@@ -1,0 +1,38 @@
+# Milepost — working notes
+
+A Strava-style run tracker: GPS record screen, full-screen live recorder
+(time / split pace / distance / splits), pause + resume, "No Movement
+Detected" guard, save to a local SwiftData log, per-run detail with route map.
+No backend, no account, no upload.
+
+Same per-change loop as the other iOS apps (Pothole Radar is the template):
+
+1. `./scripts/run_tests.sh` — unit + UI. Decide whether the change needs a new
+   XCUITest and say so in the commit body ("XCUITest: added X" / "N/A because").
+2. `./scripts/smoke_test.sh` — a green suite does not prove a cold launch.
+3. Secrets scan of the staged diff. `scripts/asc-config.env` and `*.p8` are
+   gitignored; nothing else here is secret.
+4. OWASP LLM note in the commit: always N/A, there is no LLM surface.
+5. Commit with an explanatory body + `Co-Authored-By`, then push.
+6. `./scripts/ship.sh` for app-code changes once the ASC app record exists.
+
+Gotchas:
+- `project.yml` is the source of truth; never hand-edit the pbxproj. Run
+  `./scripts/generate.sh` after adding files — a build with a stale project
+  silently produces empty test bundles.
+- Resources live under `sources:` on purpose; XcodeGen drops a `resources:` key.
+- Background recording relies on `UIBackgroundModes: location` +
+  `allowsBackgroundLocationUpdates`. Removing either kills tracking with the
+  screen off, with no error (the first one traps at runtime).
+- UI tests pass `-uitest` → in-memory SwiftData store. `run_tests.sh` pins the
+  simulator at a fixed Brooklyn location for `MilepostUITests` (every run ends
+  in "No Movement Detected") and starts a `simctl location` route through
+  Prospect Park for `MilepostRouteUITests` (distance must climb, save works).
+- The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+- Never `app.debugDescription` or an untyped `descendants(matching: .any)` on
+  the Record tab — the MapKit accessibility tree takes minutes to walk.
+- `RunRecorder` is the whole engine and is clock-injected; every rule
+  (accuracy gate, stationary gate, split roll-over, paused time) has a unit
+  test. Change a rule → change its test.
+- Splits are stored in the unit the run was recorded with (`splitMeters`);
+  the detail view labels them from that, not from the current setting.

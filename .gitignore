@@ -1,0 +1,17 @@
+build/
+build.nosync/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+# Generated from project.yml — never commit, never hand-edit.
+Milepost.xcodeproj/
+# iCloud duplicates ~/Desktop leaves behind.
+Milepost [0-9]*.xcodeproj/
+
+# Secrets
+scripts/asc-config.env
+scripts/*.p8
+*.p8
+__pycache__/

@@ -1,0 +1,101 @@
+name: Milepost
+options:
+  bundleIdPrefix: com.divinedavis
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+configs:
+  Debug: debug
+  Release: release
+
+targets:
+  Milepost:
+    type: application
+    platform: iOS
+    # XcodeGen has no target-level `resources:` key — a folder listed there is
+    # silently dropped from the bundle. Resources/ rides along under sources.
+    sources:
+      - path: Milepost
+    info:
+      path: Milepost/Info.plist
+      properties:
+        CFBundleDisplayName: Milepost
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiredDeviceCapabilities:
+          - arm64
+          - gps
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleIconName: AppIcon
+        # Location keeps the process alive while the screen is off mid-run.
+        # Without this key, allowsBackgroundLocationUpdates traps at runtime.
+        UIBackgroundModes:
+          - location
+        NSLocationWhenInUseUsageDescription: Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_EMIT_LOC_STRINGS: YES
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: CG89RY4W6R
+        ENABLE_PREVIEWS: YES
+        # Without this the AccentColor.colorset is dead weight and every .tint
+        # falls back to system blue.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  MilepostTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MilepostTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Milepost
+
+  MilepostUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: MilepostUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost.uitests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Milepost
+
+schemes:
+  Milepost:
+    build:
+      targets:
+        Milepost: all
+        MilepostTests: [test]
+        MilepostUITests: [test]
+    test:
+      targets:
+        - MilepostTests
+        - MilepostUITests
+      gatherCoverageData: true
+    run:
+      config: Debug
+    archive:
+      config: Release
