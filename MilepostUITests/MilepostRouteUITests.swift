@@ -22,6 +22,13 @@ final class MilepostRouteUITests: XCTestCase {
         }
     }
 
+    private func snap(_ name: String) {
+        guard let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty else { return }
+        let data = XCUIScreen.main.screenshot().pngRepresentation
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try? data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+    }
+
     private func tap(_ id: String, timeout: TimeInterval = 6) {
         let el = app.buttons[id]
         XCTAssertTrue(el.waitForExistence(timeout: timeout), "\(id) never appeared")
@@ -31,23 +38,26 @@ final class MilepostRouteUITests: XCTestCase {
     func testMovingRunSavesAndAppearsInActivities() {
         tap("record.start")
         allowLocation()
-        if !app.buttons["recorder.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
+        if !app.buttons["live.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
             tap("record.start")
         }
-        XCTAssertTrue(app.buttons["recorder.pause"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
 
         // Distance should tick up within a few fixes at the simulated speed.
         let distance = app.staticTexts["live.distance"]
         let moved = NSPredicate(format: "label != '0.00'")
         let e = expectation(for: moved, evaluatedWith: distance)
         wait(for: [e], timeout: 45)
+        sleep(20)   // let a few hundred metres and a split pace accrue
+        snap("route-recording")
 
-        tap("recorder.pause")
-        tap("recorder.finish")
+        tap("live.pause")
+        tap("live.finish")
 
         let title = app.textFields["save.title"]
         XCTAssertTrue(title.waitForExistence(timeout: 8), "save sheet never appeared")
         XCTAssertTrue(title.value as? String != nil)
+        snap("route-save")
         tap("save.save")
 
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
@@ -61,6 +71,7 @@ final class MilepostRouteUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["Distance"].exists)
         XCTAssertTrue(app.staticTexts["Splits (mi)"].exists)
+        snap("route-detail")
 
         tap("detail.menu")
         tap("detail.delete")

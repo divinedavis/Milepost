@@ -14,24 +14,29 @@ struct RecorderControls: View {
     @State private var showNoMovement = false
     @State private var pendingSummary: RunSummary?
 
+    /// The map card and the full-screen recorder both host these controls,
+    /// and a fullScreenCover does not hide the map's copy from XCUITest, so
+    /// each layout gets its own identifiers.
+    private var prefix: String { layout == .live ? "live" : "map" }
+
     var body: some View {
         HStack(spacing: 12) {
             if recorder.state == .recording {
-                pill("Pause", symbol: "pause.fill", fill: Theme.orange, text: .white, id: "recorder.pause") {
+                pill("Pause", symbol: "pause.fill", fill: Theme.orange, text: .white, id: "\(prefix).pause") {
                     recorder.pause()
                 }
             } else {
-                pill("Resume", symbol: "play.fill", fill: Theme.orange, text: .white, id: "recorder.resume") {
+                pill("Resume", symbol: "play.fill", fill: Theme.orange, text: .white, id: "\(prefix).resume") {
                     recorder.resume()
                 }
-                pill("Finish", symbol: "flag.checkered", fill: .white, text: .black, id: "recorder.finish") {
+                pill("Finish", symbol: "flag.checkered", fill: .white, text: .black, id: "\(prefix).finish") {
                     finishTapped()
                 }
             }
         }
         .alert("No Movement Detected", isPresented: $showNoMovement) {
             Button("Discard", role: .destructive) { discardRun() }
-            Button("Resume") { recorder.resume() }
+            Button("Resume", role: .cancel) { recorder.resume() }
         } message: {
             Text("This activity cannot be saved because we couldn't detect any change in your location.")
         }

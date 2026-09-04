@@ -23,6 +23,15 @@ final class MilepostUITests: XCTestCase {
         }
     }
 
+    /// Writes a PNG when TEST_RUNNER_MILEPOST_SHOTS points at a directory;
+    /// otherwise a no-op. The simulator shares the host filesystem.
+    private func snap(_ name: String) {
+        guard let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty else { return }
+        let data = XCUIScreen.main.screenshot().pngRepresentation
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try? data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
+    }
+
     private func tap(_ id: String, timeout: TimeInterval = 6) {
         let el = app.buttons[id]
         XCTAssertTrue(el.waitForExistence(timeout: timeout), "\(id) never appeared")
@@ -33,10 +42,10 @@ final class MilepostUITests: XCTestCase {
     private func startRun() {
         tap("record.start")
         allowLocation()
-        if !app.buttons["recorder.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
+        if !app.buttons["live.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
             tap("record.start")
         }
-        XCTAssertTrue(app.buttons["recorder.pause"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
     }
 
     func testEveryTabOpens() {
@@ -69,19 +78,22 @@ final class MilepostUITests: XCTestCase {
         // The clock runs.
         sleep(2)
         XCTAssertNotEqual(app.staticTexts["live.time"].label, "00:00:00")
+        snap("live-recording")
 
-        tap("recorder.pause")
+        tap("live.pause")
         XCTAssertTrue(app.staticTexts["live.pausedBanner"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.buttons["recorder.resume"].exists)
-        XCTAssertTrue(app.buttons["recorder.finish"].exists)
+        XCTAssertTrue(app.buttons["live.resume"].exists)
+        XCTAssertTrue(app.buttons["live.finish"].exists)
+        snap("live-paused")
 
         let frozen = app.staticTexts["live.time"].label
         sleep(2)
         XCTAssertEqual(app.staticTexts["live.time"].label, frozen, "clock must stop while paused")
 
-        tap("recorder.finish")
+        tap("live.finish")
         let alert = app.alerts["No Movement Detected"]
         XCTAssertTrue(alert.waitForExistence(timeout: 6))
+        snap("no-movement")
         alert.buttons["Discard"].tap()
 
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
@@ -92,25 +104,26 @@ final class MilepostUITests: XCTestCase {
     /// run on the map card, and expanding gets the full screen back.
     func testResumeFromAlertAndCollapseExpand() {
         startRun()
-        tap("recorder.pause")
-        tap("recorder.finish")
+        tap("live.pause")
+        tap("live.finish")
         let alert = app.alerts["No Movement Detected"]
         XCTAssertTrue(alert.waitForExistence(timeout: 6))
         alert.buttons["Resume"].tap()
-        XCTAssertTrue(app.buttons["recorder.pause"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 4))
         XCTAssertFalse(app.staticTexts["live.pausedBanner"].exists)
 
         tap("live.collapse")
         XCTAssertTrue(app.buttons["record.expand"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.buttons["recorder.pause"].exists, "map card keeps the controls while a run is live")
+        snap("map-recording")
+        XCTAssertTrue(app.buttons["map.pause"].waitForExistence(timeout: 4), "map card keeps the controls while a run is live")
         XCTAssertFalse(app.buttons["record.start"].exists)
 
         tap("record.expand")
         XCTAssertTrue(app.staticTexts["live.time"].waitForExistence(timeout: 6))
 
         // Clean up so the next test starts idle.
-        tap("recorder.pause")
-        tap("recorder.finish")
+        tap("live.pause")
+        tap("live.finish")
         XCTAssertTrue(alert.waitForExistence(timeout: 6))
         alert.buttons["Discard"].tap()
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
