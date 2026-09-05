@@ -63,6 +63,7 @@ final class MilepostUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["record.time"].label, "00:00")
         XCTAssertEqual(app.staticTexts["record.distance"].label, "0.00")
         XCTAssertEqual(app.staticTexts["record.pace"].label, "-:--")
+        XCTAssertFalse(app.buttons["record.expand"].exists, "nothing to expand before a run starts")
     }
 
     /// Start opens the full-screen recorder with a running clock; Pause turns

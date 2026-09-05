@@ -83,18 +83,22 @@ struct RecordScreen: View {
                 Text("Run")
                     .font(.headline)
                     .foregroundStyle(.white)
-                HStack {
-                    Spacer()
-                    Button {
-                        showLive = true
-                    } label: {
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(6)
+                // Only while a run is live: before Start there is nothing to
+                // expand, and the cover would open on 00:00:00 and dismiss itself.
+                if recorder.isActive {
+                    HStack {
+                        Spacer()
+                        Button {
+                            showLive = true
+                        } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                        }
+                        .accessibilityLabel("Expand recorder")
+                        .accessibilityIdentifier("record.expand")
                     }
-                    .accessibilityLabel("Expand recorder")
-                    .accessibilityIdentifier("record.expand")
                 }
             }
             HStack(alignment: .firstTextBaseline) {
