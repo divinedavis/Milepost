@@ -31,6 +31,12 @@ struct ActivitiesScreen: View {
                 }
             }
             .navigationTitle("Activities")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Image("Wordmark").accessibilityLabel("Milepost")
+                }
+            }
             .navigationDestination(for: Activity.self) { activity in
                 ActivityDetailView(activity: activity)
             }

@@ -33,6 +33,12 @@ struct YouScreen: View {
                 }
             }
             .navigationTitle("You")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Image("Wordmark").accessibilityLabel("Milepost")
+                }
+            }
         }
     }
 

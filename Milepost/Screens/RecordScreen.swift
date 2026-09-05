@@ -32,6 +32,15 @@ struct RecordScreen: View {
                     .padding(.top, 8)
                     .padding(.trailing, 12)
             }
+            .overlay(alignment: .topLeading) {
+                Image("Wordmark")
+                    .accessibilityLabel("Milepost")
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(Theme.card.opacity(0.9), in: Capsule())
+                    .padding(.top, 8)
+                    .padding(.leading, 12)
+            }
 
             VStack(spacing: 0) {
                 statsCard
