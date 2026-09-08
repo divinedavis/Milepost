@@ -4,8 +4,11 @@ import SwiftUI
 struct YouScreen: View {
     @Query(sort: \Activity.startDate, order: .reverse) private var activities: [Activity]
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
+    @AppStorage(VoiceCueInterval.storageKey) private var voiceRaw = VoiceCueInterval.off.rawValue
+    @Environment(VoiceAnnouncer.self) private var announcer
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
+    private var voice: VoiceCueInterval { VoiceCueInterval(rawValue: voiceRaw) ?? .off }
 
     var body: some View {
         NavigationStack {
@@ -16,13 +19,30 @@ struct YouScreen: View {
                 Section("This week") { totals(week) }
                 Section("All time") { totals(all) }
 
-                Section("Settings") {
+                Section {
                     Picker("Units", selection: $unitRaw) {
                         ForEach(DistanceUnit.allCases) { u in
                             Text(u.title).tag(u.rawValue)
                         }
                     }
                     .accessibilityIdentifier("you.units")
+
+                    Picker("Voice cues", selection: $voiceRaw) {
+                        ForEach(VoiceCueInterval.allCases) { v in
+                            Text(v.title(unit: unit)).tag(v.rawValue)
+                        }
+                    }
+                    .accessibilityIdentifier("you.voiceCues")
+
+                    Button("Preview voice") {
+                        announcer.speak(VoiceCuePhrase.text(for: VoiceAnnouncer.sample))
+                    }
+                    .disabled(voice == .off)
+                    .accessibilityIdentifier("you.voicePreview")
+                } header: {
+                    Text("Settings")
+                } footer: {
+                    Text(voiceFooter)
                 }
 
                 Section("About") {
@@ -39,6 +59,15 @@ struct YouScreen: View {
                     Image("Wordmark").accessibilityLabel("Milepost")
                 }
             }
+        }
+    }
+
+    private var voiceFooter: String {
+        let noun = unit.splitNoun.lowercased()
+        switch voice {
+        case .off: return "Voice cues read out your time and average pace mid-run, over your music, even with the screen off."
+        case .full: return "Spoken at every \(noun), over your music, even with the screen off."
+        case .half: return "Spoken at every half \(noun), over your music, even with the screen off."
         }
     }
 

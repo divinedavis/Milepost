@@ -151,4 +151,41 @@ final class MilepostUITests: XCTestCase {
         tap("tab.record")
         XCTAssertTrue(app.staticTexts["Distance (mi)"].waitForExistence(timeout: 6))
     }
+
+    func testVoiceCuesSettingEnablesPreviewAndPersists() {
+        tap("tab.you")
+        // Settings sit below two stats sections; offscreen List cells are not
+        // in the accessibility tree, so bring them up first.
+        app.swipeUp()
+        let picker = app.buttons["you.voiceCues"].exists ? app.buttons["you.voiceCues"] : app.otherElements["you.voiceCues"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 6))
+        XCTAssertTrue(picker.label.contains("Off"), "fresh -uitest launch must start with cues off: \(picker.label)")
+        // A row's button can surface as any element type; match by identifier only.
+        let preview = app.descendants(matching: .any).matching(identifier: "you.voicePreview").firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 4))
+        XCTAssertFalse(preview.isEnabled, "Preview is disabled while cues are off")
+        picker.tap()
+        let half = app.buttons["Every half mile"]
+        XCTAssertTrue(half.waitForExistence(timeout: 4))
+        half.tap()
+        XCTAssertTrue(picker.waitForExistence(timeout: 4))
+        XCTAssertTrue(picker.label.contains("Every half mile"), "picker did not take: \(picker.label)")
+        XCTAssertTrue(preview.waitForExistence(timeout: 4))
+        XCTAssertTrue(preview.isEnabled)
+        preview.tap()                                  // muted under -uitest; must not crash
+
+        // Survives a tab round-trip (AppStorage).
+        tap("tab.record")
+        tap("tab.you")
+        app.swipeUp()
+        XCTAssertTrue(picker.waitForExistence(timeout: 6))
+        XCTAssertTrue(picker.label.contains("Every half mile"), picker.label)
+
+        picker.tap()
+        let off = app.buttons["Off"]
+        XCTAssertTrue(off.waitForExistence(timeout: 4))
+        off.tap()
+        XCTAssertTrue(preview.waitForExistence(timeout: 4))
+        XCTAssertFalse(preview.isEnabled)
+    }
 }

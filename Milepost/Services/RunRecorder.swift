@@ -37,6 +37,12 @@ final class RunRecorder {
     private(set) var startDate: Date?
     private(set) var unit: DistanceUnit = .miles
 
+    /// Fired each time the run crosses a half-unit boundary (0.5, 1, 1.5 …).
+    /// The voice announcer decides which of those to say; the engine has no
+    /// idea what a setting is.
+    var onMilestone: (@MainActor (Milestone) -> Void)?
+    private var nextMilestoneMeters: Double = 0
+
     private var accumulated: TimeInterval = 0
     private var segmentStart: Date?
     private var lastAccepted: CLLocation?
@@ -48,6 +54,7 @@ final class RunRecorder {
     }
 
     var splitMeters: Double { unit.meters }
+    var milestoneMeters: Double { unit.meters / 2 }
     var isActive: Bool { state != .idle }
     var hasMovement: Bool { distanceMeters >= Self.minimumMovementMeters }
     var currentSplit: Split? { splits.last }
@@ -66,6 +73,7 @@ final class RunRecorder {
         accumulated = 0
         route = []
         splits = [Split(index: 1, distanceMeters: 0, seconds: 0)]
+        nextMilestoneMeters = milestoneMeters
         lastAccepted = nil
         let t = now()
         startDate = t
@@ -158,6 +166,23 @@ final class RunRecorder {
         distanceMeters += step
         route.append(RoutePoint(location))
         lastAccepted = location
+        emitMilestones(step: step, seconds: seconds)
+    }
+
+    /// One step can cross several boundaries (a long GPS gap); each gets its
+    /// own milestone with the moving time pro-rated to the crossing.
+    private func emitMilestones(step: Double, seconds: TimeInterval) {
+        guard distanceMeters >= nextMilestoneMeters else { return }
+        refreshElapsed()
+        while distanceMeters >= nextMilestoneMeters {
+            let overshoot = distanceMeters - nextMilestoneMeters
+            let after = step > 0 ? min(1, overshoot / step) * seconds : 0
+            let milestone = Milestone(distanceMeters: nextMilestoneMeters,
+                                      elapsed: max(0, elapsed - after),
+                                      unit: unit)
+            nextMilestoneMeters += milestoneMeters
+            onMilestone?(milestone)
+        }
     }
 
     /// Books a step against the current split, rolling any overflow — time

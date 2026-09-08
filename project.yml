@@ -45,8 +45,11 @@ targets:
         CFBundleIconName: AppIcon
         # Location keeps the process alive while the screen is off mid-run.
         # Without this key, allowsBackgroundLocationUpdates traps at runtime.
+        # Audio lets the voice cues play with the screen off: without it the
+        # playback session refuses to activate in the background (silently).
         UIBackgroundModes:
           - location
+          - audio
         NSLocationWhenInUseUsageDescription: Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.
     settings:
       base:

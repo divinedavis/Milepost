@@ -28,6 +28,15 @@ Gotchas:
   simulator at a fixed Brooklyn location for `MilepostUITests` (every run ends
   in "No Movement Detected") and starts a `simctl location` route through
   Prospect Park for `MilepostRouteUITests` (distance must climb, save works).
+- `run_tests.sh ui <filter>` takes `Target/Class/test`. `MilepostUITests/testX`
+  resolves to a class that does not exist, runs zero tests and prints
+  `** TEST SUCCEEDED **`.
+- Offscreen `List` cells are not in the accessibility tree. The Settings
+  section on You sits below the fold on an iPhone 17 Pro: `app.swipeUp()`
+  before querying it, or the element "does not exist".
+- `-uitest` wipes UserDefaults on launch; tests do not need to restore settings.
+- Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
+  `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
 - Never `app.debugDescription` or an untyped `descendants(matching: .any)` on
   the Record tab — the MapKit accessibility tree takes minutes to walk.
