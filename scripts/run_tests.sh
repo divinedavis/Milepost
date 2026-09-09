@@ -57,6 +57,8 @@ ui_all() {
   echo "== ui (static) =="
   still
   run MilepostUITests/MilepostUITests
+  echo "== ui (live activity) =="
+  run MilepostUITests/MilepostLiveActivityUITests
   echo "== ui (moving) =="
   moving
   run MilepostUITests/MilepostRouteUITests

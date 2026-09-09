@@ -2,7 +2,8 @@
 
 A Strava-style run tracker: GPS record screen, full-screen live recorder
 (time / split pace / distance / splits), pause + resume, "No Movement
-Detected" guard, save to a local SwiftData log, per-run detail with route map.
+Detected" guard, save to a local SwiftData log, per-run detail with route map,
+and a Dynamic Island / lock-screen Live Activity showing the mile in progress.
 No backend, no account, no upload.
 
 Same per-change loop as the other iOS apps (Pothole Radar is the template):
@@ -38,6 +39,34 @@ Gotchas:
 - Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
   `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+
+Live Activity (`MilepostWidget/`, `RunActivityController`):
+- The SwiftData model is called `Activity`, so inside the app target it
+  shadows ActivityKit's. Write `ActivityKit.Activity<RunActivityAttributes>`
+  or the compiler says "cannot specialize non-generic type 'Activity'".
+- `NSSupportsLiveActivities` goes in the **app's** Info.plist, not the
+  extension's. Without it `Activity.request` throws and a run just has no card.
+- The extension cannot link the app, so `RunActivityAttributes.swift`,
+  `Units.swift` and `Theme.swift` are listed under both targets in
+  `project.yml` on purpose. Anything the card needs has to be app-independent.
+- Never put a value in `ContentState` that moves without a GPS fix. The run
+  average pace does (it divides by a ticking `elapsed`), so it made every 1 Hz
+  tick a push; the card uses the last *completed* split's pace instead.
+  `RunActivityTests.testStateIsStableAcrossTicksThatChangeNothingVisible`
+  is the guard.
+- The clock is a `Text(timerInterval:)` counting from `recorder.elapsedAnchor`,
+  so it ticks inside the widget with no updates from the app. Pausing swaps it
+  for a frozen string.
+- SpringBoard draws the island, so XCUITest queries `com.apple.springboard`,
+  not the app. Two false-positive traps: the home screen behind it has a
+  "Milepost" app icon, so `CONTAINS "Milepost"` and `CONTAINS "mi"` both pass
+  with no card on screen. Assert on something only the card has ("Mile 1",
+  "0.00 mi", "Time").
+- The compact island only has room for the mile. Distance, pace and the track
+  are expanded-only: long-press at normalized `dy: 0.037` (~32 pt down an
+  874 pt screen) to open it. Pressing the status bar above it does nothing.
+- A crash mid-run would strand a card nobody owns, so the controller ends any
+  stray activity on launch.
 - Never `app.debugDescription` or an untyped `descendants(matching: .any)` on
   the Record tab — the MapKit accessibility tree takes minutes to walk.
 - `RunRecorder` is the whole engine and is clock-injected; every rule

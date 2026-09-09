@@ -6,6 +6,9 @@ struct MilepostApp: App {
     @State private var location: LocationService
     @State private var recorder: RunRecorder
     @State private var announcer: VoiceAnnouncer
+    /// Not observed by any view; held so the Live Activity stays wired for
+    /// the life of the process.
+    @State private var liveActivity: RunActivityController
 
     let container: ModelContainer
 
@@ -24,6 +27,7 @@ struct MilepostApp: App {
         _location = State(initialValue: location)
         _recorder = State(initialValue: recorder)
         _announcer = State(initialValue: announcer)
+        _liveActivity = State(initialValue: RunActivityController(recorder: recorder))
 
         let config = ModelConfiguration(isStoredInMemoryOnly: isUITest)
         do {

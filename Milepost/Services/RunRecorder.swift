@@ -59,8 +59,19 @@ final class RunRecorder {
     var hasMovement: Bool { distanceMeters >= Self.minimumMovementMeters }
     var currentSplit: Split? { splits.last }
     var currentSplitPace: Double? { currentSplit?.pace(unit: unit) }
+    /// The pace of the last split that ran the full distance. Unlike
+    /// `averagePace` this does not move between GPS fixes.
+    var previousSplitPace: Double? {
+        splits.dropLast().last.flatMap { $0.pace(unit: unit) }
+    }
     var averagePace: Double? {
         Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: elapsed, unit: unit)
+    }
+    /// The instant a stopwatch would have started to read `elapsed` right
+    /// now; nil while paused. Stable for the whole recording segment, so a
+    /// clock counting from it (the Live Activity's) needs no update per second.
+    var elapsedAnchor: Date? {
+        segmentStart.map { $0.addingTimeInterval(-accumulated) }
     }
 
     // MARK: Lifecycle

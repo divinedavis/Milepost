@@ -70,6 +70,27 @@ final class MilepostRouteUITests: XCTestCase {
         }
         snap("route-recording")
 
+        // The Live Activity must carry the ground actually covered, not a
+        // card frozen at 0.00. Only the expanded island has the distance —
+        // the compact one is just the mile — so long-press to open it. The
+        // run is still moving, so assert it is non-zero rather than matching
+        // the app's label exactly.
+        XCUIDevice.shared.press(.home)
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        XCTAssertTrue(springboard.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[c] %@", "Mile 1")).firstMatch
+            .waitForExistence(timeout: 15), "no Live Activity while the run is moving")
+        springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.037))
+            .press(forDuration: 1.2)
+        let shown = springboard.descendants(matching: .any)
+            .matching(NSPredicate(format: "label MATCHES %@", "^[0-9]+\\.[0-9]{2} mi.*")).firstMatch
+        XCTAssertTrue(shown.waitForExistence(timeout: 8), "no distance on the expanded island")
+        let covered = Double(shown.label.prefix(while: { $0 != " " })) ?? 0
+        XCTAssertGreaterThan(covered, 0, "the island is stuck at 0.00 mi during a moving run")
+        springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
+        app.activate()
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
+
         tap("live.pause")
         tap("live.finish")
 

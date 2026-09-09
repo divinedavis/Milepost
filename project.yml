@@ -51,6 +51,9 @@ targets:
           - location
           - audio
         NSLocationWhenInUseUsageDescription: Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.
+        # The Dynamic Island / lock-screen run card. Without this key
+        # Activity.request throws and the run simply has no card.
+        NSSupportsLiveActivities: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost
@@ -63,6 +66,36 @@ targets:
         # Without this the AccentColor.colorset is dead weight and every .tint
         # falls back to system blue.
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - target: MilepostWidget
+
+  # The Live Activity is drawn by a widget extension; the app only feeds it.
+  # The three shared files are compiled into both targets on purpose: the
+  # extension cannot link the app.
+  MilepostWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MilepostWidget
+      - path: Milepost/Models/RunActivityAttributes.swift
+      - path: Milepost/Models/Units.swift
+      - path: Milepost/Design/Theme.swift
+    info:
+      path: MilepostWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Milepost
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: CG89RY4W6R
+        SKIP_INSTALL: YES
 
   MilepostTests:
     type: bundle.unit-test

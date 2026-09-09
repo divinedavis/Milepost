@@ -26,6 +26,8 @@
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

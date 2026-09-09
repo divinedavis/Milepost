@@ -7,7 +7,8 @@ distance and per-mile splits live, pause when you hit a light, finish, save.
 Every run keeps its route and shows up in Activities with a map and splits.
 Nothing leaves the phone.
 
-- SwiftUI + MapKit + CoreLocation + SwiftData, iOS 17+
+- SwiftUI + MapKit + CoreLocation + SwiftData + ActivityKit, iOS 17+
+- The mile you are on in the Dynamic Island and on the lock screen
 - Background tracking while the screen is off
 - Miles or kilometers
 - Unit tests for the recording engine, XCUITests for the flows
