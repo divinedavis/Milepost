@@ -45,3 +45,26 @@ Gotchas:
   test. Change a rule → change its test.
 - Splits are stored in the unit the run was recorded with (`splitMeters`);
   the detail view labels them from that, not from the current setting.
+
+## App Store submission (all in `scripts/`, run with `~/.venvs/spendcap/bin/python`)
+
+- `asc_metadata.py` — the whole listing (categories, subtitle, description,
+  keywords, URLs, copyright, age rating, review contact + notes, free price,
+  availability in every territory). `--show` prints the live state. Contact
+  fields come from the gitignored `asc-config.env`.
+- Screenshots: `MILEPOST_SIM=<Pro Max UDID> TEST_RUNNER_MILEPOST_SHOTS=$PWD/build.nosync/screenshots-raw
+  TEST_RUNNER_MILEPOST_LONG_RUN=1 ./scripts/run_tests.sh ui` writes the raw
+  captures (the route test runs ~9 min so a split lands), then
+  `asc_make_screenshots.py` composes the five panels and
+  `asc_upload_screenshots.py --replace` uploads them to the 6.7" slot.
+- `make_asc_header.py` — Header/Search Results banner into `marketing/asc-header/`
+  (upload is browser-only).
+- `asc_push_privacy_iris.py` — App Privacy = "Data Not Collected" through the
+  private iris API; needs a fresh `fastlane spaceauth -u divinejdavis@gmail.com`
+  cookie (2FA, so a person runs it; 401 = expired).
+- `asc_submit_for_review.py --check` then without `--check` to submit
+  (reviewSubmissions). Pricing and App Privacy are invisible to the pre-flight;
+  read `meta.associatedErrors` on a 409.
+- `attach_build.py --build N` after every ship, or the version keeps the old build.
+- Privacy/support pages live in Personal-Website `milepost/{privacy,support}/`
+  and deploy by scp to 159.203.110.79:/var/www/divinedavis/ (no auto-deploy).

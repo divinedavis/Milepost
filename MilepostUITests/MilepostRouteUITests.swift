@@ -49,6 +49,25 @@ final class MilepostRouteUITests: XCTestCase {
         let e = expectation(for: moved, evaluatedWith: distance)
         wait(for: [e], timeout: 45)
         sleep(20)   // let a few hundred metres and a split pace accrue
+
+        // Marketing captures only (MILEPOST_LONG_RUN=1): keep going past the
+        // first split so the recorder, detail and totals show a real run, and
+        // grab the map with the route drawn in. ~9 minutes at the simulated jog.
+        if ProcessInfo.processInfo.environment["MILEPOST_LONG_RUN"] == "1" {
+            let target = 1.2
+            let deadline = Date().addingTimeInterval(14 * 60)
+            while Date() < deadline {
+                if let v = Double(distance.label), v >= target { break }
+                sleep(5)
+            }
+            tap("live.collapse")
+            XCTAssertTrue(app.buttons["record.expand"].waitForExistence(timeout: 6))
+            sleep(3)
+            snap("map-route")
+            tap("record.expand")
+            XCTAssertTrue(app.staticTexts["live.time"].waitForExistence(timeout: 6))
+            sleep(1)
+        }
         snap("route-recording")
 
         tap("live.pause")
@@ -67,11 +86,26 @@ final class MilepostRouteUITests: XCTestCase {
         let row = app.staticTexts["activities.rowTitle"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         XCTAssertTrue(row.label.hasSuffix("Run"))
+        snap("activities-list")
         row.tap()
         XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["Distance"].exists)
         XCTAssertTrue(app.staticTexts["Splits (mi)"].exists)
         snap("route-detail")
+
+        // Marketing captures only: the You tab with a real run behind its
+        // totals. Off the regression path so a flaky pop cannot fail the suite.
+        if let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty {
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            tap("tab.you")
+            XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 6))
+            sleep(1)
+            snap("you-totals")
+            tap("tab.activities")
+            XCTAssertTrue(row.waitForExistence(timeout: 8))
+            row.tap()
+            XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 8))
+        }
 
         tap("detail.menu")
         tap("detail.delete")

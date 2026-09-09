@@ -50,6 +50,8 @@ final class MilepostUITests: XCTestCase {
 
     func testEveryTabOpens() {
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
+        sleep(3)   // let the map tiles land before the marketing capture
+        snap("record-idle")
 
         tap("tab.activities")
         XCTAssertTrue(app.staticTexts["No runs yet"].waitForExistence(timeout: 6))

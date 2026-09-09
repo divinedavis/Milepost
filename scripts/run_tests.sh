@@ -10,8 +10,14 @@ cd "$(dirname "$0")/.."
 
 WHAT="${1:-all}"
 FILTER="${2:-}"
+# MILEPOST_SIM may be a name or a UDID. Three runtimes share the name
+# "iPhone 17 Pro", so a UDID is the only way to pin one for screenshots.
 DEVICE="${MILEPOST_SIM:-iPhone 17 Pro}"
-DEST="platform=iOS Simulator,name=$DEVICE"
+if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then
+  DEST="platform=iOS Simulator,id=$DEVICE"
+else
+  DEST="platform=iOS Simulator,name=$DEVICE"
+fi
 
 boot() {
   xcrun simctl boot "$DEVICE" 2>/dev/null || true
