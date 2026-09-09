@@ -54,7 +54,7 @@ final class MilepostUITests: XCTestCase {
         snap("record-idle")
 
         tap("tab.activities")
-        XCTAssertTrue(app.staticTexts["No runs yet"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["No activities yet"].waitForExistence(timeout: 6))
 
         tap("tab.you")
         XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 6))

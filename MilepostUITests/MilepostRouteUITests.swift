@@ -133,6 +133,6 @@ final class MilepostRouteUITests: XCTestCase {
         let confirm = app.buttons["Delete"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 4))
         confirm.tap()
-        XCTAssertTrue(app.staticTexts["No runs yet"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["No activities yet"].waitForExistence(timeout: 8))
     }
 }

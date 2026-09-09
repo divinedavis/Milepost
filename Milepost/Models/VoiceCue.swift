@@ -35,12 +35,13 @@ struct Milestone: Equatable {
     var distanceMeters: Double
     var elapsed: TimeInterval
     var unit: DistanceUnit
+    var sport: Sport = .run
 
     /// 0.5, 1, 1.5, … in the run's unit.
     var units: Double { (distanceMeters / unit.meters * 2).rounded() / 2 }
 
     var averagePace: Double? {
-        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: elapsed, unit: unit)
+        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: elapsed, unit: unit, sport: sport)
     }
 }
 
@@ -51,7 +52,7 @@ enum VoiceCuePhrase {
         var parts = [distance(m.units, unit: m.unit)]
         parts.append("Time, \(spoken(seconds: m.elapsed)).")
         if let pace = m.averagePace {
-            parts.append("Average pace, \(spoken(seconds: pace)) per \(m.unit.splitNoun.lowercased()).")
+            parts.append(m.sport.spokenRate(pace, unit: m.unit))
         }
         return parts.joined(separator: " ")
     }
@@ -69,15 +70,5 @@ enum VoiceCuePhrase {
     }
 
     /// "9 minutes 5 seconds", "1 hour 2 minutes", "45 seconds".
-    static func spoken(seconds: TimeInterval) -> String {
-        let total = max(0, Int(seconds.rounded()))
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        let s = total % 60
-        var out: [String] = []
-        if h > 0 { out.append("\(h) \(h == 1 ? "hour" : "hours")") }
-        if m > 0 { out.append("\(m) \(m == 1 ? "minute" : "minutes")") }
-        if s > 0 || out.isEmpty { out.append("\(s) \(s == 1 ? "second" : "seconds")") }
-        return out.joined(separator: " ")
-    }
+    static func spoken(seconds: TimeInterval) -> String { Format.spokenDuration(seconds) }
 }

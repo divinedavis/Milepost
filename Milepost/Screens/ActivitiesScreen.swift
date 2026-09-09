@@ -12,8 +12,8 @@ struct ActivitiesScreen: View {
         NavigationStack {
             Group {
                 if activities.isEmpty {
-                    ContentUnavailableView("No runs yet", systemImage: "figure.run",
-                                           description: Text("Tap Start on the Record tab and your runs will show up here."))
+                    ContentUnavailableView("No activities yet", systemImage: "figure.run",
+                                           description: Text("Tap Start on the Record tab and your runs, walks and rides will show up here."))
                         .accessibilityIdentifier("activities.empty")
                 } else {
                     List {
@@ -50,15 +50,22 @@ struct ActivityRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(activity.title)
-                .font(.headline)
-                .accessibilityIdentifier("activities.rowTitle")
+            Label {
+                Text(activity.title)
+                    .font(.headline)
+                    .accessibilityIdentifier("activities.rowTitle")
+            } icon: {
+                Image(systemName: activity.sport.symbol)
+                    .foregroundStyle(Theme.orange)
+                    .accessibilityLabel(activity.sport.title)
+            }
             Text(activity.startDate.activityDateText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 24) {
                 mini(Format.distance(activity.distanceMeters, unit: unit), unit.abbreviation)
-                mini(Format.pace(activity.averagePace(unit: unit)), unit.paceSuffix)
+                mini(activity.sport.rateText(activity.averagePace(unit: unit), unit: unit),
+                     activity.sport.rateSuffix(unit: unit))
                 mini(Format.duration(activity.movingSeconds), "time")
             }
         }

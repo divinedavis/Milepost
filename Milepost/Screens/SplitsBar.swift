@@ -6,6 +6,7 @@ import SwiftUI
 struct SplitsBar: View {
     let splits: [Split]
     let unit: DistanceUnit
+    var sport: Sport = .run
     var minimumSlots = 3
     var maximumBars = 6
 
@@ -13,7 +14,7 @@ struct SplitsBar: View {
     private var placeholders: Int { max(0, minimumSlots - visible.count) }
 
     var body: some View {
-        let paces = visible.compactMap { $0.pace(unit: unit) }
+        let paces = visible.compactMap { $0.pace(unit: unit, sport: sport) }
         let fastest = paces.min() ?? 0
         let slowest = paces.max() ?? 0
 
@@ -21,13 +22,13 @@ struct SplitsBar: View {
             ForEach(visible) { split in
                 let isCurrent = split.index == splits.last?.index
                 VStack(spacing: 6) {
-                    Text(Format.pace(split.pace(unit: unit)))
+                    Text(sport.rateText(split.pace(unit: unit, sport: sport), unit: unit))
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(Theme.secondaryText)
                     RoundedRectangle(cornerRadius: 6)
                         .fill(isCurrent ? Theme.splitBlue : Theme.barIdle)
-                        .frame(height: height(for: split.pace(unit: unit), fastest: fastest, slowest: slowest, isCurrent: isCurrent))
+                        .frame(height: height(for: split.pace(unit: unit, sport: sport), fastest: fastest, slowest: slowest, isCurrent: isCurrent))
                     Rectangle()
                         .fill(isCurrent ? Theme.orange : .clear)
                         .frame(height: 4)

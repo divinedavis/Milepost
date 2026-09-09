@@ -2,12 +2,13 @@
 
 # Milepost
 
-A small, private run tracker for iPhone. Start a run, watch time / pace /
-distance and per-mile splits live, pause when you hit a light, finish, save.
-Every run keeps its route and shows up in Activities with a map and splits.
-Nothing leaves the phone.
+A small, private tracker for runs, walks and bike rides on iPhone. Pick your
+sport, start, watch time / pace / distance and per-mile splits live, pause
+when you hit a light, finish, save. Every activity keeps its route and shows
+up in Activities with a map and splits. Nothing leaves the phone.
 
 - SwiftUI + MapKit + CoreLocation + SwiftData + ActivityKit, iOS 17+
+- Runs, walks and rides — a ride reads in mph, not minutes per mile
 - The mile you are on in the Dynamic Island and on the lock screen
 - Background tracking while the screen is off
 - Miles or kilometers

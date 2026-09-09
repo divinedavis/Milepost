@@ -39,14 +39,14 @@ struct RunLiveActivity: Widget {
                         .padding(.bottom, 2)
                 }
             } compactLeading: {
-                RunnerMark(isPaused: context.state.isPaused)
+                RunnerMark(sport: context.attributes.sport, isPaused: context.state.isPaused)
             } compactTrailing: {
                 Text(context.state.headline(unit: context.attributes.unit))
                     .font(.system(size: 15, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(.white)
             } minimal: {
-                RunnerMark(isPaused: context.state.isPaused)
+                RunnerMark(sport: context.attributes.sport, isPaused: context.state.isPaused)
             }
             .keylineTint(Theme.orange)
         }
@@ -56,15 +56,16 @@ struct RunLiveActivity: Widget {
 // MARK: - Pieces
 
 private struct RunnerMark: View {
+    let sport: Sport
     let isPaused: Bool
     var body: some View {
-        Image(systemName: isPaused ? "pause.fill" : "figure.run")
+        Image(systemName: isPaused ? "pause.fill" : sport.symbol)
             .font(.system(size: 15, weight: .bold))
             .foregroundStyle(isPaused ? Theme.paused : Theme.orange)
             // The compact island has no room for the word, so this icon is
             // the only thing that says a run is paused. Spell it out for
             // VoiceOver (and it is what the UI test asserts on).
-            .accessibilityLabel(isPaused ? "Paused" : "Running")
+            .accessibilityLabel(isPaused ? "Paused" : sport.title)
     }
 }
 
@@ -79,7 +80,7 @@ private struct Headline: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(context.state.subtitle(unit: unit))
+            Text(context.state.subtitle(unit: unit, sport: context.attributes.sport))
                 .font(.system(size: 14))
                 .monospacedDigit()
                 .foregroundStyle(Theme.secondaryText)
@@ -131,15 +132,18 @@ private struct TrackRow: View {
                     .background(Theme.paused, in: RoundedRectangle(cornerRadius: 8))
                     .layoutPriority(1)
             }
-            MileTrack(fraction: context.state.splitFraction, isPaused: context.state.isPaused)
+            MileTrack(fraction: context.state.splitFraction,
+                      sport: context.attributes.sport,
+                      isPaused: context.state.isPaused)
         }
     }
 }
 
-/// A line from this milepost to the next, with the runner where they are on
-/// it. The runner sits in a black halo so it reads as riding on the track.
+/// A line from this milepost to the next, with the athlete where they are on
+/// it. The marker sits in a black halo so it reads as riding on the track.
 private struct MileTrack: View {
     let fraction: Double
+    let sport: Sport
     let isPaused: Bool
 
     private let markerSize: CGFloat = 26
@@ -166,7 +170,7 @@ private struct MileTrack: View {
                     .frame(width: postSize, height: postSize)
                     .overlay(Circle().fill(.black).frame(width: 6, height: 6))
                     .position(x: endX, y: midY)
-                Image(systemName: "figure.run")
+                Image(systemName: sport.symbol)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(isPaused ? Theme.paused : Theme.orange)
                     .frame(width: markerSize, height: markerSize)

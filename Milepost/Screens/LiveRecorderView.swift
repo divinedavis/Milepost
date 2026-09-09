@@ -12,15 +12,15 @@ struct LiveRecorderView: View {
         VStack(spacing: 0) {
             header
             Spacer(minLength: 24)
-            bigStat(Format.pace(recorder.currentSplitPace),
-                    isPaused ? "Avg. pace (\(recorder.unit.paceSuffix))" : "Split avg. pace (\(recorder.unit.paceSuffix))",
+            bigStat(recorder.sport.rateText(recorder.currentSplitPace, unit: recorder.unit),
+                    recorder.sport.rateLabel(isPaused ? "Avg." : "Split avg.", unit: recorder.unit),
                     size: 84, id: "live.pace")
             Spacer(minLength: 24)
             bigStat(Format.distance(recorder.distanceMeters, unit: recorder.unit),
                     "Distance (\(recorder.unit.abbreviation))",
                     size: 110, id: "live.distance")
             Spacer(minLength: 24)
-            SplitsBar(splits: recorder.splits, unit: recorder.unit)
+            SplitsBar(splits: recorder.splits, unit: recorder.unit, sport: recorder.sport)
                 .padding(.horizontal, 24)
             Text("Splits (\(recorder.unit.abbreviation))")
                 .font(.subheadline.weight(.semibold))

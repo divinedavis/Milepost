@@ -39,12 +39,15 @@ struct RunActivityAttributes: ActivityAttributes {
 
     /// Fixed for the life of the run.
     var unitRaw: String
+    var sportRaw: String
     var startDate: Date
 
     var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
+    var sport: Sport { Sport(rawValue: sportRaw) ?? .run }
 
-    init(unit: DistanceUnit, startDate: Date) {
+    init(unit: DistanceUnit, sport: Sport, startDate: Date) {
         unitRaw = unit.rawValue
+        sportRaw = sport.rawValue
         self.startDate = startDate
     }
 }
@@ -55,13 +58,13 @@ extension RunActivityAttributes.ContentState {
         "\(unit.splitNoun) \(splitIndex)"
     }
 
-    /// "2.41 mi · 9:12 /mi": total distance and the pace of the split in
-    /// progress, falling back to the run average while the split is too
-    /// young to have one.
-    func subtitle(unit: DistanceUnit) -> String {
+    /// "2.41 mi · 9:12 /mi", or "6.80 mi · 14.2 mph" on a ride: total
+    /// distance and the rate of the split in progress, falling back to the
+    /// last finished split while this one is too young to have one.
+    func subtitle(unit: DistanceUnit, sport: Sport = .run) -> String {
         let distance = "\(Format.distance(distanceUnits * unit.meters, unit: unit)) \(unit.abbreviation)"
-        if let pace = splitPace ?? previousSplitPace {
-            return "\(distance) · \(Format.pace(pace)) \(unit.paceSuffix)"
+        if let rate = splitPace ?? previousSplitPace {
+            return "\(distance) · \(sport.rateText(rate, unit: unit)) \(sport.rateSuffix(unit: unit))"
         }
         return distance
     }

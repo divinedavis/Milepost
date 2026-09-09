@@ -86,7 +86,7 @@ final class RunActivityController {
     private func start() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
               let startDate = recorder.startDate else { return }
-        let attributes = RunActivityAttributes(unit: recorder.unit, startDate: startDate)
+        let attributes = RunActivityAttributes(unit: recorder.unit, sport: recorder.sport, startDate: startDate)
         let state = Self.state(for: recorder)
         do {
             activity = try ActivityKit.Activity.request(attributes: attributes,

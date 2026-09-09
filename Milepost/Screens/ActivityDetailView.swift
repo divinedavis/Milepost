@@ -30,7 +30,8 @@ struct ActivityDetailView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                     tile("Distance", "\(Format.distance(activity.distanceMeters, unit: unit)) \(unit.abbreviation)")
                     tile("Moving time", Format.duration(activity.movingSeconds))
-                    tile("Avg. pace", "\(Format.pace(activity.averagePace(unit: unit))) \(unit.paceSuffix)")
+                    tile("Avg. \(activity.sport.rateNoun)",
+                         "\(activity.sport.rateText(activity.averagePace(unit: unit), unit: unit)) \(activity.sport.rateSuffix(unit: unit))")
                     tile("Elapsed", Format.duration(activity.endDate.timeIntervalSince(activity.startDate)))
                 }
 
@@ -39,7 +40,7 @@ struct ActivityDetailView: View {
             .padding(16)
         }
         .background(Theme.background)
-        .navigationTitle("Run")
+        .navigationTitle(activity.sport.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -49,7 +50,7 @@ struct ActivityDetailView: View {
                         editingTitle = true
                     }
                     .accessibilityIdentifier("detail.rename")
-                    Button("Delete Run", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                    Button("Delete \(activity.sport.title)", systemImage: "trash", role: .destructive) { confirmDelete = true }
                         .accessibilityIdentifier("detail.delete")
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -57,7 +58,7 @@ struct ActivityDetailView: View {
                 .accessibilityIdentifier("detail.menu")
             }
         }
-        .confirmationDialog("Delete this run?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .confirmationDialog("Delete this \(activity.sport.title.lowercased())?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 context.delete(activity)
                 try? context.save()
@@ -65,7 +66,7 @@ struct ActivityDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .alert("Rename Run", isPresented: $editingTitle) {
+        .alert("Rename \(activity.sport.title)", isPresented: $editingTitle) {
             TextField("Title", text: $draftTitle)
                 .accessibilityIdentifier("detail.renameField")
             Button("Save") {
@@ -116,11 +117,12 @@ struct ActivityDetailView: View {
     @ViewBuilder
     private var splitsSection: some View {
         let recorded = activity.recordedUnit
+        let sport = activity.sport
         let splits = activity.splits
         if !splits.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Splits (\(recorded.abbreviation))").font(.headline)
-                let paces = splits.compactMap { $0.pace(unit: recorded) }
+                let paces = splits.compactMap { $0.pace(unit: recorded, sport: sport) }
                 let fastest = paces.min() ?? 0
                 let slowest = paces.max() ?? 0
                 ForEach(splits) { split in
@@ -133,10 +135,10 @@ struct ActivityDetailView: View {
                         GeometryReader { geo in
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(complete ? Theme.orange : Theme.splitBlue)
-                                .frame(width: geo.size.width * width(for: split.pace(unit: recorded), fastest: fastest, slowest: slowest))
+                                .frame(width: geo.size.width * width(for: split.pace(unit: recorded, sport: sport), fastest: fastest, slowest: slowest))
                         }
                         .frame(height: 14)
-                        Text(Format.pace(split.pace(unit: recorded)))
+                        Text(sport.rateText(split.pace(unit: recorded, sport: sport), unit: recorded))
                             .font(.subheadline)
                             .monospacedDigit()
                             .frame(width: 56, alignment: .trailing)

@@ -5,15 +5,20 @@ struct RecordScreen: View {
     @Environment(LocationService.self) private var location
     @Environment(RunRecorder.self) private var recorder
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
+    @AppStorage(Sport.storageKey) private var sportRaw = Sport.run.rawValue
     @Binding var tab: Tab
 
     @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var showLive = false
+    @State private var showSportPicker = false
     @State private var showDenied = false
     @State private var pendingStart = false
     @Namespace private var mapScope
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
+    /// While a run is live the recorder's own sport wins: the setting could
+    /// otherwise be changed from another screen mid-run and relabel the card.
+    private var sport: Sport { recorder.isActive ? recorder.sport : (Sport(rawValue: sportRaw) ?? .run) }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -53,6 +58,12 @@ struct RecordScreen: View {
         .fullScreenCover(isPresented: $showLive) {
             LiveRecorderView()
         }
+        .sheet(isPresented: $showSportPicker) {
+            SportPicker(selection: Binding(
+                get: { Sport(rawValue: sportRaw) ?? .run },
+                set: { sportRaw = $0.rawValue }
+            ))
+        }
         .alert("Location is off", isPresented: $showDenied) {
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -80,7 +91,7 @@ struct RecordScreen: View {
     private var statsCard: some View {
         VStack(spacing: 14) {
             ZStack {
-                Text("Run")
+                Text(sport.title)
                     .font(.headline)
                     .foregroundStyle(.white)
                 // Only while a run is live: before Start there is nothing to
@@ -104,7 +115,8 @@ struct RecordScreen: View {
             HStack(alignment: .firstTextBaseline) {
                 stat(Format.clock(recorder.elapsed), "Time", id: "record.time")
                 Spacer()
-                stat(Format.pace(recorder.averagePace), "Avg. pace (\(unit.paceSuffix))", id: "record.pace")
+                stat(sport.rateText(recorder.averagePace, unit: unit),
+                     sport.rateLabel("Avg.", unit: unit), id: "record.pace")
                 Spacer()
                 stat(Format.distance(recorder.distanceMeters, unit: unit), "Distance (\(unit.abbreviation))", id: "record.distance")
             }
@@ -156,20 +168,24 @@ struct RecordScreen: View {
 
     private var sportChip: some View {
         VStack(spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                Circle()
-                    .fill(Color(white: 0.2))
-                    .frame(width: 72, height: 72)
-                    .overlay(Image(systemName: "figure.run").font(.system(size: 28)).foregroundStyle(Theme.orange))
-                Circle()
-                    .fill(Theme.orange)
-                    .frame(width: 18, height: 18)
-                    .overlay(Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.black))
+            Button { showSportPicker = true } label: {
+                ZStack(alignment: .topTrailing) {
+                    Circle()
+                        .fill(Color(white: 0.2))
+                        .frame(width: 72, height: 72)
+                        .overlay(Image(systemName: sport.symbol).font(.system(size: 28)).foregroundStyle(Theme.orange))
+                    Circle()
+                        .fill(Theme.orange)
+                        .frame(width: 18, height: 18)
+                        .overlay(Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.black))
+                }
             }
-            Text("Run").font(.subheadline).foregroundStyle(.white)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Sport, \(sport.title)")
+            .accessibilityHint("Choose run, walk or ride")
+            .accessibilityIdentifier("record.sport")
+            Text(sport.title).font(.subheadline).foregroundStyle(.white)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("record.sport")
     }
 
     private var startButton: some View {
@@ -217,7 +233,7 @@ struct RecordScreen: View {
 
     private func beginRun() {
         location.startTracking()
-        recorder.start(unit: unit)
+        recorder.start(unit: unit, sport: sport)
         showLive = true
     }
 }

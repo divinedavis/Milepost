@@ -65,7 +65,7 @@ struct YouScreen: View {
     private var voiceFooter: String {
         let noun = unit.splitNoun.lowercased()
         switch voice {
-        case .off: return "Voice cues read out your time and average pace mid-run, over your music, even with the screen off."
+        case .off: return "Voice cues read out your time and average pace, over your music, even with the screen off."
         case .full: return "Spoken at every \(noun), over your music, even with the screen off."
         case .half: return "Spoken at every half \(noun), over your music, even with the screen off."
         }
@@ -73,7 +73,7 @@ struct YouScreen: View {
 
     private func totals(_ t: ActivityTotals) -> some View {
         Group {
-            LabeledContent("Runs", value: "\(t.count)")
+            LabeledContent("Activities", value: "\(t.count)")
             LabeledContent("Distance", value: "\(Format.distance(t.distanceMeters, unit: unit)) \(unit.abbreviation)")
             LabeledContent("Time", value: Format.duration(t.seconds))
             LabeledContent("Avg. pace", value: "\(Format.pace(t.averagePace(unit: unit))) \(unit.paceSuffix)")

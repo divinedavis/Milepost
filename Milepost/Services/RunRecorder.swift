@@ -10,6 +10,7 @@ struct RunSummary: Equatable {
     var splitMeters: Double
     var route: [RoutePoint]
     var splits: [Split]
+    var sport: Sport
 }
 
 /// The recording engine. Pure state + arithmetic: it is fed CLLocations by
@@ -36,6 +37,7 @@ final class RunRecorder {
     private(set) var splits: [Split] = []
     private(set) var startDate: Date?
     private(set) var unit: DistanceUnit = .miles
+    private(set) var sport: Sport = .run
 
     /// Fired each time the run crosses a half-unit boundary (0.5, 1, 1.5 …).
     /// The voice announcer decides which of those to say; the engine has no
@@ -58,14 +60,14 @@ final class RunRecorder {
     var isActive: Bool { state != .idle }
     var hasMovement: Bool { distanceMeters >= Self.minimumMovementMeters }
     var currentSplit: Split? { splits.last }
-    var currentSplitPace: Double? { currentSplit?.pace(unit: unit) }
+    var currentSplitPace: Double? { currentSplit?.pace(unit: unit, sport: sport) }
     /// The pace of the last split that ran the full distance. Unlike
     /// `averagePace` this does not move between GPS fixes.
     var previousSplitPace: Double? {
-        splits.dropLast().last.flatMap { $0.pace(unit: unit) }
+        splits.dropLast().last.flatMap { $0.pace(unit: unit, sport: sport) }
     }
     var averagePace: Double? {
-        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: elapsed, unit: unit)
+        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: elapsed, unit: unit, sport: sport)
     }
     /// The instant a stopwatch would have started to read `elapsed` right
     /// now; nil while paused. Stable for the whole recording segment, so a
@@ -76,9 +78,10 @@ final class RunRecorder {
 
     // MARK: Lifecycle
 
-    func start(unit: DistanceUnit) {
+    func start(unit: DistanceUnit, sport: Sport = .run) {
         guard state == .idle else { return }
         self.unit = unit
+        self.sport = sport
         distanceMeters = 0
         elapsed = 0
         accumulated = 0
@@ -126,7 +129,8 @@ final class RunRecorder {
                           distanceMeters: distanceMeters,
                           splitMeters: splitMeters,
                           route: route,
-                          splits: splits)
+                          splits: splits,
+                          sport: sport)
     }
 
     func discard() {
@@ -190,7 +194,8 @@ final class RunRecorder {
             let after = step > 0 ? min(1, overshoot / step) * seconds : 0
             let milestone = Milestone(distanceMeters: nextMilestoneMeters,
                                       elapsed: max(0, elapsed - after),
-                                      unit: unit)
+                                      unit: unit,
+                                      sport: sport)
             nextMilestoneMeters += milestoneMeters
             onMilestone?(milestone)
         }

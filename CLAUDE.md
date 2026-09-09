@@ -1,6 +1,7 @@
 # Milepost — working notes
 
-A Strava-style run tracker: GPS record screen, full-screen live recorder
+A Strava-style tracker for runs, walks and bike rides: GPS record screen,
+full-screen live recorder
 (time / split pace / distance / splits), pause + resume, "No Movement
 Detected" guard, save to a local SwiftData log, per-run detail with route map,
 and a Dynamic Island / lock-screen Live Activity showing the mile in progress.
@@ -10,6 +11,8 @@ Same per-change loop as the other iOS apps (Pothole Radar is the template):
 
 1. `./scripts/run_tests.sh` — unit + UI. Decide whether the change needs a new
    XCUITest and say so in the commit body ("XCUITest: added X" / "N/A because").
+   The suite is five passes: unit, static UI, sport, Live Activity, and two
+   moving ones (a run at 3.5 m/s and a ride at 8 m/s).
 2. `./scripts/smoke_test.sh` — a green suite does not prove a cold launch.
 3. Secrets scan of the staged diff. `scripts/asc-config.env` and `*.p8` are
    gitignored; nothing else here is secret.
@@ -30,8 +33,11 @@ Gotchas:
   in "No Movement Detected") and starts a `simctl location` route through
   Prospect Park for `MilepostRouteUITests` (distance must climb, save works).
 - `run_tests.sh ui <filter>` takes `Target/Class/test`. `MilepostUITests/testX`
-  resolves to a class that does not exist, runs zero tests and prints
-  `** TEST SUCCEEDED **`.
+  resolves to a class that does not exist and runs zero tests; so does a
+  freshly generated project whose test bundle has not been rebuilt. xcodebuild
+  prints `** TEST SUCCEEDED **` either way, so `run_tests.sh` now fails with
+  "NO TESTS RAN" unless the log says tests actually executed. If you see that,
+  the filter is wrong or the xcodeproj is stale.
 - Offscreen `List` cells are not in the accessibility tree. The Settings
   section on You sits below the fold on an iPhone 17 Pro: `app.swipeUp()`
   before querying it, or the element "does not exist".
@@ -39,6 +45,25 @@ Gotchas:
 - Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
   `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+
+Sports (`Sport.swift`, `SportPicker`):
+- Run / Walk / Ride, chosen from the chip on the Record tab, remembered in
+  UserDefaults. The chip is only on screen before a run starts, so the sport
+  cannot change mid-recording; `RecordScreen.sport` reads the recorder's own
+  value while one is live in case the setting is changed elsewhere.
+- The engine is identical for all three. What differs is the plausibility
+  window and the wording. A 45-minute mile is a normal walk and outside the
+  run bounds; 36 mph is a normal descent on a bike and outside them too. Get
+  this wrong and the rate silently reads "-:--" for a whole activity.
+- A ride reads in **speed** (mph / km/h), a run and a walk in **pace**
+  (min/mi). `Sport.rateText` / `rateSuffix` / `rateLabel` are the only place
+  that decides; do not call `Format.pace` directly in a view.
+- `Sport` is compiled into the widget, so it cannot touch app-only types.
+  That is why the spoken-duration helper lives on `Format` and
+  `VoiceCuePhrase.spoken` is a thin alias to it.
+- `Activity.sportRaw` was added after 1.0 shipped, with a default, so
+  SwiftData migrates existing stored runs without a mapping model. Do not
+  make it non-optional without a default.
 
 Live Activity (`MilepostWidget/`, `RunActivityController`):
 - The SwiftData model is called `Activity`, so inside the app target it

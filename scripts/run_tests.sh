@@ -37,6 +37,13 @@ moving() {
     40.6600,-73.9740 40.6650,-73.9700 40.6602,-73.9690 >/dev/null 2>&1 || true
 }
 
+# The same loop at about 18 mph, for the ride suite.
+riding() {
+  xcrun simctl location "$DEVICE" start --speed=8 --interval=1 \
+    40.6602,-73.9690 40.6560,-73.9620 40.6510,-73.9660 40.6530,-73.9750 \
+    40.6600,-73.9740 40.6650,-73.9700 40.6602,-73.9690 >/dev/null 2>&1 || true
+}
+
 run() {
   local target="$1"
   local args=(-project Milepost.xcodeproj -scheme Milepost -destination "$DEST" CODE_SIGNING_ALLOWED=NO)
@@ -45,10 +52,23 @@ run() {
   else
     args+=(-only-testing:"$target")
   fi
+  local log
+  log=$(mktemp)
   set +e
-  xcodebuild test "${args[@]}" 2>&1 | grep -E "Test Case|error:|failed|\*\* TEST" | tail -80
-  local status=${PIPESTATUS[0]}
+  xcodebuild test "${args[@]}" > "$log" 2>&1
+  local status=$?
   set -e
+  grep -E "Test Case|error:|failed|\*\* TEST" "$log" | tail -80
+  # A filter that matches nothing — or a stale xcodeproj whose test bundle
+  # was built without the new file — runs zero tests and still prints
+  # "** TEST SUCCEEDED **". That is a broken gate, not a pass.
+  if ! grep -qE "Executed [1-9][0-9]* test" "$log"; then
+    echo "NO TESTS RAN for ${FILTER:-$target}"
+    echo "  a filter that matches nothing, or a stale project: run scripts/generate.sh"
+    rm -f "$log"
+    return 1
+  fi
+  rm -f "$log"
   return $status
 }
 
@@ -57,11 +77,16 @@ ui_all() {
   echo "== ui (static) =="
   still
   run MilepostUITests/MilepostUITests
+  echo "== ui (sport) =="
+  run MilepostUITests/MilepostSportUITests
   echo "== ui (live activity) =="
   run MilepostUITests/MilepostLiveActivityUITests
   echo "== ui (moving) =="
   moving
   run MilepostUITests/MilepostRouteUITests
+  echo "== ui (moving, ride) =="
+  riding
+  run MilepostUITests/MilepostRideUITests
   still
 }
 
@@ -70,7 +95,7 @@ case "$WHAT" in
   ui)
     if [ -n "$FILTER" ]; then
       boot
-      case "$FILTER" in *Route*) moving ;; *) still ;; esac
+      case "$FILTER" in *Ride*) riding ;; *Route*) moving ;; *) still ;; esac
       run "$FILTER"; still
     else
       ui_all

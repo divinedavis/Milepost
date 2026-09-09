@@ -36,7 +36,7 @@ struct Split: Codable, Hashable, Identifiable {
         distanceMeters >= splitMeters - 0.001
     }
 
-    func pace(unit: DistanceUnit) -> Double? {
-        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: seconds, unit: unit)
+    func pace(unit: DistanceUnit, sport: Sport = .run) -> Double? {
+        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: seconds, unit: unit, sport: sport)
     }
 }

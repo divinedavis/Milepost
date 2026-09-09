@@ -7,7 +7,7 @@ import XCTest
 @MainActor
 final class ActivityTests: XCTestCase {
 
-    private func summary(start: Date, meters: Double, seconds: TimeInterval) -> RunSummary {
+    private func summary(start: Date, meters: Double, seconds: TimeInterval, sport: Sport = .run) -> RunSummary {
         let route = [
             RoutePoint(latitude: 40.68, longitude: -73.97, timestamp: start),
             RoutePoint(latitude: 40.69, longitude: -73.97, timestamp: start.addingTimeInterval(seconds)),
@@ -15,7 +15,8 @@ final class ActivityTests: XCTestCase {
         return RunSummary(startDate: start, endDate: start.addingTimeInterval(seconds + 30),
                           movingSeconds: seconds, distanceMeters: meters,
                           splitMeters: DistanceUnit.miles.meters, route: route,
-                          splits: [Split(index: 1, distanceMeters: meters, seconds: seconds)])
+                          splits: [Split(index: 1, distanceMeters: meters, seconds: seconds)],
+                          sport: sport)
     }
 
     func testRouteAndSplitsRoundTripThroughTheStore() throws {

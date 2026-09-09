@@ -16,6 +16,9 @@ final class Activity {
     var splitMeters: Double
     var routeData: Data
     var splitsData: Data
+    /// Added after 1.0 shipped. The default is what every stored activity
+    /// was, so SwiftData migrates old rows without touching them.
+    var sportRaw: String = Sport.run.rawValue
 
     init(id: UUID = UUID(),
          title: String,
@@ -25,7 +28,8 @@ final class Activity {
          distanceMeters: Double,
          splitMeters: Double,
          route: [RoutePoint],
-         splits: [Split]) {
+         splits: [Split],
+         sport: Sport = .run) {
         self.id = id
         self.title = title
         self.startDate = startDate
@@ -35,6 +39,7 @@ final class Activity {
         self.splitMeters = splitMeters
         self.routeData = (try? JSONEncoder().encode(route)) ?? Data()
         self.splitsData = (try? JSONEncoder().encode(splits)) ?? Data()
+        self.sportRaw = sport.rawValue
     }
 
     convenience init(summary: RunSummary, title: String) {
@@ -45,7 +50,8 @@ final class Activity {
                   distanceMeters: summary.distanceMeters,
                   splitMeters: summary.splitMeters,
                   route: summary.route,
-                  splits: summary.splits)
+                  splits: summary.splits,
+                  sport: summary.sport)
     }
 
     var route: [RoutePoint] {
@@ -56,6 +62,8 @@ final class Activity {
         (try? JSONDecoder().decode([Split].self, from: splitsData)) ?? []
     }
 
+    var sport: Sport { Sport(rawValue: sportRaw) ?? .run }
+
     var recordedUnit: DistanceUnit {
         abs(splitMeters - DistanceUnit.kilometers.meters) < 1 ? .kilometers : .miles
     }
@@ -63,7 +71,7 @@ final class Activity {
     var coordinates: [CLLocationCoordinate2D] { route.map(\.coordinate) }
 
     func averagePace(unit: DistanceUnit) -> Double? {
-        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: movingSeconds, unit: unit)
+        Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: movingSeconds, unit: unit, sport: sport)
     }
 }
 
