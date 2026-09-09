@@ -90,6 +90,14 @@ def main() -> int:
     existing = r.json().get("data", []) if r.ok else []
     if args.probe_only:
         show("dataProtections", s.get(f"{IRIS}/appDataUsageDataProtections", timeout=30))
+        # The "regulated medical device" declaration (required for any app in
+        # Health & Fitness) has no public API either. Dump the appInfo the
+        # dashboard sees so the field name can be found and PATCHed.
+        r = s.get(f"{IRIS}/apps/{app_id}/appInfos", timeout=30)
+        show("appInfos (look for medical/regulated fields)", r)
+        for key in ("regulatedMedicalDeviceDeclarations", "medicalDeviceDeclarations", "appMedicalDeviceDeclarations"):
+            rr = s.get(f"{IRIS}/{key}", params={"filter[app]": app_id}, timeout=30)
+            print(f"   {key}: HTTP {rr.status_code}")
         return 0
 
     if any((e.get("relationships", {}).get("dataProtection", {}).get("data") or {}).get("id")
