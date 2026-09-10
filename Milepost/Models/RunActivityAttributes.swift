@@ -53,24 +53,36 @@ struct RunActivityAttributes: ActivityAttributes {
 }
 
 extension RunActivityAttributes.ContentState {
-    /// "Mile 3" / "Kilometer 3": the headline everywhere.
-    func headline(unit: DistanceUnit) -> String {
+    /// "0.30 mi" — how far so far. This is the number that actually moves,
+    /// so it is the headline everywhere; the mile you are *on* only changes
+    /// once a mile and reads as stuck. Two decimals under 10 units and one
+    /// above, so the compact island never runs out of room.
+    func distanceText(unit: DistanceUnit) -> String {
+        let number = distanceUnits >= 10
+            ? String(format: "%.1f", distanceUnits)
+            : String(format: "%.2f", distanceUnits)
+        return "\(number) \(unit.abbreviation)"
+    }
+
+    /// "Mile 3": the mile / kilometer in progress.
+    func splitText(unit: DistanceUnit) -> String {
         "\(unit.splitNoun) \(splitIndex)"
     }
 
-    /// "2.41 mi · 9:12 /mi", or "6.80 mi · 14.2 mph" on a ride: total
-    /// distance and the rate of the split in progress, falling back to the
-    /// last finished split while this one is too young to have one.
-    func subtitle(unit: DistanceUnit, sport: Sport = .run) -> String {
-        let distance = "\(Format.distance(distanceUnits * unit.meters, unit: unit)) \(unit.abbreviation)"
+    /// "Mile 3 · 9:12 /mi", or "Mile 3 · 14.2 mph" on a ride. The rate is the
+    /// split in progress, falling back to the last finished split while this
+    /// one is too young to have one.
+    func detailText(unit: DistanceUnit, sport: Sport = .run) -> String {
+        let split = splitText(unit: unit)
         if let rate = splitPace ?? previousSplitPace {
-            return "\(distance) · \(sport.rateText(rate, unit: unit)) \(sport.rateSuffix(unit: unit))"
+            return "\(split) · \(sport.rateText(rate, unit: unit)) \(sport.rateSuffix(unit: unit))"
         }
-        return distance
+        return split
     }
 
-    /// "Mile 4": where the progress bar is heading.
-    func nextHeadline(unit: DistanceUnit) -> String {
-        "\(unit.splitNoun) \(splitIndex + 1)"
+    /// What VoiceOver reads off the track.
+    func trackDescription(unit: DistanceUnit) -> String {
+        let percent = Int((splitFraction * 100).rounded())
+        return "\(percent) percent to \(unit.splitNoun) \(splitIndex + 1)"
     }
 }

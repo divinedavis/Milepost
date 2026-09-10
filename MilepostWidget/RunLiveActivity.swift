@@ -3,7 +3,8 @@ import SwiftUI
 import WidgetKit
 
 /// The run in the Dynamic Island and on the lock screen. Laid out like a
-/// ride-share pickup card: wordmark, "Mile 3" headline, distance + pace
+/// ride-share pickup card: wordmark, how far so far as the headline, the
+/// mile in progress and the pace
 /// under it, the clock on the right, and a track along the bottom with the
 /// runner moving toward the next milepost.
 struct RunLiveActivity: Widget {
@@ -41,7 +42,9 @@ struct RunLiveActivity: Widget {
             } compactLeading: {
                 RunnerMark(sport: context.attributes.sport, isPaused: context.state.isPaused)
             } compactTrailing: {
-                Text(context.state.headline(unit: context.attributes.unit))
+                // How far, not which mile: the mile number would sit here
+                // unchanged for a whole mile and read as frozen.
+                Text(context.state.distanceText(unit: context.attributes.unit))
                     .font(.system(size: 15, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(.white)
@@ -69,18 +72,18 @@ private struct RunnerMark: View {
     }
 }
 
-/// "Mile 3" with the distance and pace under it.
+/// How far, with the mile in progress and the pace under it.
 private struct Headline: View {
     let context: ActivityViewContext<RunActivityAttributes>
     var body: some View {
         let unit = context.attributes.unit
         VStack(alignment: .leading, spacing: 2) {
-            Text(context.state.headline(unit: unit))
+            Text(context.state.distanceText(unit: unit))
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(context.state.subtitle(unit: unit, sport: context.attributes.sport))
+            Text(context.state.detailText(unit: unit, sport: context.attributes.sport))
                 .font(.system(size: 14))
                 .monospacedDigit()
                 .foregroundStyle(Theme.secondaryText)
@@ -118,24 +121,38 @@ private struct RunClock: View {
     }
 }
 
-/// The bottom row: a "Paused" chip when stopped, then the track.
+/// The bottom row: the Pause / Resume button, then the track.
 private struct TrackRow: View {
     let context: ActivityViewContext<RunActivityAttributes>
     var body: some View {
         HStack(spacing: 12) {
-            if context.state.isPaused {
-                Label("Paused", systemImage: "pause.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Theme.paused, in: RoundedRectangle(cornerRadius: 8))
-                    .layoutPriority(1)
-            }
+            RecordingButton(isPaused: context.state.isPaused)
             MileTrack(fraction: context.state.splitFraction,
                       sport: context.attributes.sport,
-                      isPaused: context.state.isPaused)
+                      isPaused: context.state.isPaused,
+                      label: context.state.trackDescription(unit: context.attributes.unit))
         }
+    }
+}
+
+/// Pauses or resumes the run without opening the app. The system runs the
+/// intent in the app's process, so it reaches the live recorder.
+private struct RecordingButton: View {
+    let isPaused: Bool
+
+    var body: some View {
+        Button(intent: ToggleRecordingIntent()) {
+            Label(isPaused ? "Resume" : "Pause",
+                  systemImage: isPaused ? "play.fill" : "pause.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isPaused ? .black : .white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(isPaused ? Theme.paused : Color(white: 0.24), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(isPaused ? "island.resume" : "island.pause")
+        .layoutPriority(1)
     }
 }
 
@@ -145,6 +162,7 @@ private struct MileTrack: View {
     let fraction: Double
     let sport: Sport
     let isPaused: Bool
+    var label: String = ""
 
     private let markerSize: CGFloat = 26
     private let postSize: CGFloat = 16
@@ -179,7 +197,7 @@ private struct MileTrack: View {
             }
         }
         .frame(height: markerSize)
-        .accessibilityLabel("\(Int((fraction * 100).rounded())) percent to the next milepost")
+        .accessibilityLabel(label)
     }
 }
 

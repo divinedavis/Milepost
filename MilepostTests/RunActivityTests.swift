@@ -39,8 +39,8 @@ final class RunActivityTests: XCTestCase {
         XCTAssertNil(s.splitPace)
         XCTAssertFalse(s.isPaused)
         XCTAssertEqual(s.clock, .running(since: clock))
-        XCTAssertEqual(s.headline(unit: .miles), "Mile 1")
-        XCTAssertEqual(s.subtitle(unit: .miles), "0.00 mi")
+        XCTAssertEqual(s.distanceText(unit: .miles), "0.00 mi")
+        XCTAssertEqual(s.detailText(unit: .miles), "Mile 1")
     }
 
     func testHalfwayThroughTheFirstMile() {
@@ -54,7 +54,8 @@ final class RunActivityTests: XCTestCase {
         XCTAssertEqual(s.splitFraction, 0.5, accuracy: 0.011)
         XCTAssertEqual(s.distanceUnits, 0.5, accuracy: 0.011)
         XCTAssertEqual(s.splitPace ?? 0, 600, accuracy: 2)
-        XCTAssertEqual(s.subtitle(unit: .miles), "0.50 mi · 10:00 /mi")
+        XCTAssertEqual(s.distanceText(unit: .miles), "0.50 mi")
+        XCTAssertEqual(s.detailText(unit: .miles), "Mile 1 · 10:00 /mi")
     }
 
     func testCrossingAMileMovesTheHeadlineToTheNextOne() {
@@ -66,8 +67,9 @@ final class RunActivityTests: XCTestCase {
         let s = RunActivityController.state(for: r)
         XCTAssertEqual(s.splitIndex, 2, "20 m past the first milepost is mile 2")
         XCTAssertEqual(s.splitFraction, 0.01, accuracy: 0.011)
-        XCTAssertEqual(s.headline(unit: .miles), "Mile 2")
-        XCTAssertEqual(s.nextHeadline(unit: .miles), "Mile 3")
+        XCTAssertEqual(s.distanceText(unit: .miles), "1.01 mi")
+        XCTAssertEqual(s.splitText(unit: .miles), "Mile 2")
+        XCTAssertEqual(s.trackDescription(unit: .miles), "1 percent to Mile 3")
     }
 
     /// The pace shown falls back to the finished split, never the drifting
@@ -83,11 +85,27 @@ final class RunActivityTests: XCTestCase {
         let s = RunActivityController.state(for: r)
         XCTAssertNil(s.splitPace, "5 m is too little to price mile 2")
         XCTAssertEqual(s.previousSplitPace ?? 0, 598, accuracy: 2)
-        XCTAssertEqual(s.subtitle(unit: .miles), "1.00 mi · 9:58 /mi")
+        XCTAssertEqual(s.distanceText(unit: .miles), "1.00 mi")
+        XCTAssertEqual(s.detailText(unit: .miles), "Mile 2 · 9:58 /mi")
 
         clock = clock.addingTimeInterval(1)
         r.refreshElapsed()
         XCTAssertEqual(s, RunActivityController.state(for: r))
+    }
+
+    /// The compact island has to stay short past ten miles, so the second
+    /// decimal is dropped there rather than letting the text truncate.
+    func testLongRunsDropADecimalSoTheIslandStillFits() {
+        var s = RunActivityController.state(for: {
+            let r = RunRecorder(now: { Date(timeIntervalSince1970: 1_700_000_000) })
+            r.start(unit: .miles)
+            return r
+        }())
+        s.distanceUnits = 9.99
+        XCTAssertEqual(s.distanceText(unit: .miles), "9.99 mi")
+        s.distanceUnits = 12.34
+        XCTAssertEqual(s.distanceText(unit: .miles), "12.3 mi")
+        XCTAssertLessThanOrEqual(s.distanceText(unit: .miles).count, 7)
     }
 
     func testKilometersUseTheirOwnNoun() {
@@ -97,7 +115,8 @@ final class RunActivityTests: XCTestCase {
         clock = clock.addingTimeInterval(300)
         r.ingest(fix(1250, at: 301))
         let s = RunActivityController.state(for: r)
-        XCTAssertEqual(s.headline(unit: .kilometers), "Kilometer 2")
+        XCTAssertEqual(s.splitText(unit: .kilometers), "Kilometer 2")
+        XCTAssertEqual(s.distanceText(unit: .kilometers), "1.25 km")
         XCTAssertEqual(s.splitFraction, 0.25, accuracy: 0.011)
     }
 

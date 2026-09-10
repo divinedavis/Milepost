@@ -28,6 +28,17 @@ struct MilepostApp: App {
         _recorder = State(initialValue: recorder)
         _announcer = State(initialValue: announcer)
         _liveActivity = State(initialValue: RunActivityController(recorder: recorder))
+        // What the Pause / Resume button on the Live Activity calls. The
+        // system runs that intent in this process, so the recorder it reaches
+        // is the one actually recording.
+        RunActivityActions.toggleRecording = { [weak recorder] in
+            guard let recorder else { return }
+            switch recorder.state {
+            case .recording: recorder.pause()
+            case .paused: recorder.resume()
+            case .idle: break
+            }
+        }
 
         let config = ModelConfiguration(isStoredInMemoryOnly: isUITest)
         do {

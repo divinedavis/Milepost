@@ -90,6 +90,19 @@ Live Activity (`MilepostWidget/`, `RunActivityController`):
 - The compact island only has room for the mile. Distance, pace and the track
   are expanded-only: long-press at normalized `dy: 0.037` (~32 pt down an
   874 pt screen) to open it. Pressing the status bar above it does nothing.
+- The compact island shows **how far**, not which mile: a mile number sits
+  there unchanged for a whole mile and reads as frozen. Distance is the
+  headline on the expanded card too, with the mile and pace under it. Two
+  decimals under ten units, one above, so the compact string stays short.
+- Pause / Resume on the card is a `LiveActivityIntent`. That kind of intent
+  runs in the **app's** process (the system wakes the app in the background
+  for it), which is the only reason it can reach the live recorder. The
+  intent file is compiled into the widget too, so it must not touch the
+  engine: the app registers a closure on `RunActivityActions` at launch and
+  the intent calls that. If the app was killed the recorder is idle and the
+  tap does nothing, which is right — the run is gone either way.
+- XCUITest can tap those buttons: they carry accessibility identifiers into
+  SpringBoard's tree, so `springboard.buttons["island.pause"]` works.
 - A crash mid-run would strand a card nobody owns, so the controller ends any
   stray activity on launch.
 - Never `app.debugDescription` or an untyped `descendants(matching: .any)` on

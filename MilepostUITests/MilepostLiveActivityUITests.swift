@@ -59,20 +59,57 @@ final class MilepostLiveActivityUITests: XCTestCase {
             .press(forDuration: 1.2)
     }
 
+    /// The Pause button on the expanded island has to actually pause the
+    /// run, not just relabel the card: the intent runs in the app's process
+    /// and reaches the live recorder.
+    func testPausingFromTheDynamicIslandPausesTheRun() {
+        startRun()
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(islandText("0.00 mi").waitForExistence(timeout: 10))
+
+        expandIsland()
+        let pause = springboard.buttons["island.pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 8), "no Pause button on the expanded island")
+        snap("island-buttons")
+        pause.tap()
+
+        XCTAssertTrue(springboard.buttons["island.resume"].waitForExistence(timeout: 12),
+                      "the card did not flip to Resume")
+
+        app.activate()
+        XCTAssertTrue(app.buttons["live.resume"].waitForExistence(timeout: 10),
+                      "the island said paused but the recorder kept running")
+
+        // And back the other way, from the island again.
+        XCUIDevice.shared.press(.home)
+        expandIsland()
+        let resume = springboard.buttons["island.resume"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 8))
+        resume.tap()
+        XCTAssertTrue(springboard.buttons["island.pause"].waitForExistence(timeout: 12))
+        app.activate()
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 10),
+                      "the island said running but the recorder stayed paused")
+    }
+
     func testDynamicIslandShowsTheMileAndFollowsPause() {
         startRun()
 
+        // The compact island carries how far, not which mile: a mile number
+        // would sit here unchanged for a whole mile.
         XCUIDevice.shared.press(.home)
-        XCTAssertTrue(islandText("Mile 1").waitForExistence(timeout: 10),
-                      "no Live Activity in the Dynamic Island after backgrounding")
+        XCTAssertTrue(islandText("0.00 mi").waitForExistence(timeout: 10),
+                      "no distance in the compact Dynamic Island after backgrounding")
+        XCTAssertFalse(islandText("Mile 1").exists,
+                       "the compact island is showing the mile number instead of the distance")
         snap("island-compact")
 
-        // The expanded card adds distance, pace and the track under the
-        // mile. Assert on the distance: "Milepost" and a bare "mi" would
-        // both match the app icon sitting on the home screen behind it.
+        // The expanded card adds the mile in progress, the pace and the
+        // track under the distance. "Milepost" and a bare "mi" would both
+        // match the app icon sitting on the home screen behind it.
         expandIsland()
-        XCTAssertTrue(islandText("0.00 mi").waitForExistence(timeout: 6),
-                      "the expanded island is missing the distance line")
+        XCTAssertTrue(islandText("Mile 1").waitForExistence(timeout: 6),
+                      "the expanded island is missing the mile in progress")
         XCTAssertTrue(islandText("Time").exists, "no clock on the expanded card")
         snap("island-expanded")
         springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
@@ -95,7 +132,7 @@ final class MilepostLiveActivityUITests: XCTestCase {
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 6))
         XCUIDevice.shared.press(.home)
         let gone = NSPredicate(format: "exists == false")
-        let e = expectation(for: gone, evaluatedWith: islandText("Mile 1"))
+        let e = expectation(for: gone, evaluatedWith: islandText("0.00 mi"))
         wait(for: [e], timeout: 10)
         app.activate()
     }

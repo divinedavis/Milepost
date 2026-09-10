@@ -80,6 +80,7 @@ targets:
       - path: Milepost/Models/RunActivityAttributes.swift
       - path: Milepost/Models/Units.swift
       - path: Milepost/Models/Sport.swift
+      - path: Milepost/Models/RunActivityIntents.swift
       - path: Milepost/Design/Theme.swift
     info:
       path: MilepostWidget/Info.plist

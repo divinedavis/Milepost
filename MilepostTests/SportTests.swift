@@ -110,8 +110,8 @@ final class SportTests: XCTestCase {
         XCTAssertEqual(s.splitIndex, 2)
         // 100 m into mile 2, its own share of the 240 s works out at 15.9 mph.
         // Miles per hour, never minutes per mile: that is the whole point.
-        XCTAssertEqual(s.subtitle(unit: .miles, sport: .bike), "1.06 mi · 15.9 mph")
-        XCTAssertEqual(s.headline(unit: .miles), "Mile 2")
+        XCTAssertEqual(s.distanceText(unit: .miles), "1.06 mi")
+        XCTAssertEqual(s.detailText(unit: .miles, sport: .bike), "Mile 2 · 15.9 mph")
         XCTAssertEqual(Sport.bike.symbol, "bicycle")
     }
 
