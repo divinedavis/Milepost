@@ -85,8 +85,12 @@ final class MilepostRouteUITests: XCTestCase {
 
         springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.037))
             .press(forDuration: 1.2)
+        // BEGINSWITH "Mile " (not a hardcoded "Mile 1"): MILEPOST_LONG_RUN
+        // deliberately drives distance past 1.0 mi to show a split, at which
+        // point RunRecorder.swift bumps splitIndex to 2 (Mile 2 in
+        // progress). A literal "Mile 1" here always failed on that path.
         XCTAssertTrue(springboard.descendants(matching: .any)
-            .matching(NSPredicate(format: "label BEGINSWITH %@", "Mile 1")).firstMatch
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Mile ")).firstMatch
             .waitForExistence(timeout: 8), "no mile in progress on the expanded island")
         springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
         app.activate()

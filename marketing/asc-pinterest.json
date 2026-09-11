@@ -1,0 +1,15 @@
+{
+  "name": "Milepost",
+  "icon": "/Users/divinedavis/projects/Milepost/Milepost/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png",
+  "brand": "#FF5C1A",
+  "raw_dir": "/Users/divinedavis/projects/Milepost/marketing/raw",
+  "out_dir": "/Users/divinedavis/projects/Milepost/marketing/asc-screenshots-pinterest",
+  "masonry": ["route-detail.png", "you-totals.png", "route-recording.png", "route-save.png", "activities-list.png"],
+  "panels": [
+    ["route-recording.png", "Press start. See your pace."],
+    ["route-detail.png", "Every run, mapped"],
+    ["route-save.png", "Name it. Save it."],
+    ["you-totals.png", "Watch the miles add up"]
+  ],
+  "stickers": ["🏃", "🗺️", "⛰️", "🔥"]
+}
