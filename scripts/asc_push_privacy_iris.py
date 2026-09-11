@@ -99,7 +99,9 @@ def main() -> int:
     app_id = load_config()["ASC_APP_ID"]
     s = session()
 
-    r = s.get(f"{IRIS}/appDataUsages", params={"filter[app]": app_id, "limit": 50}, timeout=30)
+    # The appDataUsages collection refuses GET (403 "does not allow
+    # GET_COLLECTION"); the app's relationship path lists them.
+    r = s.get(f"{IRIS}/apps/{app_id}/dataUsages", params={"limit": 50}, timeout=30)
     if r.status_code == 401:
         raise SystemExit("iris says 401: the Spaceship cookie has expired — "
                          "run `fastlane spaceauth -u divinejdavis@gmail.com` and retry")
