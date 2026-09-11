@@ -28,8 +28,11 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from asc import ASC, load_config  # noqa: E402
 
-SUBTITLE = "GPS run & walk tracker"                       # <= 30 characters
-KEYWORDS = ("run,running,walk,walking,gps,tracker,pace,splits,"
+NAME = "Milepost: Run, Walk & Ride"                   # <= 30 characters
+SUBTITLE = "GPS run, walk & ride tracker"                 # <= 30 characters
+# Words already in the name or subtitle are indexed from there, so they are
+# not repeated here.
+KEYWORDS = ("running,walking,cycling,bike,biking,pace,splits,"
             "miles,jog,jogging,route,distance,fitness,cues")   # <= 100 characters
 PROMO = ("Press Start, run, press Finish. Time, pace and distance live, splits as "
          "they happen, your route on a map. Add friends to see their runs; routes stay on your phone.")
@@ -39,7 +42,7 @@ COPYRIGHT = "2026 Divine Davis"
 PRIMARY_CATEGORY = "HEALTH_AND_FITNESS"
 SECONDARY_CATEGORY = "SPORTS"
 
-DESCRIPTION = """Milepost records your runs and walks and keeps them on your phone. Press Start, go, press Finish. That is the whole app.
+DESCRIPTION = """Milepost records your runs, walks and bike rides and keeps them on your phone. Press Start, go, press Finish. That is the whole app.
 
 WHILE YOU RUN
 A full-screen recorder shows the clock, your current split pace and distance in big type you can read at a glance. Pause stops the clock, Resume picks it up, Finish saves. Lock the phone or switch apps and the recording keeps going. Collapse the recorder and the same run sits on the map with your route drawing in as you move.
@@ -63,7 +66,7 @@ Milepost uses GPS, so it needs open sky; runs that start indoors show distance o
 """
 
 REVIEW_NOTES = """WHAT THE APP DOES
-Milepost records a run or walk with GPS: elapsed time, distance, split pace, mile/km splits, and the route drawn on an Apple map. Runs are saved to a local database on the device. Recording needs no account and there is no in-app purchase.
+Milepost records a run, walk or bike ride with GPS: elapsed time, distance, split pace, mile/km splits, and the route drawn on an Apple map. Runs are saved to a local database on the device. Recording needs no account and there is no in-app purchase.
 
 FRIENDS (OPTIONAL, SIGN IN WITH APPLE)
 Block tab > Friends > Continue with Apple, then pick any username. Tap the person-plus button, search "milepost_demo" and tap Add: that demo account accepts requests automatically and has sample activities, so its runs appear in Block > Friends right away. Friends see only an activity's sport, title, distance, pace and time - never the route. Swipe a friend's activity (or long-press) to Report or Block. You tab > Friends: sharing toggle, Sign out, and Delete account (deletes the account and everything shared, immediately).
@@ -171,6 +174,7 @@ def ensure_availability(asc: ASC, app_id: str) -> None:
 
 
 def apply(asc: ASC, cfg: dict) -> None:
+    assert len(NAME) <= 30, "name over 30 chars"
     assert len(SUBTITLE) <= 30, "subtitle over 30 chars"
     assert len(KEYWORDS) <= 100, f"keywords over 100 chars ({len(KEYWORDS)})"
     assert len(PROMO) <= 170, f"promotional text over 170 chars ({len(PROMO)})"
@@ -194,8 +198,8 @@ def apply(asc: ASC, cfg: dict) -> None:
 
     asc.patch(f"/appInfoLocalizations/{ids['info_loc']}", {"data": {
         "type": "appInfoLocalizations", "id": ids["info_loc"],
-        "attributes": {"subtitle": SUBTITLE, "privacyPolicyUrl": PRIVACY}}})
-    print("    subtitle + privacy policy URL")
+        "attributes": {"name": NAME, "subtitle": SUBTITLE, "privacyPolicyUrl": PRIVACY}}})
+    print("    name, subtitle + privacy policy URL")
 
     asc.patch(f"/appStoreVersionLocalizations/{ids['version_loc']}", {"data": {
         "type": "appStoreVersionLocalizations", "id": ids["version_loc"],
@@ -253,6 +257,7 @@ def show(asc: ASC, cfg: dict) -> None:
     avail = asc.s.get(asc._url(f"/apps/{app_id}/appAvailabilityV2"), timeout=30)
     print(f"version {version['versionString']}  {version['appStoreState']}")
     print(f"  categories   {cats}")
+    print(f"  name         {info_loc['name']}")
     print(f"  subtitle     {info_loc['subtitle']}")
     print(f"  description  {len(loc['description'] or '')} chars")
     print(f"  keywords     {loc['keywords']}")
