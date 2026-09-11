@@ -58,6 +58,22 @@ final class RunActivityTests: XCTestCase {
         XCTAssertEqual(s.detailText(unit: .miles), "Mile 1 · 10:00 /mi")
     }
 
+    /// The right end of the progress line, where Now Playing shows time left.
+    func testProgressLineShowsDistanceToTheNextMilepost() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        let fresh = RunActivityController.state(for: r)
+        XCTAssertEqual(fresh.remainingText(unit: .miles), "−1.00 mi")
+        XCTAssertEqual(fresh.remainingDescription(unit: .miles), "1.00 mi to Mile 2")
+
+        r.ingest(fix(0, at: 1))
+        clock = clock.addingTimeInterval(300)
+        r.ingest(fix(804.672, at: 301))   // half a mile
+        let half = RunActivityController.state(for: r)
+        XCTAssertEqual(half.remainingText(unit: .miles), "−0.50 mi")
+        XCTAssertTrue(RunActivityController.state(for: r).remainingText(unit: .kilometers).hasSuffix(" km"))
+    }
+
     func testCrossingAMileMovesTheHeadlineToTheNextOne() {
         let r = makeRecorder()
         r.start(unit: .miles)

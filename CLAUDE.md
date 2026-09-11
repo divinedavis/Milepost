@@ -145,6 +145,21 @@ Live Activity (`MilepostWidget/`, `RunActivityController`):
   there unchanged for a whole mile and reads as frozen. Distance is the
   headline on the expanded card too, with the mile and pace under it. Two
   decimals under ten units, one above, so the compact string stays short.
+- Since 2026-09-11 (user request) the expanded island and the lock-screen
+  card copy the system **Now Playing** layout, row for row: sport tile where
+  the artwork goes, distance + "Mile N · pace" as title/subtitle, a live
+  indicator where the sound bars go; the progress line through the mile in
+  the scrubber row (clock left, "−0.63 mi" to the next milepost right, like
+  time left); Pause / Resume alone at the centre of the bottom row.
+- **Height cap: a third-party expanded island (and lock-screen card) is 160 pt
+  max; anything past it is clipped with no error.** Music is a system app
+  and runs ~207 pt, so "the same size" can only mean the same rows in the
+  same places. The first Now Playing build used a 64 pt tile and a 48 pt
+  controls row and lost the Pause button off the bottom; the UI test still
+  passed because the clipped button kept its accessibility element. Check
+  the `island-expanded` screenshot after any layout change
+  (`TEST_RUNNER_MILEPOST_SHOTS=<dir> run_tests.sh ui
+  MilepostUITests/MilepostLiveActivityUITests`).
 - Pause / Resume on the card is a `LiveActivityIntent`. That kind of intent
   runs in the **app's** process (the system wakes the app in the background
   for it), which is the only reason it can reach the live recorder. The

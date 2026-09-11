@@ -104,13 +104,16 @@ final class MilepostLiveActivityUITests: XCTestCase {
                        "the compact island is showing the mile number instead of the distance")
         snap("island-compact")
 
-        // The expanded card adds the mile in progress, the pace and the
-        // track under the distance. "Milepost" and a bare "mi" would both
-        // match the app icon sitting on the home screen behind it.
+        // The expanded card is laid out like Now Playing: the mile in
+        // progress under the distance, and the distance to the next milepost
+        // at the end of the progress line (where a player shows time left).
+        // "Milepost" and a bare "mi" would both match the app icon sitting on
+        // the home screen behind it.
         expandIsland()
         XCTAssertTrue(islandText("Mile 1").waitForExistence(timeout: 6),
                       "the expanded island is missing the mile in progress")
-        XCTAssertTrue(islandText("Time").exists, "no clock on the expanded card")
+        XCTAssertTrue(islandText("to Mile 2").exists, "no distance-to-the-next-mile on the progress line")
+        XCTAssertTrue(springboard.buttons["island.pause"].exists, "no Pause button in the bottom row")
         snap("island-expanded")
         springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
 

@@ -80,6 +80,18 @@ extension RunActivityAttributes.ContentState {
         return split
     }
 
+    /// "−0.63 mi": how far to the next milepost, in the slot where a player
+    /// shows the time left. Derived from `splitFraction`, so it moves only
+    /// when a GPS fix does.
+    func remainingText(unit: DistanceUnit) -> String {
+        "−" + String(format: "%.2f", max(0, 1 - splitFraction)) + " \(unit.abbreviation)"
+    }
+
+    /// "0.63 mi to Mile 2", for VoiceOver.
+    func remainingDescription(unit: DistanceUnit) -> String {
+        String(format: "%.2f", max(0, 1 - splitFraction)) + " \(unit.abbreviation) to \(unit.splitNoun) \(splitIndex + 1)"
+    }
+
     /// What VoiceOver reads off the track.
     func trackDescription(unit: DistanceUnit) -> String {
         let percent = Int((splitFraction * 100).rounded())
