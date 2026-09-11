@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""Publish Milepost's App Privacy labels: "Data Not Collected".
+"""Publish Milepost's App Privacy labels.
 
 The public App Store Connect API has no App Privacy resource, so this drives
 the private iris API the dashboard itself uses, with the cookie jar fastlane's
 Spaceship writes after `fastlane spaceauth -u <apple id>` (2FA, so a person
 runs that; the cookie lasts a few days).
 
-Milepost stores runs in an on-device database and makes no network requests,
-so the whole questionnaire is one record with dataProtection
-DATA_NOT_COLLECTED and no category/purpose, followed by the publish PATCH.
-The publish state can only be UPDATEd, never read, so a 200 there is the proof.
+Until 2026-09-10 Milepost was "Data Not Collected". The friends layer changed
+that: an account (Sign in with Apple), a username and display name, and the
+stats of each shared activity, all linked to the account, used only to make
+the feature work, never for tracking. Routes and location are NOT collected —
+they never leave the phone. The declaration below is that, and nothing else.
+
+Existing records are deleted first (a leftover DATA_NOT_COLLECTED record
+would contradict the categories), then one record per (category, purpose),
+then the publish PATCH. The publish state can only be UPDATEd, never read,
+so a 200 there is the proof.
 
     python3 scripts/asc_push_privacy_iris.py [--probe-only]
 """
@@ -27,6 +33,17 @@ from asc import load_config  # noqa: E402
 
 IRIS = "https://appstoreconnect.apple.com/iris/v1"
 COOKIE_FILE = pathlib.Path.home() / ".fastlane" / "spaceship" / "divinejdavis@gmail.com" / "cookie"
+
+# Apple's appDataUsageCategories are leaf data types. All linked to the user,
+# none used to track, all for app functionality only.
+#   USER_ID            - the Sign in with Apple account id and the username
+#   NAME               - the optional display name
+#   EMAIL_ADDRESS      - kept by the auth provider if Apple shares one
+#   FITNESS            - sport, distance and moving time of shared activities
+#   OTHER_USER_CONTENT - activity titles, and the reason on a report
+DATA_TYPES = ["USER_ID", "NAME", "EMAIL_ADDRESS", "FITNESS", "OTHER_USER_CONTENT"]
+PURPOSE = "APP_FUNCTIONALITY"
+PROTECTION = "DATA_LINKED_TO_YOU"
 
 
 def cookies() -> list[dict]:
@@ -89,38 +106,36 @@ def main() -> int:
     show("existing appDataUsages", r)
     existing = r.json().get("data", []) if r.ok else []
     if args.probe_only:
+        show("categories", s.get(f"{IRIS}/appDataUsageCategories", params={"limit": 200}, timeout=30))
+        show("purposes", s.get(f"{IRIS}/appDataUsagePurposes", timeout=30))
         show("dataProtections", s.get(f"{IRIS}/appDataUsageDataProtections", timeout=30))
-        # The "regulated medical device" declaration (required for any app in
-        # Health & Fitness) has no public API either. Dump the appInfo the
-        # dashboard sees so the field name can be found and PATCHed.
-        r = s.get(f"{IRIS}/apps/{app_id}/appInfos", timeout=30)
-        show("appInfos (look for medical/regulated fields)", r)
-        for key in ("regulatedMedicalDeviceDeclarations", "medicalDeviceDeclarations", "appMedicalDeviceDeclarations"):
-            rr = s.get(f"{IRIS}/{key}", params={"filter[app]": app_id}, timeout=30)
-            print(f"   {key}: HTTP {rr.status_code}")
         return 0
 
-    if any((e.get("relationships", {}).get("dataProtection", {}).get("data") or {}).get("id")
-           == "DATA_NOT_COLLECTED" for e in existing):
-        print("DATA_NOT_COLLECTED record already present")
-    else:
-        for e in existing:   # a stale category record would contradict "not collected"
-            s.delete(f"{IRIS}/appDataUsages/{e['id']}", timeout=30)
+    for e in existing:
+        d = s.delete(f"{IRIS}/appDataUsages/{e['id']}", timeout=30)
+        if d.status_code >= 400:
+            show(f"DELETE {e['id']} failed", d)
+            return 1
+    print(f"removed {len(existing)} old record(s)")
+
+    for category in DATA_TYPES:
         body = {"data": {"type": "appDataUsages", "relationships": {
             "app": {"data": {"type": "apps", "id": app_id}},
-            "dataProtection": {"data": {"type": "appDataUsageDataProtections", "id": "DATA_NOT_COLLECTED"}}}}}
+            "category": {"data": {"type": "appDataUsageCategories", "id": category}},
+            "purpose": {"data": {"type": "appDataUsagePurposes", "id": PURPOSE}},
+            "dataProtection": {"data": {"type": "appDataUsageDataProtections", "id": PROTECTION}}}}}
         r = s.post(f"{IRIS}/appDataUsages", data=json.dumps(body), timeout=30)
         if r.status_code >= 400:
-            show("POST DATA_NOT_COLLECTED failed", r)
+            show(f"POST {category} failed (try --probe-only for the valid ids)", r)
             return 1
-        print("posted DATA_NOT_COLLECTED")
+        print(f"   ✓ {category} / {PROTECTION} / {PURPOSE}")
 
     r = s.patch(f"{IRIS}/appDataUsagesPublishState/{app_id}", data=json.dumps({"data": {
         "type": "appDataUsagesPublishState", "id": app_id, "attributes": {"published": True}}}), timeout=30)
     if r.status_code >= 400:
         show("publish failed", r)
         return 1
-    print("App Privacy published: Data Not Collected")
+    print("App Privacy published: " + ", ".join(DATA_TYPES) + " (linked, app functionality, no tracking)")
     return 0
 
 

@@ -9,6 +9,7 @@ struct MilepostApp: App {
     /// Not observed by any view; held so the Live Activity stays wired for
     /// the life of the process.
     @State private var liveActivity: RunActivityController
+    @State private var social: SocialStore
 
     let container: ModelContainer
 
@@ -48,6 +49,23 @@ struct MilepostApp: App {
             container = try! ModelContainer(for: Activity.self,
                                             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
+
+        let social = SocialStore(backend: Self.socialBackend(isUITest: isUITest))
+        let context = container.mainContext
+        social.localActivities = { (try? context.fetch(FetchDescriptor<Activity>())) ?? [] }
+        _social = State(initialValue: social)
+    }
+
+    /// Under `-uitest` the session is in memory (the runner cannot write the
+    /// keychain); `-uitest-social-demo` swaps in canned friends so signed-in
+    /// screens can be driven at all.
+    private static func socialBackend(isUITest: Bool) -> SocialBackend {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-uitest-social-demo") {
+            return DemoSocialBackend()
+        }
+        #endif
+        return SupabaseSocialBackend(inMemorySession: isUITest)
     }
 
     var body: some Scene {
@@ -56,6 +74,7 @@ struct MilepostApp: App {
                 .environment(location)
                 .environment(recorder)
                 .environment(announcer)
+                .environment(social)
                 .preferredColorScheme(.dark)
         }
         .modelContainer(container)

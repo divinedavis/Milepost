@@ -32,7 +32,7 @@ SUBTITLE = "GPS run & walk tracker"                       # <= 30 characters
 KEYWORDS = ("run,running,walk,walking,gps,tracker,pace,splits,"
             "miles,jog,jogging,route,distance,fitness,cues")   # <= 100 characters
 PROMO = ("Press Start, run, press Finish. Time, pace and distance live, splits as "
-         "they happen, your route on a map. No account, no upload. Nothing leaves your phone.")
+         "they happen, your route on a map. Add friends to see their runs; routes stay on your phone.")
 SUPPORT = "https://divinedavis.com/milepost/support/"
 PRIVACY = "https://divinedavis.com/milepost/privacy/"
 COPYRIGHT = "2026 Divine Davis"
@@ -53,20 +53,26 @@ Optional spoken cues every mile or every half mile with your time and last split
 YOUR LOG
 Every activity with its route on a map, distance, time, average pace, and each split. Weekly and all-time totals on the You tab. Miles or kilometres, your choice, and each run keeps the unit it was recorded in.
 
-NOTHING LEAVES YOUR PHONE
-No account, no sign-in, no server. Your runs live in a database on your phone and are never uploaded. There are no ads and no analytics. Location is asked for when you press Start and used only while a run is recording.
+FRIENDS ON THE BLOCK
+The Block tab has two sides: Mine, your own log, and Friends. Sign in with Apple, pick a username, and add friends by searching for theirs. Once they accept, you see each other's activities: sport, title, distance, pace and time. Friends are optional; without an account the app works exactly the same.
+
+YOUR ROUTES STAY ON YOUR PHONE
+Recording needs no account. Runs and their routes live in a database on your phone. If you sign in for friends, only each activity's stats are shared, and only with people you accept. Maps, GPS points and splits are never uploaded. Turn sharing off or delete your account from the You tab at any time. There are no ads and no analytics. Location is asked for when you press Start and used only while a run is recording.
 
 Milepost uses GPS, so it needs open sky; runs that start indoors show distance once you are outside and moving.
 """
 
 REVIEW_NOTES = """WHAT THE APP DOES
-Milepost records a run or walk with GPS: elapsed time, distance, split pace, mile/km splits, and the route drawn on an Apple map. Runs are saved to a local database on the device. There is no account, no sign-in, no server, and no in-app purchase, so no demo credentials are needed.
+Milepost records a run or walk with GPS: elapsed time, distance, split pace, mile/km splits, and the route drawn on an Apple map. Runs are saved to a local database on the device. Recording needs no account and there is no in-app purchase.
+
+FRIENDS (OPTIONAL, SIGN IN WITH APPLE)
+Block tab > Friends > Continue with Apple, then pick any username. Tap the person-plus button, search "milepost_demo" and tap Add: that demo account accepts requests automatically and has sample activities, so its runs appear in Block > Friends right away. Friends see only an activity's sport, title, distance, pace and time - never the route. Swipe a friend's activity (or long-press) to Report or Block. You tab > Friends: sharing toggle, Sign out, and Delete account (deletes the account and everything shared, immediately).
 
 HOW TO TEST
 1. Record tab: press Start. iOS asks for location access ("While Using the App"). The full-screen recorder opens with a running clock.
 2. Move, or in the Simulator use Features > Location > Freeway Drive / City Run. Distance and split pace update live and the route draws on the map.
 3. Press Pause, then Finish. Name the run and tap Save. (Finishing with under 10 metres of movement shows a "No Movement Detected" alert instead of a save sheet - that is intentional.)
-4. Activities tab: the saved run with its route map, tiles and splits. You tab: weekly/all-time totals, the miles/km switch, and Voice cues (spoken split announcements, off by default).
+4. Block tab: the saved run with its route map, tiles and splits. You tab: weekly/all-time totals, the miles/km switch, and Voice cues (spoken split announcements, off by default).
 
 BACKGROUND LOCATION
 The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization and reads location solely between Start and Finish. The audio background mode is used only for the optional spoken voice cues during a run.

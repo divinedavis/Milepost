@@ -40,7 +40,7 @@ PANELS = [
     ("route-recording", "time. pace.\ndistance. live.",  WHITE,  "Numbers you can read mid-stride, and a splits bar."),
     ("route-detail",    "every run,\nmapped.",           ORANGE, "Route, distance, pace and each split, saved on your phone."),
     ("you-totals",      "this week.\nall time.",         WHITE,  "Totals in miles or kilometres. Voice cues if you want them."),
-    ("activities-list", "nothing leaves\nyour phone.",   ORANGE, "No account. No upload. No ads. Just your runs."),
+    ("activities-list", "your routes\nstay yours.",      ORANGE, "Friends see your stats. Your maps stay on your phone."),
 ]
 
 

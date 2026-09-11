@@ -5,7 +5,9 @@
 A small, private tracker for runs, walks and bike rides on iPhone. Pick your
 sport, start, watch time / pace / distance and per-mile splits live, pause
 when you hit a light, finish, save. Every activity keeps its route and shows
-up in Activities with a map and splits. Nothing leaves the phone.
+up in the Block tab with a map and splits. Routes never leave the phone; with
+friends on (Sign in with Apple), only each activity's stats are shared with the
+people you accept, and their activities show up under Block > Friends.
 
 - SwiftUI + MapKit + CoreLocation + SwiftData + ActivityKit, iOS 17+
 - Runs, walks and rides — a ride reads in mph, not minutes per mile

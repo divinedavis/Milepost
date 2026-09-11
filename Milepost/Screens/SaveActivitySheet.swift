@@ -4,6 +4,7 @@ import SwiftUI
 struct SaveActivitySheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(SocialStore.self) private var social
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
 
     let summary: RunSummary
@@ -68,6 +69,9 @@ struct SaveActivitySheet: View {
         let activity = Activity(summary: summary, title: trimmed.isEmpty ? Format.defaultTitle(for: summary.startDate, sport: sport) : trimmed)
         context.insert(activity)
         try? context.save()
+        // Stats only, and only when signed in with sharing on; a failed
+        // upload is retried by the next session's syncAll.
+        Task { await social.share(activity) }
         onDone(true)
         dismiss()
     }

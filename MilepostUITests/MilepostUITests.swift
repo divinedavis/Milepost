@@ -53,7 +53,7 @@ final class MilepostUITests: XCTestCase {
         sleep(3)   // let the map tiles land before the marketing capture
         snap("record-idle")
 
-        tap("tab.activities")
+        tap("tab.block")
         XCTAssertTrue(app.staticTexts["No activities yet"].waitForExistence(timeout: 6))
 
         tap("tab.you")

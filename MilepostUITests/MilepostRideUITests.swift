@@ -73,8 +73,8 @@ final class MilepostRideUITests: XCTestCase {
         snap("ride-save")
         tap("save.save")
 
-        tap("tab.activities")
-        let row = app.staticTexts["activities.rowTitle"].firstMatch
+        tap("tab.block")
+        let row = app.staticTexts["block.rowTitle"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         XCTAssertTrue(row.label.hasSuffix("Ride"))
         row.tap()

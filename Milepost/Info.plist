@@ -28,6 +28,10 @@
 	<string>Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_HOST</key>
+	<string>$(SUPABASE_HOST)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

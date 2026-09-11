@@ -79,6 +79,8 @@ ui_all() {
   run MilepostUITests/MilepostUITests
   echo "== ui (sport) =="
   run MilepostUITests/MilepostSportUITests
+  echo "== ui (friends) =="
+  run MilepostUITests/MilepostFriendsUITests
   echo "== ui (live activity) =="
   run MilepostUITests/MilepostLiveActivityUITests
   echo "== ui (moving) =="

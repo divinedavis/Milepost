@@ -1,0 +1,189 @@
+import SwiftUI
+
+/// Pushed from the Block tab's Friends feed and from You.
+struct FriendsRoute: Hashable {}
+
+/// Find people by username, answer requests, manage friends and blocks.
+struct FriendsScreen: View {
+    @Environment(SocialStore.self) private var social
+    @State private var query = ""
+    @State private var results: [FriendProfile] = []
+    @State private var searched = false
+    @State private var reporting: FriendProfile?
+    @State private var blocking: FriendProfile?
+
+    private var needle: String { Username.normalize(query) }
+
+    var body: some View {
+        List {
+            Section {
+                TextField("Search by username", text: $query)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("friends.search")
+                ForEach(results) { person in
+                    PersonRow(person: person) { searchControl(person) }
+                }
+                if searched && results.isEmpty && needle.count >= 2 {
+                    Text("No one by that username.").foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Add friends")
+            } footer: {
+                Text("Friends see the stats of what you share — never your routes.")
+            }
+
+            if !social.incoming.isEmpty {
+                Section("Requests") {
+                    ForEach(social.incoming) { person in
+                        PersonRow(person: person) {
+                            HStack(spacing: 8) {
+                                Button("Accept") { Task { await social.respond(to: person.id, accept: true) } }
+                                    .buttonStyle(.borderedProminent)
+                                    .accessibilityIdentifier("friends.accept.\(person.username)")
+                                Button("Decline") { Task { await social.respond(to: person.id, accept: false) } }
+                                    .buttonStyle(.bordered)
+                                    .accessibilityIdentifier("friends.decline.\(person.username)")
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !social.friends.isEmpty {
+                Section("Friends") {
+                    ForEach(social.friends) { person in
+                        PersonRow(person: person) { EmptyView() }
+                            .accessibilityIdentifier("friends.friend.\(person.username)")
+                            .swipeActions {
+                                Button("Remove", role: .destructive) { Task { await social.remove(person.id) } }
+                                Button("Block") { blocking = person }.tint(.gray)
+                            }
+                            .contextMenu {
+                                Button("Report", systemImage: "flag") { reporting = person }
+                                Button("Block", systemImage: "hand.raised", role: .destructive) { blocking = person }
+                                Button("Remove friend", systemImage: "person.badge.minus", role: .destructive) {
+                                    Task { await social.remove(person.id) }
+                                }
+                            }
+                    }
+                }
+            }
+
+            if !social.outgoing.isEmpty {
+                Section("Sent") {
+                    ForEach(social.outgoing) { person in
+                        PersonRow(person: person) {
+                            Button("Cancel") { Task { await social.remove(person.id) } }
+                                .buttonStyle(.bordered)
+                                .accessibilityIdentifier("friends.cancel.\(person.username)")
+                        }
+                    }
+                }
+            }
+
+            if !social.blocked.isEmpty {
+                Section("Blocked") {
+                    ForEach(social.blocked) { person in
+                        PersonRow(person: person) {
+                            Button("Unblock") { Task { await social.unblock(person.id) } }
+                                .buttonStyle(.bordered)
+                                .accessibilityIdentifier("friends.unblock.\(person.username)")
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Friends")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await social.loadConnections() }
+        .task(id: needle) { await runSearch() }
+        .refreshable { await social.loadConnections() }
+        .confirmationDialog("Report \(reporting?.handle ?? "")?", isPresented: present($reporting), titleVisibility: .visible, presenting: reporting) { person in
+            ForEach(ReportReason.allCases) { reason in
+                Button(reason.rawValue) { Task { await social.report(person.id, activityID: nil, reason: reason) } }
+            }
+        }
+        .confirmationDialog("Block \(blocking?.handle ?? "")?", isPresented: present($blocking), titleVisibility: .visible, presenting: blocking) { person in
+            Button("Block", role: .destructive) {
+                Task {
+                    await social.block(person.id)
+                    results.removeAll { $0.id == person.id }
+                }
+            }
+        } message: { _ in
+            Text("They stop being your friend, can't find you, and can't send you requests.")
+        }
+        .alert(social.notice ?? "", isPresented: Binding(get: { social.notice != nil }, set: { if !$0 { social.notice = nil } })) {
+            Button("OK") {}
+        }
+    }
+
+    @ViewBuilder
+    private func searchControl(_ person: FriendProfile) -> some View {
+        switch person.status {
+        case .none:
+            Button("Add") {
+                Task {
+                    if let status = await social.sendRequest(to: person.id) { setStatus(person.id, status) }
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("friends.add.\(person.username)")
+        case .outgoing:
+            Text("Requested")
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("friends.status.\(person.username)")
+        case .incoming:
+            Button("Accept") {
+                Task {
+                    await social.respond(to: person.id, accept: true)
+                    setStatus(person.id, .friend)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("friends.accept.\(person.username)")
+        case .friend:
+            Text("Friends")
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("friends.status.\(person.username)")
+        }
+    }
+
+    private func setStatus(_ id: UUID, _ status: FriendStatus) {
+        if let i = results.firstIndex(where: { $0.id == id }) { results[i].status = status }
+    }
+
+    private func runSearch() async {
+        let q = needle
+        guard q.count >= 2 else {
+            results = []
+            searched = false
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        let found = await social.search(q)
+        guard !Task.isCancelled else { return }
+        results = found
+        searched = true
+    }
+}
+
+struct PersonRow<Trailing: View>: View {
+    let person: FriendProfile
+    @ViewBuilder let trailing: () -> Trailing
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(person.name).font(.body.weight(.semibold))
+                if !person.displayName.isEmpty {
+                    Text(person.handle).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            trailing()
+        }
+    }
+}

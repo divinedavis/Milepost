@@ -2,7 +2,7 @@ import XCTest
 
 /// Needs the simulator to be moving: run_tests.sh starts a simctl location
 /// route before this class runs. Start → distance climbs → Pause → Finish →
-/// Save → the run shows up in Activities with a route map.
+/// Save → the run shows up in Block with a route map.
 final class MilepostRouteUITests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -35,7 +35,7 @@ final class MilepostRouteUITests: XCTestCase {
         el.tap()
     }
 
-    func testMovingRunSavesAndAppearsInActivities() {
+    func testMovingRunSavesAndAppearsInBlock() {
         tap("record.start")
         allowLocation()
         if !app.buttons["live.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
@@ -108,8 +108,8 @@ final class MilepostRouteUITests: XCTestCase {
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
         XCTAssertEqual(app.staticTexts["record.distance"].label, "0.00", "map card resets after save")
 
-        tap("tab.activities")
-        let row = app.staticTexts["activities.rowTitle"].firstMatch
+        tap("tab.block")
+        let row = app.staticTexts["block.rowTitle"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8))
         XCTAssertTrue(row.label.hasSuffix("Run"))
         snap("activities-list")
@@ -127,7 +127,7 @@ final class MilepostRouteUITests: XCTestCase {
             XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 6))
             sleep(1)
             snap("you-totals")
-            tap("tab.activities")
+            tap("tab.block")
             XCTAssertTrue(row.waitForExistence(timeout: 8))
             row.tap()
             XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 8))

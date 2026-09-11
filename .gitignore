@@ -15,3 +15,6 @@ scripts/asc-config.env
 scripts/*.p8
 *.p8
 __pycache__/
+
+# Supabase project config (anon key only, still kept out of git)
+Secrets.xcconfig

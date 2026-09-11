@@ -205,7 +205,7 @@ struct RecordScreen: View {
 
     private var historyChip: some View {
         VStack(spacing: 8) {
-            Button { tab = .activities } label: {
+            Button { tab = .block } label: {
                 Circle()
                     .fill(Color(white: 0.2))
                     .frame(width: 72, height: 72)

@@ -1,12 +1,12 @@
 import SwiftUI
 
 enum Tab: String, CaseIterable {
-    case record, activities, you
+    case record, block, you
 
     var title: String {
         switch self {
         case .record: return "Record"
-        case .activities: return "Activities"
+        case .block: return "Block"
         case .you: return "You"
         }
     }
@@ -14,7 +14,7 @@ enum Tab: String, CaseIterable {
     var symbol: String {
         switch self {
         case .record: return "record.circle"
-        case .activities: return "list.bullet.rectangle"
+        case .block: return "list.bullet.rectangle"
         case .you: return "person.crop.circle"
         }
     }
@@ -22,7 +22,7 @@ enum Tab: String, CaseIterable {
 
 struct RootView: View {
     @Environment(RunRecorder.self) private var recorder
-    // `-open-tab activities` lets scripts land on a tab for screenshots.
+    // `-open-tab block` lets scripts land on a tab for screenshots.
     @State private var tab: Tab = {
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "-open-tab"), i + 1 < args.count, let t = Tab(rawValue: args[i + 1]) { return t }
@@ -34,7 +34,7 @@ struct RootView: View {
             Group {
                 switch tab {
                 case .record: RecordScreen(tab: $tab)
-                case .activities: ActivitiesScreen()
+                case .block: BlockScreen()
                 case .you: YouScreen()
                 }
             }

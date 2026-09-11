@@ -5,7 +5,8 @@ full-screen live recorder
 (time / split pace / distance / splits), pause + resume, "No Movement
 Detected" guard, save to a local SwiftData log, per-run detail with route map,
 and a Dynamic Island / lock-screen Live Activity showing the mile in progress.
-No backend, no account, no upload.
+Recording needs no account. The optional friends layer (Block > Friends) is
+the only thing with a backend, and routes never go to it — see "Friends".
 
 Same per-change loop as the other iOS apps (Pothole Radar is the template):
 
@@ -64,6 +65,56 @@ Sports (`Sport.swift`, `SportPicker`):
 - `Activity.sportRaw` was added after 1.0 shipped, with a default, so
   SwiftData migrates existing stored runs without a mapping model. Do not
   make it non-optional without a default.
+
+Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
+- The Activities tab is now **Block**, with a Mine / Friends switch. `Tab.block`,
+  ids `tab.block`, `block.rowTitle`, `block.empty`; `-open-tab block`.
+- Backend: Supabase `pmdcwgsxxyagmkkypvma` (org Juniper, us-east-1, ≈$10/mo).
+  Keychain: `milepost-supabase-anon`, `milepost-supabase-service`,
+  `milepost-supabase-db-password`; PAT `supabase-pat-clockin`. Anon key goes
+  in the gitignored `Secrets.xcconfig` (see `.example`); without it the build
+  works and Friends says it is unavailable.
+- Migrations go through `POST /v1/projects/<ref>/database/query` (non-default
+  User-Agent), then `scripts/e2e_backend.py` must pass — it drives three real
+  JWT users through every rule, including the negative ones.
+- **Routes never leave the phone.** `shared_activities` has sport, title,
+  start, distance, moving time and nothing else; `SharedActivityPayload` is the
+  only thing that uploads, and `SocialTests.testSharedPayloadIsStatsOnly` pins
+  its keys. Adding a location column is a privacy-policy change, not a feature.
+- Sport raw values are `run`/`walk`/**`bike`** (not "ride"); the table's check
+  must match `Sport.rawValue` or every ride upload is refused.
+- All friendship writes are RPCs (`send_friend_request`, `respond_friend_request`,
+  `remove_friend`, `block_user`); clients only SELECT `friendships`. Strangers'
+  profiles are invisible to RLS — search goes through `search_profiles`
+  (definer, ≥2 chars, ≤20 rows, LIKE-escaped, block-aware). Every function
+  revokes EXECUTE from public, anon AND authenticated before granting back.
+- Sign in with Apple only (email auth off). Nonce: hash to Apple, raw to
+  GoTrue, and only when the token carries the claim. `APPLE_ID_AUTH` is on the
+  App ID (`scripts/asc_enable_capability.py`); the entitlement is in project.yml.
+- Sharing is on by default once signed in; `syncAll` upserts every local
+  activity at each session start (also the retry for offline saves). A local
+  delete deletes the shared row, or queues it (`social.pendingDeletes`).
+  Turning sharing off deletes everything shared.
+- App Review has no second account, so `@milepost_demo` (`demo_accounts`
+  table, service-role only) auto-accepts requests and carries sample
+  activities. Re-run `scripts/seed_demo_friend.py` before a submission so its
+  activities are recent. The trigger keys on the id in `demo_accounts`, never
+  the username, so nobody can squat the name into auto-accept.
+- UI tests: the runner cannot keep a Supabase session (no keychain) or drive
+  Apple's sheet, so `-uitest-social-demo` (Debug only) swaps in
+  `DemoSocialBackend`. A plain `.tap()` on the Mine/Friends segment reports
+  success and selects nothing (same iOS 26 quirk as the tab bar); use
+  `selectSegment`, which coordinate-taps and confirms `isSelected`. The
+  toolbar button is labelled "Add friends" so it never collides with the
+  segment. Text with an accessibility identifier is not found by label via
+  `staticTexts["…"]` — match `label ==` with a predicate.
+- App Privacy is no longer "Data Not Collected" — `asc_push_privacy_iris.py`
+  now declares the friends data (needs a fresh `fastlane spaceauth`, a human).
+- Reports land in `public.reports`; nothing alerts on them yet — check the
+  table before each release.
+- Abuse ceilings live in the database (0003): 20,000 shared activities per
+  account, 200 reports per reporter per day, 100 pending outgoing requests.
+  Nothing else bounds what a valid session can insert.
 
 Live Activity (`MilepostWidget/`, `RunActivityController`):
 - The SwiftData model is called `Activity`, so inside the app target it

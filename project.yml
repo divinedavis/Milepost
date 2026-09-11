@@ -18,6 +18,11 @@ configs:
   Debug: debug
   Release: release
 
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.20.0"
+
 targets:
   Milepost:
     type: application
@@ -26,6 +31,11 @@ targets:
     # silently dropped from the bundle. Resources/ rides along under sources.
     sources:
       - path: Milepost
+    # The friends layer's Supabase project. Gitignored; a clone without it
+    # builds fine and the Friends feed says it is unavailable.
+    configFiles:
+      Debug: Secrets.xcconfig
+      Release: Secrets.xcconfig
     info:
       path: Milepost/Info.plist
       properties:
@@ -54,6 +64,10 @@ targets:
         # The Dynamic Island / lock-screen run card. Without this key
         # Activity.request throws and the run simply has no card.
         NSSupportsLiveActivities: true
+        # Supabase project for friends. The anon key is public by design (it
+        # ships in the bundle); RLS does the gating. From Secrets.xcconfig.
+        SUPABASE_HOST: $(SUPABASE_HOST)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost
@@ -66,8 +80,17 @@ targets:
         # Without this the AccentColor.colorset is dead weight and every .tint
         # falls back to system blue.
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    entitlements:
+      path: Milepost/Milepost.entitlements
+      properties:
+        # APPLE_ID_AUTH is enabled on the identifier (scripts/asc_enable_capability.py);
+        # the entitlement and the capability are two halves of one switch.
+        com.apple.developer.applesignin:
+          - Default
     dependencies:
       - target: MilepostWidget
+      - package: Supabase
+        product: Supabase
 
   # The Live Activity is drawn by a widget extension; the app only feeds it.
   # The three shared files are compiled into both targets on purpose: the

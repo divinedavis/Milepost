@@ -45,13 +45,16 @@ struct YouScreen: View {
                     Text(voiceFooter)
                 }
 
+                AccountSection()
+
                 Section("About") {
                     LabeledContent("Version", value: Self.versionText)
-                    Text("Runs are stored on this phone only. Nothing is uploaded.")
+                    Text("Routes are stored on this phone only. With friends on, only each activity's stats are shared.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
+            .navigationDestination(for: FriendsRoute.self) { _ in FriendsScreen() }
             .navigationTitle("You")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
