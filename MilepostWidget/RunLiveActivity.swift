@@ -69,8 +69,14 @@ private struct RunnerMark: View {
     let sport: Sport
     let isPaused: Bool
     var body: some View {
-        Image(systemName: isPaused ? "pause.fill" : sport.symbol)
-            .font(.system(size: 15, weight: .bold))
+        Group {
+            if isPaused {
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 15, weight: .bold))
+            } else {
+                SportIcon(sport: sport, size: 15, weight: .bold)
+            }
+        }
             .foregroundStyle(isPaused ? Theme.paused : Theme.orange)
             // The compact island has no room for the word, so this icon is
             // the only thing that says a run is paused. Spell it out for
@@ -89,8 +95,7 @@ private struct SportTile: View {
             .fill(isPaused ? Theme.paused : Theme.orange)
             .frame(width: size, height: size)
             .overlay(
-                Image(systemName: sport.symbol)
-                    .font(.system(size: size * 0.46, weight: .bold))
+                SportIcon(sport: sport, size: size * 0.46, weight: .bold)
                     .foregroundStyle(isPaused ? .black : .white)
             )
             .accessibilityLabel(sport.title)

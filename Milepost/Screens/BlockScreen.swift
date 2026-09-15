@@ -97,7 +97,7 @@ struct ActivityRow: View {
                     .font(.headline)
                     .accessibilityIdentifier("block.rowTitle")
             } icon: {
-                Image(systemName: activity.sport.symbol)
+                SportIcon(sport: activity.sport)
                     .foregroundStyle(Theme.orange)
                     .accessibilityLabel(activity.sport.title)
             }

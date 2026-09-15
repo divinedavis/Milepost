@@ -1,6 +1,6 @@
 # Milepost — working notes
 
-A Strava-style tracker for runs, walks and bike rides: GPS record screen,
+A Strava-style tracker for runs, stroller runs, walks and bike rides: GPS record screen,
 full-screen live recorder
 (time / split pace / distance / splits), pause + resume, "No Movement
 Detected" guard, save to a local SwiftData log, per-run detail with route map,
@@ -48,11 +48,11 @@ Gotchas:
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
 
 Sports (`Sport.swift`, `SportPicker`):
-- Run / Walk / Ride, chosen from the chip on the Record tab, remembered in
+- Run / Stroller Run / Walk / Ride, chosen from the chip on the Record tab, remembered in
   UserDefaults. The chip is only on screen before a run starts, so the sport
   cannot change mid-recording; `RecordScreen.sport` reads the recorder's own
   value while one is live in case the setting is changed elsewhere.
-- The engine is identical for all three. What differs is the plausibility
+- The engine is identical for all sports. What differs is the plausibility
   window and the wording. A 45-minute mile is a normal walk and outside the
   run bounds; 36 mph is a normal descent on a bike and outside them too. Get
   this wrong and the rate silently reads "-:--" for a whole activity.
@@ -62,6 +62,8 @@ Sports (`Sport.swift`, `SportPicker`):
 - `Sport` is compiled into the widget, so it cannot touch app-only types.
   That is why the spoken-duration helper lives on `Format` and
   `VoiceCuePhrase.spoken` is a thin alias to it.
+- `SportIcon` draws the shared activity mark in the app and widget. Stroller
+  running uses a custom vector runner pushing a stroller and the run pace bounds.
 - `Activity.sportRaw` was added after 1.0 shipped, with a default, so
   SwiftData migrates existing stored runs without a mapping model. Do not
   make it non-optional without a default.
@@ -81,7 +83,7 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
   start, distance, moving time and nothing else; `SharedActivityPayload` is the
   only thing that uploads, and `SocialTests.testSharedPayloadIsStatsOnly` pins
   its keys. Adding a location column is a privacy-policy change, not a feature.
-- Sport raw values are `run`/`walk`/**`bike`** (not "ride"); the table's check
+- Sport raw values are `run`/`strollerRun`/`walk`/**`bike`** (not "ride"); the table's check
   must match `Sport.rawValue` or every ride upload is refused.
 - All friendship writes are RPCs (`send_friend_request`, `respond_friend_request`,
   `remove_friend`, `block_user`); clients only SELECT `friendships`. Strangers'

@@ -1,11 +1,11 @@
 import Foundation
 
-/// What is being recorded. The engine is the same for all three — GPS in,
+/// What is being recorded. The engine is the same for every sport — GPS in,
 /// distance and splits out — but what counts as a plausible speed and how
 /// the rate is phrased differ. Compiled into the widget too, so it must
 /// stay free of app-only types.
 enum Sport: String, CaseIterable, Identifiable, Codable {
-    case run, walk, bike
+    case run, strollerRun, walk, bike
 
     static let storageKey = "sport"
 
@@ -15,14 +15,17 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
     var title: String {
         switch self {
         case .run: return "Run"
+        case .strollerRun: return "Stroller Run"
         case .walk: return "Walk"
         case .bike: return "Ride"
         }
     }
 
-    var symbol: String {
+    /// A nil system symbol uses the custom drawing in SportIcon.
+    var symbol: String? {
         switch self {
         case .run: return "figure.run"
+        case .strollerRun: return nil
         case .walk: return "figure.walk"
         case .bike: return "bicycle"
         }
@@ -34,6 +37,7 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
     var subtitle: String {
         switch self {
         case .run: return "Pace, splits and voice cues"
+        case .strollerRun: return "Running with a stroller"
         case .walk: return "Pace, at walking speeds"
         case .bike: return "Speed instead of pace"
         }
@@ -51,7 +55,7 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
     // a descent on a bike is faster than any run.
     var fastestSecondsPerUnit: Double {
         switch self {
-        case .run: return 2 * 60      // 30 mph
+        case .run, .strollerRun: return 2 * 60      // 30 mph
         case .walk: return 6 * 60     // 10 mph, about a race walk
         case .bike: return 80         // 45 mph
         }
@@ -59,7 +63,7 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
 
     var slowestSecondsPerUnit: Double {
         switch self {
-        case .run: return 40 * 60
+        case .run, .strollerRun: return 40 * 60
         case .walk: return 60 * 60    // 1 mph, a genuine stroll
         case .bike: return 20 * 60    // 3 mph
         }

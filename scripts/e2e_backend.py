@@ -170,6 +170,12 @@ def main():
         check(len(feed) == 1 and feed[0]["id"] == act and feed[0]["title"] == "Renamed Run" and feed[0]["username"] == a.username,
               f"B sees A's activity in friend_feed ({r.status_code} {r.text[:160]})")
         check(not any(k in feed[0] for k in ("route", "latitude", "longitude", "polyline")), "the feed row carries no location")
+        r = a.rest("PATCH", f"shared_activities?user_id=eq.{a.id}&id=eq.{act}",
+                   json={"sport": "strollerRun", "title": "Stroller Run"})
+        check(r.status_code in (200, 204), f"A saves the stroller run type ({r.status_code})")
+        r = b.rpc("friend_feed")
+        check(r.status_code == 200 and len(r.json()) == 1 and r.json()[0]["sport"] == "strollerRun",
+              "the friend feed preserves the stroller run type")
         r = c.rpc("friend_feed")
         check(r.status_code == 200 and r.json() == [], "C (a stranger) sees nothing")
         r = a.rpc("friend_feed")

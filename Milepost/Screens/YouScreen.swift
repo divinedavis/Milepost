@@ -4,11 +4,14 @@ import SwiftUI
 struct YouScreen: View {
     @Query(sort: \Activity.startDate, order: .reverse) private var activities: [Activity]
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
-    @AppStorage(VoiceCueInterval.storageKey) private var voiceRaw = VoiceCueInterval.off.rawValue
+    @AppStorage(VoiceCueInterval.storageKey) private var voiceRaw = VoiceCueInterval.half.rawValue
+    @AppStorage(VoiceCueInterval.enabledKey) private var voiceEnabled = true
     @Environment(VoiceAnnouncer.self) private var announcer
+    @Environment(RunRecorder.self) private var recorder
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
-    private var voice: VoiceCueInterval { VoiceCueInterval(rawValue: voiceRaw) ?? .off }
+    private var voice: VoiceCueInterval { VoiceCueInterval(rawValue: voiceRaw) ?? .half }
+    private var voiceUnit: DistanceUnit { recorder.isActive ? recorder.unit : unit }
 
     var body: some View {
         NavigationStack {
@@ -27,17 +30,24 @@ struct YouScreen: View {
                     }
                     .accessibilityIdentifier("you.units")
 
-                    Picker("Voice cues", selection: $voiceRaw) {
-                        ForEach(VoiceCueInterval.allCases) { v in
-                            Text(v.title(unit: unit)).tag(v.rawValue)
+                    Toggle("Voice announcements", isOn: $voiceEnabled)
+                        .accessibilityIdentifier("you.voiceEnabled")
+                        .onChange(of: voiceEnabled) { _, enabled in
+                            if !enabled { announcer.stop() }
+                        }
+
+                    Picker("Announce distance", selection: $voiceRaw) {
+                        ForEach(VoiceCueInterval.selectable) { v in
+                            Text(v.title(unit: voiceUnit)).tag(v.rawValue)
                         }
                     }
+                    .disabled(!voiceEnabled)
                     .accessibilityIdentifier("you.voiceCues")
 
                     Button("Preview voice") {
-                        announcer.speak(VoiceCuePhrase.text(for: VoiceAnnouncer.sample))
+                        announcer.speak(VoiceCuePhrase.text(for: VoiceAnnouncer.sample(unit: voiceUnit, interval: voice)))
                     }
-                    .disabled(voice == .off)
+                    .disabled(!voiceEnabled)
                     .accessibilityIdentifier("you.voicePreview")
                 } header: {
                     Text("Settings")
@@ -66,12 +76,8 @@ struct YouScreen: View {
     }
 
     private var voiceFooter: String {
-        let noun = unit.splitNoun.lowercased()
-        switch voice {
-        case .off: return "Voice cues read out your time and average pace, over your music, even with the screen off."
-        case .full: return "Spoken at every \(noun), over your music, even with the screen off."
-        case .half: return "Spoken at every half \(noun), over your music, even with the screen off."
-        }
+        let example = VoiceCuePhrase.distance(voice.units, unit: voiceUnit)
+        return "\(example) Hear your completed distance, time and average pace or speed over your music, even with the screen off. Changes apply at the next matching distance."
     }
 
     private func totals(_ t: ActivityTotals) -> some View {

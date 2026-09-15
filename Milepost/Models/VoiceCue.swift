@@ -4,9 +4,12 @@ import Foundation
 /// UserDefaults; read live, so changing it during a run takes effect at the
 /// next milestone.
 enum VoiceCueInterval: String, CaseIterable, Identifiable {
-    case off, full, half
+    // `off` remains readable for settings saved by earlier versions.
+    case off, full, half, two, five
 
     static let storageKey = "voiceCues"
+    static let enabledKey = "voiceCuesEnabled"
+    static let selectable: [Self] = [.half, .full, .two, .five]
 
     var id: String { rawValue }
 
@@ -16,16 +19,36 @@ enum VoiceCueInterval: String, CaseIterable, Identifiable {
         case .off: return "Off"
         case .full: return "Every \(noun)"
         case .half: return "Every half \(noun)"
+        case .two: return "Every 2 \(noun)s"
+        case .five: return "Every 5 \(noun)s"
+        }
+    }
+
+    var units: Double {
+        switch self {
+        case .off, .half: return 0.5
+        case .full: return 1
+        case .two: return 2
+        case .five: return 5
+        }
+    }
+
+    /// Split the old Off/interval preference without losing an explicit opt-out.
+    /// New installs announce every half unit; existing selections are kept.
+    static func migrateSettings(in defaults: UserDefaults) {
+        let previous = defaults.string(forKey: storageKey).flatMap(Self.init(rawValue:))
+        if defaults.object(forKey: enabledKey) == nil {
+            defaults.set(previous != .off, forKey: enabledKey)
+        }
+        if previous == nil || previous == .off {
+            defaults.set(Self.half.rawValue, forKey: storageKey)
         }
     }
 
     /// Whether a milestone at `units` (0.5, 1, 1.5, …) should be spoken.
     func includes(units: Double) -> Bool {
-        switch self {
-        case .off: return false
-        case .full: return units == units.rounded(.down)
-        case .half: return true
-        }
+        guard self != .off, units.isFinite, units > 0 else { return false }
+        return units.truncatingRemainder(dividingBy: self.units) == 0
     }
 }
 
@@ -62,10 +85,10 @@ enum VoiceCuePhrase {
         let hasHalf = units - Double(whole) >= 0.25
         let noun = unit.splitNoun.lowercased()
         switch (whole, hasHalf) {
-        case (0, true): return "Half \(noun)."
-        case (1, false): return "One \(noun)."
-        case (let n, false): return "\(n) \(noun)s."
-        case (let n, true): return "\(n) and a half \(noun)s."
+        case (0, true): return "Half a \(noun) complete."
+        case (1, false): return "1 \(noun) complete."
+        case (let n, false): return "\(n) \(noun)s complete."
+        case (let n, true): return "\(n) and a half \(noun)s complete."
         }
     }
 

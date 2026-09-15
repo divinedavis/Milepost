@@ -1,6 +1,6 @@
 import XCTest
 
-/// Choosing Run / Walk / Ride from the Record tab, and what each one changes.
+/// Choosing a sport from the Record tab, and what each one changes.
 /// Static location (run_tests.sh), so every run here ends in "No Movement
 /// Detected" — what is under test is the selection and the labelling, not
 /// distance, which the moving suite and the unit tests cover.
@@ -42,12 +42,14 @@ final class MilepostSportUITests: XCTestCase {
         tap("sport.\(sport)")
     }
 
-    /// The picker offers all three and the chip follows the choice.
-    func testPickerOffersRunWalkAndRideAndTheChipFollows() {
+    /// Every sport is reachable and the chip follows the choice.
+    func testPickerOffersEverySportAndTheChipFollows() {
         tap("record.sport")
         XCTAssertTrue(app.buttons["sport.run"].waitForExistence(timeout: 6))
         XCTAssertTrue(app.buttons["sport.walk"].exists)
         XCTAssertTrue(app.buttons["sport.bike"].exists)
+        XCTAssertTrue(app.buttons["sport.strollerRun"].isHittable)
+        XCTAssertTrue(app.buttons["sport.bike"].isHittable)
         snap("sport-picker")
 
         tap("sport.walk")
@@ -62,6 +64,16 @@ final class MilepostSportUITests: XCTestCase {
         tap("record.sport")
         tap("sport.cancel")
         XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Ride")
+    }
+
+    func testStrollerRunKeepsPaceAndTheChoiceSticks() {
+        choose("strollerRun")
+        XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Stroller Run")
+        XCTAssertTrue(app.staticTexts["Avg. pace (/mi)"].waitForExistence(timeout: 6))
+        snap("stroller-run-selected")
+        tap("tab.you")
+        tap("tab.record")
+        XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Stroller Run")
     }
 
     /// A ride reads in miles per hour. Minutes per mile is meaningless at

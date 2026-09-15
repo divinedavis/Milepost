@@ -29,6 +29,29 @@ final class SportTests: XCTestCase {
                           timestamp: Date(timeIntervalSince1970: 1_700_000_000 + seconds))
     }
 
+    func testStrollerRunRecordsAndPreservesItsTypeWhenSavedAndShared() throws {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .strollerRun)
+        r.ingest(fix(0, at: 1))
+        clock = clock.addingTimeInterval(600)
+        r.ingest(fix(1609.344, at: 601))
+        XCTAssertEqual(r.averagePace ?? 0, 600, accuracy: 1)
+        XCTAssertEqual(Sport.strollerRun.rateLabel("Avg.", unit: .miles), "Avg. pace (/mi)")
+
+        let summary = try XCTUnwrap(r.finish())
+        let title = Format.defaultTitle(for: summary.startDate, sport: summary.sport)
+        XCTAssertTrue(title.hasSuffix("Stroller Run"))
+        let saved = Activity(summary: summary, title: title)
+        XCTAssertEqual(saved.sport, .strollerRun)
+        XCTAssertEqual(saved.splits.first?.distanceMeters ?? 0, 1609.344, accuracy: 0.1)
+        let payload = try XCTUnwrap(SharedActivityPayload(activity: saved, userID: UUID()))
+        XCTAssertEqual(payload.sport, "strollerRun")
+
+        let attributes = RunActivityAttributes(unit: .miles, sport: .strollerRun, startDate: summary.startDate)
+        let decoded = try JSONDecoder().decode(RunActivityAttributes.self, from: JSONEncoder().encode(attributes))
+        XCTAssertEqual(decoded.sport, .strollerRun)
+    }
+
     /// Distance, splits and milestones are sport-independent; only the label
     /// changes. A 3 mile ride still books 3 splits.
     func testARideRecordsDistanceAndSplitsLikeAnythingElse() {
@@ -82,7 +105,7 @@ final class SportTests: XCTestCase {
     func testVoiceCuesFollowTheSport() {
         let ride = Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 4 * 60, unit: .miles, sport: .bike)
         let phrase = VoiceCuePhrase.text(for: ride)
-        XCTAssertTrue(phrase.contains("One mile."), phrase)
+        XCTAssertTrue(phrase.contains("1 mile complete."), phrase)
         XCTAssertTrue(phrase.contains("Average speed, 15.0 miles per hour."), phrase)
 
         let walk = Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 18 * 60, unit: .miles, sport: .walk)

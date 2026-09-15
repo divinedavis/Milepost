@@ -18,20 +18,33 @@ final class VoiceAnnouncer: NSObject, AVSpeechSynthesizerDelegate {
         self.defaults = defaults
         self.isMuted = isMuted
         super.init()
+        VoiceCueInterval.migrateSettings(in: defaults)
         synthesizer.delegate = self
     }
 
     var interval: VoiceCueInterval {
-        VoiceCueInterval(rawValue: defaults.string(forKey: VoiceCueInterval.storageKey) ?? "") ?? .off
+        VoiceCueInterval(rawValue: defaults.string(forKey: VoiceCueInterval.storageKey) ?? "") ?? .half
+    }
+
+    var isEnabled: Bool {
+        defaults.bool(forKey: VoiceCueInterval.enabledKey)
     }
 
     func announce(_ milestone: Milestone) {
-        guard interval.includes(units: milestone.units) else { return }
+        guard isEnabled, interval.includes(units: milestone.units) else { return }
         speak(VoiceCuePhrase.text(for: milestone))
     }
 
     /// What the Settings "Preview" button plays.
-    static let sample = Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 9 * 60 + 12, unit: .miles)
+    static func sample(unit: DistanceUnit, interval: VoiceCueInterval) -> Milestone {
+        Milestone(distanceMeters: unit.meters * interval.units,
+                  elapsed: (9 * 60 + 12) * interval.units, unit: unit)
+    }
+
+    func stop() {
+        synthesizer.stopSpeaking(at: .immediate)
+        release()
+    }
 
     func speak(_ text: String) {
         guard !isMuted else { return }
@@ -45,6 +58,7 @@ final class VoiceAnnouncer: NSObject, AVSpeechSynthesizerDelegate {
             // background it will be silent, which is the failure we can live with.
         }
         let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         synthesizer.speak(utterance)
     }

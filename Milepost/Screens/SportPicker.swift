@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Run / Walk / Ride. Opened by tapping the sport chip on the Record tab;
+/// Run / Stroller Run / Walk / Ride. Opened by tapping the sport chip on the Record tab;
 /// only reachable before a run starts, so nothing can change mid-recording.
 struct SportPicker: View {
     @Environment(\.dismiss) private var dismiss
@@ -8,20 +8,21 @@ struct SportPicker: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 10) {
-                ForEach(Sport.allCases) { sport in
-                    Button {
-                        selection = sport
-                        dismiss()
-                    } label: {
-                        row(sport)
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(Sport.allCases) { sport in
+                        Button {
+                            selection = sport
+                            dismiss()
+                        } label: {
+                            row(sport)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("sport.\(sport.rawValue)")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("sport.\(sport.rawValue)")
                 }
-                Spacer(minLength: 0)
+                .padding(16)
             }
-            .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Theme.background)
             .navigationTitle("Record")
@@ -33,7 +34,7 @@ struct SportPicker: View {
                 }
             }
         }
-        .presentationDetents([.height(340)])
+        .presentationDetents([.height(440), .large])
         .preferredColorScheme(.dark)
     }
 
@@ -44,8 +45,7 @@ struct SportPicker: View {
                 .fill(isSelected ? Theme.orange : Color(white: 0.2))
                 .frame(width: 52, height: 52)
                 .overlay(
-                    Image(systemName: sport.symbol)
-                        .font(.system(size: 22))
+                    SportIcon(sport: sport, size: 22)
                         .foregroundStyle(isSelected ? .white : Theme.orange)
                 )
             VStack(alignment: .leading, spacing: 2) {

@@ -5,12 +5,17 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DEVICE="${MILEPOST_SIM:-iPhone 17 Pro}"
+if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then
+  DEST="platform=iOS Simulator,id=$DEVICE"
+else
+  DEST="platform=iOS Simulator,name=$DEVICE"
+fi
 BUNDLE_ID="com.divinedavis.milepost"
 DERIVED="build/smoke"
 
 echo "== build =="
 xcodebuild -project Milepost.xcodeproj -scheme Milepost \
-  -destination "platform=iOS Simulator,name=$DEVICE" \
+  -destination "$DEST" \
   -derivedDataPath "$DERIVED" \
   -configuration Debug CODE_SIGNING_ALLOWED=NO \
   ENABLE_DEBUG_DYLIB=NO \

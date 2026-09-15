@@ -94,14 +94,90 @@ final class VoiceCueTests: XCTestCase {
         XCTAssertEqual(VoiceCueInterval.off.title(unit: .kilometers), "Off")
     }
 
+    func testLongerIntervalsOnlyIncludeMatchingDistances() {
+        let boundaries = stride(from: 0.5, through: 10.0, by: 0.5)
+        XCTAssertEqual(boundaries.filter { VoiceCueInterval.two.includes(units: $0) }, [2, 4, 6, 8, 10])
+        XCTAssertEqual(boundaries.filter { VoiceCueInterval.five.includes(units: $0) }, [5, 10])
+        XCTAssertFalse(VoiceCueInterval.half.includes(units: 0))
+        XCTAssertFalse(VoiceCueInterval.half.includes(units: .nan))
+        XCTAssertEqual(VoiceCueInterval.two.title(unit: .miles), "Every 2 miles")
+        XCTAssertEqual(VoiceCueInterval.five.title(unit: .kilometers), "Every 5 kilometers")
+    }
+
+    func testSettingsMigrationAndLiveChanges() {
+        let suite = "VoiceCueTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let announcer = VoiceAnnouncer(defaults: defaults, isMuted: true)
+        XCTAssertTrue(announcer.isEnabled)
+        XCTAssertEqual(announcer.interval, .half)
+
+        defaults.set(VoiceCueInterval.two.rawValue, forKey: VoiceCueInterval.storageKey)
+        defaults.set(false, forKey: VoiceCueInterval.enabledKey)
+        XCTAssertFalse(announcer.isEnabled)
+        XCTAssertEqual(announcer.interval, .two)
+        defaults.set(true, forKey: VoiceCueInterval.enabledKey)
+        XCTAssertTrue(announcer.isEnabled)
+        XCTAssertEqual(announcer.interval, .two, "Toggling must remember the interval")
+
+        let relaunched = VoiceAnnouncer(defaults: defaults, isMuted: true)
+        XCTAssertTrue(relaunched.isEnabled)
+        XCTAssertEqual(relaunched.interval, .two)
+    }
+
+    func testMigrationPreservesLegacyOffAndIntervalSelections() {
+        let suite = "VoiceCueTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for previous in [VoiceCueInterval.off, .half, .full] {
+            defaults.removePersistentDomain(forName: suite)
+            defaults.set(previous.rawValue, forKey: VoiceCueInterval.storageKey)
+            VoiceCueInterval.migrateSettings(in: defaults)
+            XCTAssertEqual(defaults.bool(forKey: VoiceCueInterval.enabledKey), previous != .off)
+            XCTAssertEqual(defaults.string(forKey: VoiceCueInterval.storageKey),
+                           (previous == .off ? VoiceCueInterval.half : previous).rawValue)
+            VoiceCueInterval.migrateSettings(in: defaults)
+            XCTAssertEqual(defaults.bool(forKey: VoiceCueInterval.enabledKey), previous != .off,
+                           "Launching again must not turn voice back on")
+        }
+    }
+
+    func testPreviewUsesSelectedDistanceAndUnits() {
+        let sample = VoiceAnnouncer.sample(unit: .kilometers, interval: .five)
+        XCTAssertEqual(sample.units, 5)
+        XCTAssertTrue(VoiceCuePhrase.text(for: sample).hasPrefix("5 kilometers complete."))
+        let half = VoiceAnnouncer.sample(unit: .miles, interval: .half)
+        XCTAssertTrue(VoiceCuePhrase.text(for: half).hasPrefix("Half a mile complete."))
+    }
+
+    func testPausedDistanceDoesNotAnnounceAndResumeDoesNotRepeat() {
+        var seen: [Milestone] = []
+        let r = recorder { seen.append($0) }
+        r.start(unit: .kilometers)
+        r.ingest(fix(0, at: 0))
+        clock = clock.addingTimeInterval(200)
+        r.ingest(fix(600, at: 200))
+        XCTAssertEqual(seen.map(\.units), [0.5])
+        r.pause()
+        r.ingest(fix(1600, at: 400))
+        XCTAssertEqual(seen.map(\.units), [0.5])
+        clock = clock.addingTimeInterval(200)
+        r.resume()
+        r.ingest(fix(1600, at: 400))
+        clock = clock.addingTimeInterval(200)
+        r.ingest(fix(2200, at: 600))
+        XCTAssertEqual(seen.map(\.units), [0.5, 1])
+        r.discard()
+    }
+
     // MARK: Phrase
 
     func testPhraseForEachDistanceShape() {
-        XCTAssertEqual(VoiceCuePhrase.distance(0.5, unit: .miles), "Half mile.")
-        XCTAssertEqual(VoiceCuePhrase.distance(1, unit: .miles), "One mile.")
-        XCTAssertEqual(VoiceCuePhrase.distance(1.5, unit: .miles), "1 and a half miles.")
-        XCTAssertEqual(VoiceCuePhrase.distance(3, unit: .kilometers), "3 kilometers.")
-        XCTAssertEqual(VoiceCuePhrase.distance(2.5, unit: .kilometers), "2 and a half kilometers.")
+        XCTAssertEqual(VoiceCuePhrase.distance(0.5, unit: .miles), "Half a mile complete.")
+        XCTAssertEqual(VoiceCuePhrase.distance(1, unit: .miles), "1 mile complete.")
+        XCTAssertEqual(VoiceCuePhrase.distance(1.5, unit: .miles), "1 and a half miles complete.")
+        XCTAssertEqual(VoiceCuePhrase.distance(3, unit: .kilometers), "3 kilometers complete.")
+        XCTAssertEqual(VoiceCuePhrase.distance(2.5, unit: .kilometers), "2 and a half kilometers complete.")
     }
 
     func testSpokenDurations() {
@@ -115,8 +191,8 @@ final class VoiceCueTests: XCTestCase {
     func testFullPhraseIncludesPaceOnlyWhenPlausible() {
         let mile = Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 9 * 60 + 12, unit: .miles)
         XCTAssertEqual(VoiceCuePhrase.text(for: mile),
-                       "One mile. Time, 9 minutes 12 seconds. Average pace, 9 minutes 12 seconds per mile.")
+                       "1 mile complete. Time, 9 minutes 12 seconds. Average pace, 9 minutes 12 seconds per mile.")
         let jitter = Milestone(distanceMeters: DistanceUnit.miles.meters / 2, elapsed: 30, unit: .miles)
-        XCTAssertEqual(VoiceCuePhrase.text(for: jitter), "Half mile. Time, 30 seconds.")
+        XCTAssertEqual(VoiceCuePhrase.text(for: jitter), "Half a mile complete. Time, 30 seconds.")
     }
 }

@@ -173,7 +173,7 @@ struct RecordScreen: View {
                     Circle()
                         .fill(Color(white: 0.2))
                         .frame(width: 72, height: 72)
-                        .overlay(Image(systemName: sport.symbol).font(.system(size: 28)).foregroundStyle(Theme.orange))
+                        .overlay(SportIcon(sport: sport, size: 28).foregroundStyle(Theme.orange))
                     Circle()
                         .fill(Theme.orange)
                         .frame(width: 18, height: 18)
@@ -182,7 +182,7 @@ struct RecordScreen: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Sport, \(sport.title)")
-            .accessibilityHint("Choose run, walk or ride")
+            .accessibilityHint("Choose run, stroller run, walk or ride")
             .accessibilityIdentifier("record.sport")
             Text(sport.title).font(.subheadline).foregroundStyle(.white)
         }
