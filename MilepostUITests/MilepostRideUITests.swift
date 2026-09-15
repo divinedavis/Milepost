@@ -73,6 +73,12 @@ final class MilepostRideUITests: XCTestCase {
         snap("ride-save")
         tap("save.save")
 
+        XCTAssertTrue(app.staticTexts["celebrate.title"].waitForExistence(timeout: 8), "no congratulations splash after save")
+        XCTAssertTrue(app.staticTexts["celebrate.distance"].exists)
+        snap("ride-celebrate")
+        tap("celebrate.done")
+        XCTAssertTrue(app.staticTexts["celebrate.title"].waitForNonExistence(timeout: 4), "the splash did not close")
+
         tap("tab.block")
         let row = app.staticTexts["block.rowTitle"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 8))

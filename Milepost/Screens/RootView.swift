@@ -22,6 +22,7 @@ enum Tab: String, CaseIterable {
 
 struct RootView: View {
     @Environment(RunRecorder.self) private var recorder
+    @Environment(SaveCelebration.self) private var celebration
     // `-open-tab block` lets scripts land on a tab for screenshots.
     @State private var tab: Tab = {
         let args = ProcessInfo.processInfo.arguments
@@ -43,6 +44,18 @@ struct RootView: View {
             tabBar
         }
         .background(Theme.background)
+        // An overlay, not a cover: Save dismisses the sheet and the live
+        // recorder's cover at the same moment, and presenting a third one
+        // mid-dismissal is dropped. The overlay is revealed as they slide away.
+        .overlay {
+            if let moment = celebration.moment {
+                CelebrationView(moment: moment) {
+                    withAnimation(.easeOut(duration: 0.25)) { celebration.moment = nil }
+                }
+                .transition(.opacity)
+                .zIndex(1)
+            }
+        }
     }
 
     /// Hand-rolled: iOS 26's floating TabView bar reports a successful tap in

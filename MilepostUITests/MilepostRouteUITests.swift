@@ -105,6 +105,12 @@ final class MilepostRouteUITests: XCTestCase {
         snap("route-save")
         tap("save.save")
 
+        XCTAssertTrue(app.staticTexts["celebrate.title"].waitForExistence(timeout: 8), "no congratulations splash after save")
+        XCTAssertTrue(app.staticTexts["celebrate.distance"].exists)
+        snap("route-celebrate")
+        tap("celebrate.done")
+        XCTAssertTrue(app.staticTexts["celebrate.title"].waitForNonExistence(timeout: 4), "the splash did not close")
+
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
         XCTAssertEqual(app.staticTexts["record.distance"].label, "0.00", "map card resets after save")
 

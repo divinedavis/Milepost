@@ -5,6 +5,7 @@ struct SaveActivitySheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(SocialStore.self) private var social
+    @Environment(SaveCelebration.self) private var celebration
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
 
     let summary: RunSummary
@@ -72,6 +73,7 @@ struct SaveActivitySheet: View {
         // Stats only, and only when signed in with sharing on; a failed
         // upload is retried by the next session's syncAll.
         Task { await social.share(activity) }
+        celebration.celebrate(title: activity.title, summary: summary)
         onDone(true)
         dismiss()
     }

@@ -10,6 +10,7 @@ struct MilepostApp: App {
     /// the life of the process.
     @State private var liveActivity: RunActivityController
     @State private var social: SocialStore
+    @State private var celebration = SaveCelebration()
 
     let container: ModelContainer
 
@@ -75,6 +76,7 @@ struct MilepostApp: App {
                 .environment(recorder)
                 .environment(announcer)
                 .environment(social)
+                .environment(celebration)
                 .preferredColorScheme(.dark)
         }
         .modelContainer(container)
