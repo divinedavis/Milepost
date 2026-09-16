@@ -2,7 +2,8 @@
 # Unit + UI tests.
 #
 #   ./scripts/run_tests.sh              # everything
-#   ./scripts/run_tests.sh unit         # unit only
+#   ./scripts/run_tests.sh unit         # iPhone unit + watch journeys
+#   ./scripts/run_tests.sh watch        # watch journeys only
 #   ./scripts/run_tests.sh ui           # UI only (static + moving)
 #   ./scripts/run_tests.sh ui MilepostUITests/testEveryTabOpens
 set -euo pipefail
@@ -10,6 +11,7 @@ cd "$(dirname "$0")/.."
 
 WHAT="${1:-all}"
 FILTER="${2:-}"
+WATCH_DEVICE="${MILEPOST_WATCH_SIM:-Apple Watch Series 11 (46mm)}"
 # MILEPOST_SIM may be a name or a UDID. Three runtimes share the name
 # "iPhone 17 Pro", so a UDID is the only way to pin one for screenshots.
 DEVICE="${MILEPOST_SIM:-iPhone 17 Pro}"
@@ -72,6 +74,28 @@ run() {
   return $status
 }
 
+# watchOS has no XCUITest, so the watch journeys drive the controller the
+# buttons call — which is where the freezes and the lost runs have lived.
+watch_tests() {
+  echo "== watch (journeys) =="
+  local log
+  log=$(mktemp)
+  set +e
+  xcodebuild test -project Milepost.xcodeproj -scheme MilepostWatch \
+    -destination "platform=watchOS Simulator,name=$WATCH_DEVICE" \
+    CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
+  local status=$?
+  set -e
+  grep -E "Test Case|error:|\*\* TEST" "$log" | grep -v "healthkit Code=4" | tail -40
+  if ! grep -qE "Executed [1-9][0-9]* test" "$log"; then
+    echo "NO TESTS RAN for MilepostWatchTests"
+    rm -f "$log"
+    return 1
+  fi
+  rm -f "$log"
+  return $status
+}
+
 ui_all() {
   boot
   echo "== ui (static) =="
@@ -95,7 +119,8 @@ ui_all() {
 }
 
 case "$WHAT" in
-  unit) echo "== unit =="; run MilepostTests ;;
+  unit) echo "== unit =="; run MilepostTests; watch_tests ;;
+  watch) watch_tests ;;
   ui)
     if [ -n "$FILTER" ]; then
       boot
@@ -104,6 +129,6 @@ case "$WHAT" in
     else
       ui_all
     fi ;;
-  all)  echo "== unit =="; run MilepostTests; ui_all ;;
-  *)    echo "usage: run_tests.sh [unit|ui|all] [Class[/test]]"; exit 2 ;;
+  all)  echo "== unit =="; run MilepostTests; watch_tests; ui_all ;;
+  *)    echo "usage: run_tests.sh [unit|watch|ui|all] [Class[/test]]"; exit 2 ;;
 esac

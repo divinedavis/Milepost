@@ -198,6 +198,22 @@ targets:
       properties:
         com.apple.developer.healthkit: true
 
+  # watchOS has no XCUITest, so the buttons cannot be pressed. These drive the
+  # controller behind them instead, which is where every freeze and every lost
+  # run has actually lived. run_tests.sh and ship.sh both run them.
+  MilepostWatchTests:
+    type: bundle.unit-test
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: MilepostWatchTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost.watchkitapp.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: MilepostWatch
+
   MilepostTests:
     type: bundle.unit-test
     platform: iOS
@@ -223,6 +239,20 @@ targets:
       - target: Milepost
 
 schemes:
+  MilepostWatch:
+    build:
+      targets:
+        MilepostWatch: all
+        MilepostWatchTests: [test]
+    test:
+      targets:
+        - MilepostWatchTests
+      gatherCoverageData: true
+    run:
+      config: Debug
+    archive:
+      config: Release
+
   Milepost:
     build:
       targets:

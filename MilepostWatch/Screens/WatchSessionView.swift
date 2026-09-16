@@ -5,9 +5,23 @@ import SwiftUI
 /// default, splits to the right.
 struct WatchSessionView: View {
     @Environment(WatchWorkoutController.self) private var workout
-    @State private var page = Page.metrics
+    @State private var page = Page.initial
 
-    private enum Page: Hashable { case controls, metrics, splits }
+    private enum Page: Hashable {
+        case controls, metrics, splits
+
+        /// Metrics is the default: it is what you want on the way up. The
+        /// override exists only so the other two can be captured, since
+        /// watchOS has no way to drive a swipe from a test.
+        static var initial: Page {
+            #if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-watch-preview-page-splits") { return .splits }
+            if arguments.contains("-watch-preview-page-controls") { return .controls }
+            #endif
+            return .metrics
+        }
+    }
 
     var body: some View {
         TabView(selection: $page) {

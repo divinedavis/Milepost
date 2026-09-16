@@ -7,7 +7,6 @@ struct WatchStartView: View {
     @Environment(WatchPhoneSync.self) private var sync
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
     @AppStorage(Sport.storageKey) private var sportRaw = Sport.run.rawValue
-    @State private var isStarting = false
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
     private var sport: Sport { Sport(rawValue: sportRaw) ?? .run }
@@ -31,7 +30,6 @@ struct WatchStartView: View {
                     }
                     .accessibilityIdentifier("watch.start.\(option.rawValue)")
                 }
-                .disabled(isStarting)
 
                 if let error = workout.errorText {
                     Text(error)
@@ -56,13 +54,11 @@ struct WatchStartView: View {
         }
     }
 
+    /// Synchronous on purpose. `start` returns immediately and the screen
+    /// changes on the same run loop pass, so there is no window where the
+    /// button has been pressed and nothing has happened.
     private func start(_ sport: Sport) {
-        guard !isStarting else { return }
-        isStarting = true
-        Task {
-            if workout.location.isUndetermined { workout.location.requestPermission() }
-            await workout.start(sport: sport, unit: unit)
-            isStarting = false
-        }
+        if workout.location.isUndetermined { workout.location.requestPermission() }
+        workout.start(sport: sport, unit: unit)
     }
 }

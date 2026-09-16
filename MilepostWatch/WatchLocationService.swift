@@ -42,15 +42,35 @@ final class WatchLocationService: NSObject, CLLocationManagerDelegate {
 
     func startTracking() {
         guard !isTracking else { return }
-        manager.allowsBackgroundLocationUpdates = true
         manager.startUpdatingLocation()
         isTracking = true
     }
 
+    /// Turns on background delivery, which is what keeps fixes coming with the
+    /// wrist down.
+    ///
+    /// This is deliberately **not** part of `startTracking`. Setting
+    /// `allowsBackgroundLocationUpdates` on a process that is not backgroundable
+    /// raises `NSInternalInconsistencyException` — "Invalid parameter not
+    /// satisfying: !stayUp || CLClientIsBackgroundable(...)" — which is an
+    /// Objective-C exception, so Swift cannot catch it and the app simply dies.
+    /// On watchOS what makes the process backgroundable is a **running workout
+    /// session**, so this is called once one has actually begun collecting, and
+    /// never before.
+    func allowBackgroundUpdates(_ allowed: Bool) {
+        guard isBackgroundEligible || !allowed else { return }
+        manager.allowsBackgroundLocationUpdates = allowed
+    }
+
+    /// Set by the controller when a workout session is live. Nothing else may
+    /// turn background updates on.
+    var isBackgroundEligible = false
+
     func stopTracking() {
         guard isTracking else { return }
         manager.stopUpdatingLocation()
-        manager.allowsBackgroundLocationUpdates = false
+        allowBackgroundUpdates(false)
+        isBackgroundEligible = false
         isTracking = false
     }
 

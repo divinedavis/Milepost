@@ -70,6 +70,30 @@ final class WatchWorkoutController: NSObject {
         }
     }
 
+#if DEBUG
+    /// Puts the controller into a running workout built from `WatchPreviewData`,
+    /// with no HealthKit session behind it. Debug only — see that file.
+    func enterPreviewState() {
+        heartRate = WatchPreviewData.heartRate
+        averageHeartRate = WatchPreviewData.averageHeartRate
+        maxHeartRate = WatchPreviewData.maxHeartRate
+        activeKilocalories = WatchPreviewData.activeKilocalories
+        phase = .running
+    }
+
+    /// The finished-run summary screen, same idea.
+    func enterPreviewSummary() {
+        guard let summary = recorder.finish() else { return }
+        finished = WatchActivityPayload(title: Format.defaultTitle(for: summary.startDate, sport: summary.sport),
+                                        summary: summary,
+                                        averageHeartRate: WatchPreviewData.averageHeartRate,
+                                        maxHeartRate: WatchPreviewData.maxHeartRate,
+                                        activeKilocalories: WatchPreviewData.activeKilocalories,
+                                        healthWorkoutID: UUID().uuidString)
+        phase = .finished
+    }
+#endif
+
     // MARK: Authorization
 
     static var isSupported: Bool { HKHealthStore.isHealthDataAvailable() }
@@ -110,8 +134,34 @@ final class WatchWorkoutController: NSObject {
 
     // MARK: Lifecycle
 
-    func start(sport: Sport, unit: DistanceUnit) async {
-        guard phase == .idle, Self.isSupported else { return }
+    /// Begins recording. Returns immediately and never throws.
+    ///
+    /// Recording starts here, synchronously, because the engine and GPS are all
+    /// that distance, pace and splits need — and because the screen has to
+    /// change the instant the button is pressed. The workout session is what
+    /// brings heart rate, calories and staying alive with the wrist down, and it
+    /// is attached afterwards, on its own Task.
+    ///
+    /// That split is the whole point. Every earlier version put the session
+    /// first and it froze on Start three different ways: an unavailable Health
+    /// database made the button do nothing at all, `beginCollection` could block
+    /// behind an unanswered permission sheet, and mirroring could hang with no
+    /// phone in range — all while the sport list sat disabled waiting for it. A
+    /// run must never be held up by Health, let alone lost to it.
+    func start(sport: Sport, unit: DistanceUnit) {
+        guard phase == .idle else { return }
+        recorder.start(unit: unit, sport: sport)
+        location.startTracking()
+        phase = .running
+        errorText = nil
+        Task { await attachWorkoutSession(sport: sport) }
+    }
+
+    /// Hangs a live workout session off a recording that is already running.
+    /// Failure here costs heart rate, calories and the Health workout; it does
+    /// not cost the run, which carries on from GPS alone.
+    private func attachWorkoutSession(sport: Sport) async {
+        guard Self.isSupported, session == nil, phase == .running || phase == .paused else { return }
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = sport.workoutActivityType
         configuration.locationType = .outdoor
@@ -131,22 +181,33 @@ final class WatchWorkoutController: NSObject {
             self.builder = builder
             routeBuilder = HKWorkoutRouteBuilder(healthStore: store, device: .local())
 
-            let startDate = Date()
+            // The recorder's own start, so the Health workout covers the same
+            // stretch of time the app is showing.
+            let startDate = recorder.startDate ?? Date()
             session.startActivity(with: startDate)
             try await builder.beginCollection(at: startDate)
-
-            recorder.start(unit: unit, sport: sport)
-            location.startTracking()
-            phase = .running
+            // Only now is the process backgroundable, and only now is it safe
+            // to ask CoreLocation to keep delivering with the wrist down. See
+            // WatchLocationService.allowBackgroundUpdates.
+            location.isBackgroundEligible = true
+            location.allowBackgroundUpdates(true)
             errorText = nil
-
-            // Lets the phone show and control this workout while it runs.
-            try? await session.startMirroringToCompanionDevice()
-            startMirrorTicker()
         } catch {
+            // Degrade to a GPS-only run rather than taking the run down with it.
             errorText = error.localizedDescription
-            cleanUp()
+            session = nil
+            builder = nil
+            routeBuilder = nil
+            return
         }
+
+        // Fire and forget: with no phone in range this never returns, and
+        // nothing about the run depends on it.
+        Task { [weak self] in
+            guard let session = await self?.session else { return }
+            try? await session.startMirroringToCompanionDevice()
+        }
+        startMirrorTicker()
     }
 
     func pause() {
@@ -182,30 +243,29 @@ final class WatchWorkoutController: NSObject {
         let summary = recorder.finish()
         let endDate = Date()
 
-        guard let session, let builder else {
-            cleanUp()
-            return nil
-        }
-
-        session.end()
-
+        // The session may never have attached — Health unavailable, permission
+        // refused, a failure mid-run. That costs the Health workout and the
+        // heart rate, and nothing else: the run itself came from the recorder
+        // and still has to reach the phone.
         var workoutID: String?
-        do {
-            if let summary {
-                let samples = distanceSamples(for: summary)
-                if !samples.isEmpty { try await builder.addSamples(samples) }
-                let events = lapEvents(for: summary)
-                if !events.isEmpty { try await builder.addWorkoutEvents(events) }
-                try await builder.addMetadata(metadata(for: summary))
+        if let session, let builder {
+            session.end()
+            do {
+                if let summary {
+                    let samples = distanceSamples(for: summary)
+                    if !samples.isEmpty { try await builder.addSamples(samples) }
+                    let events = lapEvents(for: summary)
+                    if !events.isEmpty { try await builder.addWorkoutEvents(events) }
+                    try await builder.addMetadata(metadata(for: summary))
+                }
+                try await builder.endCollection(at: endDate)
+                if let workout = try await builder.finishWorkout() {
+                    workoutID = workout.uuid.uuidString
+                    await attachRoute(to: workout)
+                }
+            } catch {
+                errorText = error.localizedDescription
             }
-            try await builder.endCollection(at: endDate)
-            let workout = try await builder.finishWorkout()
-            if let workout {
-                workoutID = workout.uuid.uuidString
-                await attachRoute(to: workout)
-            }
-        } catch {
-            errorText = error.localizedDescription
         }
 
         guard let summary else {
@@ -230,6 +290,7 @@ final class WatchWorkoutController: NSObject {
     /// Throws the recording away without saving anything. The workout builder
     /// is discarded too, or Health would keep a zero-distance stub.
     func discard() {
+        location.allowBackgroundUpdates(false)
         session?.end()
         builder?.discardWorkout()
         location.stopTracking()

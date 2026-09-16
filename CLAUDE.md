@@ -282,6 +282,38 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   harmless and takes the whole test process down inside SwiftData, with no
   assertion failure — xcodebuild reports "Restarting after unexpected exit" and
   names the tests without saying why. Keep the container in a property.
+- **Start must not wait on HealthKit.** `WatchWorkoutController.start` is
+  synchronous: it starts the recorder, turns on GPS and sets `phase = .running`
+  on the same run loop pass, then attaches the workout session on its own Task.
+  The first version did it the other way round and froze on Start three ways —
+  an unavailable Health database made the button do nothing at all,
+  `beginCollection` blocked behind an unanswered permission sheet, and
+  `startMirroringToCompanionDevice` hung with no phone in range — all while the
+  sport list sat disabled waiting. A failed session costs heart rate, calories
+  and the Health workout; it must never cost the run.
+- For the same reason `end()` produces a payload whether or not a session ever
+  attached. It used to `guard let session, let builder else { return nil }`,
+  which silently threw away a whole GPS-recorded run.
+- **`allowsBackgroundLocationUpdates = true` raises an uncatchable Obj-C
+  exception** (`NSInternalInconsistencyException`, "Invalid parameter not
+  satisfying: !stayUp || CLClientIsBackgroundable(...)") when the process is not
+  backgroundable. Swift cannot catch it; the app dies. On watchOS a **running
+  workout session** is what makes it backgroundable, so
+  `WatchLocationService.allowBackgroundUpdates` is called only after
+  `beginCollection` succeeds, gated on `isBackgroundEligible`.
+- `MilepostWatchTests` (watchOS unit-test target) holds the journeys, driving
+  the controller with an injected clock and **no Health database** — the case a
+  real wrist hides until it bites. `run_tests.sh watch` runs them; `unit` and
+  `all` include them, so `ship.sh` gates on them.
+  Fixture traps, both of which silently measure nothing: a fix timestamped
+  before `segmentStart` is dropped by the engine (inject the clock and advance
+  it), and a pause with no clock movement is a zero-length interval that
+  `closedPauses` drops on purpose.
+- `-watch-preview` (DEBUG only, `WatchPreviewData`) fills the screens with a
+  real twelve-minute run driven through the real recorder, so the watch UI can
+  be looked at and captured at all; `-watch-preview-summary` and
+  `-watch-preview-page-{splits,controls}` reach the other screens. Verified
+  absent from the Release binary with `strings`.
 - watchOS has no XCUITest, so `scripts/smoke_test_watch.sh` (build, install,
   cold launch in a watch simulator, then check the process is still alive) is
   the gate, and `ship.sh` runs it. `simctl io <watch sim> screenshot` returns a
