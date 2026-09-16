@@ -241,7 +241,11 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   `builtin-validationUtility`; the App Store upload is the first thing that
   says no (`ERROR 90362: Invalid value 'workout-processing' for Info.plist key
   UIBackgroundModes`), after the build number has already been bumped.
-  `smoke_test.sh` now fails on either mistake. It needs `workout-processing`
+  `location` is an **iOS** value and `WKBackgroundModes` rejects it too, with
+  the same error and no value named. Background location on the watch needs no
+  key at all: since watchOS 4 a workout session no longer grants it, and
+  `allowsBackgroundLocationUpdates` is the whole mechanism.
+  `smoke_test.sh` and `smoke_test_watch.sh` now fail on any of these. It needs `workout-processing`
   (or the session is suspended and the run stops) **and** `location` (what
   `allowsBackgroundLocationUpdates` requires, as on iOS).
 - Finished activities reach the phone with `transferUserInfo`, not
@@ -278,6 +282,11 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   harmless and takes the whole test process down inside SwiftData, with no
   assertion failure — xcodebuild reports "Restarting after unexpected exit" and
   names the tests without saying why. Keep the container in a property.
+- watchOS has no XCUITest, so `scripts/smoke_test_watch.sh` (build, install,
+  cold launch in a watch simulator, then check the process is still alive) is
+  the gate, and `ship.sh` runs it. `simctl io <watch sim> screenshot` returns a
+  **stale framebuffer** — three shots across two relaunches came back
+  byte-identical — so the process check is the signal, not the picture.
 - **Building needs the watchOS platform installed** (`xcodebuild -downloadPlatform
   watchOS`, ~4 GB). Without it even the iOS scheme fails, because it embeds a
   watch app: "watchOS 26.5 must be installed in order to run the scheme".

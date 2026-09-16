@@ -50,6 +50,12 @@ if [[ "${SHIP_SKIP_SMOKE:-0}" == "1" ]]; then
 else
     echo "==> smoke-testing a simulator launch"
     ./scripts/smoke_test.sh
+    # The iPhone smoke test says nothing about the watch app riding inside the
+    # bundle: its own @main, its own HealthKit and CoreLocation setup, its own
+    # ways to die on launch. watchOS has no XCUITest, so a cold launch is the
+    # gate there.
+    echo "==> smoke-testing a watch simulator launch"
+    ./scripts/smoke_test_watch.sh
 fi
 
 current=$(grep -m1 'CURRENT_PROJECT_VERSION:' "$PROJECT_YML" | sed -E 's/.*"([0-9]+)".*/\1/')

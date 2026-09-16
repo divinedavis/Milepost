@@ -168,16 +168,19 @@ targets:
         WKCompanionAppBundleIdentifier: com.divinedavis.milepost
         # The watch app records on its own; it must not need the phone nearby.
         WKRunsIndependentlyOfCompanionApp: true
-        # watchOS uses WKBackgroundModes, NOT UIBackgroundModes. Getting this
-        # wrong builds, archives, exports and passes local validation; the App
-        # Store upload is the first thing that says no (error 90362, "Invalid
-        # value 'workout-processing' for Info.plist key UIBackgroundModes").
-        # workout-processing is what keeps the app running with the wrist down;
-        # without it the session is suspended and the run stops. location is
-        # what allowsBackgroundLocationUpdates requires.
+        # watchOS uses WKBackgroundModes, NOT UIBackgroundModes, and it takes a
+        # much shorter list of values — `location` is an iOS value and is
+        # rejected here. Either mistake builds, archives, exports and passes
+        # local validation; the App Store upload is the first thing that says
+        # no (error 90362).
+        #
+        # workout-processing is what keeps the app running with the wrist down.
+        # Background *location* needs no key at all: since watchOS 4 a workout
+        # session no longer grants it and CLLocationManager's
+        # allowsBackgroundLocationUpdates is the whole mechanism, which
+        # WatchLocationService sets only while a recording is live.
         WKBackgroundModes:
           - workout-processing
-          - location
         NSHealthUpdateUsageDescription: Milepost saves your runs, walks and rides to Apple Health as workouts, with heart rate and calories from your watch.
         NSHealthShareUsageDescription: Milepost reads the heart rate and calories your watch measures during an activity so it can show them while you move.
         NSLocationWhenInUseUsageDescription: Milepost uses your location to measure distance and pace and to record your route while you move, including with your wrist down.
