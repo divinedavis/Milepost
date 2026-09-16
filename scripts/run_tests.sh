@@ -77,6 +77,8 @@ ui_all() {
   echo "== ui (static) =="
   still
   run MilepostUITests/MilepostUITests
+  echo "== ui (health) =="
+  run MilepostUITests/MilepostHealthUITests
   echo "== ui (sport) =="
   run MilepostUITests/MilepostSportUITests
   echo "== ui (friends) =="

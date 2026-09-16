@@ -26,6 +26,14 @@ final class MilepostFriendsUITests: XCTestCase {
     }
 
     /// Matches by identifier whatever element type SwiftUI chose.
+    /// Swipes up until `id` is in the accessibility tree, or gives up.
+    private func scrollToElement(_ id: String, attempts: Int = 6) {
+        for _ in 0..<attempts {
+            if element(id).exists { return }
+            app.swipeUp()
+        }
+    }
+
     private func element(_ id: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: id).firstMatch
     }
@@ -111,8 +119,11 @@ final class MilepostFriendsUITests: XCTestCase {
     func testAccountSectionOnYou() {
         launch(demo: true)
         tap("tab.you")
-        app.swipeUp()
-        app.swipeUp()
+        // The Account section sits below the fold, and how far below moves
+        // whenever a setting is added above it (Apple Health did). Offscreen
+        // List cells are not in the accessibility tree, so scroll until it is
+        // there rather than guessing a number of swipes.
+        scrollToElement("you.username")
         XCTAssertTrue(element("you.username").waitForExistence(timeout: 6))
         XCTAssertTrue(element("you.username").label.contains("@you_demo"), element("you.username").label)
         XCTAssertTrue(element("you.share").exists)

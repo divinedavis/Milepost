@@ -64,6 +64,12 @@ targets:
         # The Dynamic Island / lock-screen run card. Without this key
         # Activity.request throws and the run simply has no card.
         NSSupportsLiveActivities: true
+        # Health. Both keys are required the moment the app links HealthKit:
+        # the share string is shown when Milepost asks to write workouts, the
+        # read string when it asks for heart rate and body mass. A missing
+        # string is a launch-time crash, not a warning.
+        NSHealthUpdateUsageDescription: Milepost adds your saved runs, walks and rides to Apple Health as workouts, so they count toward your rings and other fitness apps can read them. Your route is only included if you switch it on.
+        NSHealthShareUsageDescription: Milepost reads heart rate and other metrics your Apple Watch recorded during an activity, and your weight, so it can estimate calories more accurately.
         # Supabase project for friends. The anon key is public by design (it
         # ships in the bundle); RLS does the gating. From Secrets.xcconfig.
         SUPABASE_HOST: $(SUPABASE_HOST)
@@ -87,8 +93,11 @@ targets:
         # the entitlement and the capability are two halves of one switch.
         com.apple.developer.applesignin:
           - Default
+        com.apple.developer.healthkit: true
     dependencies:
       - target: MilepostWidget
+      - target: MilepostWatch
+        embed: true
       - package: Supabase
         product: Supabase
 
@@ -122,6 +131,65 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: CG89RY4W6R
         SKIP_INSTALL: YES
+
+  # The watch app records standalone: its own HKWorkoutSession for heart rate
+  # and for staying alive with the wrist down, its own GPS, and the app's own
+  # RunRecorder for distance, pace and splits so the two devices cannot
+  # disagree about the same run. The shared files below are compiled into it
+  # for the same reason the widget compiles its three: a watch app cannot link
+  # the iPhone app.
+  MilepostWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: MilepostWatch
+      - path: Milepost/Models/Sport.swift
+      - path: Milepost/Models/Units.swift
+      - path: Milepost/Models/RoutePoint.swift
+      - path: Milepost/Models/VoiceCue.swift
+      - path: Milepost/Models/HealthSettings.swift
+      - path: Milepost/Models/WatchActivityPayload.swift
+      - path: Milepost/Models/WorkoutRemoteCommand.swift
+      - path: Milepost/Services/RunRecorder.swift
+      - path: Milepost/Services/CalorieEstimator.swift
+      - path: Milepost/Services/SplitTimeline.swift
+      - path: Milepost/Services/Sport+HealthKit.swift
+      - path: Milepost/Design/Theme.swift
+      - path: Milepost/Design/SportIcon.swift
+    info:
+      path: MilepostWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Milepost
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        # Single-target watch app (no legacy WatchKit extension).
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.divinedavis.milepost
+        # The watch app records on its own; it must not need the phone nearby.
+        WKRunsIndependentlyOfCompanionApp: true
+        # workout-processing is what keeps the app running with the wrist down;
+        # without it the session is suspended and the run stops. location is
+        # what allowsBackgroundLocationUpdates requires, exactly as on iOS.
+        UIBackgroundModes:
+          - workout-processing
+          - location
+        NSHealthUpdateUsageDescription: Milepost saves your runs, walks and rides to Apple Health as workouts, with heart rate and calories from your watch.
+        NSHealthShareUsageDescription: Milepost reads the heart rate and calories your watch measures during an activity so it can show them while you move.
+        NSLocationWhenInUseUsageDescription: Milepost uses your location to measure distance and pace and to record your route while you move, including with your wrist down.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.milepost.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: CG89RY4W6R
+        SKIP_INSTALL: YES
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    entitlements:
+      path: MilepostWatch/MilepostWatch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
 
   MilepostTests:
     type: bundle.unit-test

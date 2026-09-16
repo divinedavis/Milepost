@@ -35,6 +35,63 @@ final class MilepostRouteUITests: XCTestCase {
         el.tap()
     }
 
+    /// A real run saved with Apple Health switched on, all the way to the
+    /// detail screen's Health entry.
+    ///
+    /// The simulator runs unsigned, so nothing can actually reach the Health
+    /// database — what this covers is the path around it: saving still works
+    /// with the extra branch in it, the activity is stored exactly once, and
+    /// the menu offers to send it to Health because it has not been sent.
+    func testSavingWithAppleHealthOnKeepsTheActivityAndOffersHealth() {
+        app.terminate()
+        app.launchArguments = ["-uitest", "-uitest-health-on"]
+        app.launch()
+
+        tap("record.start")
+        allowLocation()
+        if !app.buttons["live.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
+            tap("record.start")
+        }
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
+
+        let distance = app.staticTexts["live.distance"]
+        let moved = NSPredicate(format: "label != '0.00'")
+        wait(for: [expectation(for: moved, evaluatedWith: distance)], timeout: 45)
+
+        tap("live.pause")
+        tap("live.finish")
+        XCTAssertTrue(app.textFields["save.title"].waitForExistence(timeout: 8), "save sheet never appeared")
+        tap("save.save")
+        XCTAssertTrue(app.staticTexts["celebrate.title"].waitForExistence(timeout: 8))
+        tap("celebrate.done")
+
+        tap("tab.block")
+        let row = app.staticTexts["block.rowTitle"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "the run was not saved with Health on")
+        XCTAssertEqual(app.staticTexts.matching(identifier: "block.rowTitle").count, 1,
+                       "saving to Health must not store the activity twice")
+        row.tap()
+        XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 8))
+
+        tap("detail.menu")
+        let sendToHealth = app.buttons["detail.saveToHealth"]
+        XCTAssertTrue(sendToHealth.waitForExistence(timeout: 4),
+                      "an activity not yet in Health should offer to go there")
+        sendToHealth.tap()
+
+        // Unsigned, so the write is refused. The activity has to survive that
+        // without a crash and without losing anything.
+        XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Distance"].exists)
+
+        tap("detail.menu")
+        tap("detail.delete")
+        let confirm = app.buttons["Delete"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 4))
+        confirm.tap()
+        XCTAssertTrue(app.staticTexts["No activities yet"].waitForExistence(timeout: 8))
+    }
+
     func testMovingRunSavesAndAppearsInBlock() {
         tap("record.start")
         allowLocation()

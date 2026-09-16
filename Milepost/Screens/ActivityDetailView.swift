@@ -5,7 +5,10 @@ import SwiftUI
 struct ActivityDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(HealthKitService.self) private var health
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
+    @AppStorage(HealthSettings.enabledKey) private var healthEnabled = HealthSettings.enabledDefault
+    @AppStorage(HealthSettings.routeKey) private var healthRoute = HealthSettings.routeDefault
     @Bindable var activity: Activity
     @State private var confirmDelete = false
     @State private var editingTitle = false
@@ -35,6 +38,8 @@ struct ActivityDetailView: View {
                     tile("Elapsed", Format.duration(activity.endDate.timeIntervalSince(activity.startDate)))
                 }
 
+                HealthMetricsSection(activity: activity)
+
                 splitsSection
             }
             .padding(16)
@@ -50,6 +55,12 @@ struct ActivityDetailView: View {
                         editingTitle = true
                     }
                     .accessibilityIdentifier("detail.rename")
+                    if healthEnabled, HealthKitService.isSupported, !activity.isInAppleHealth {
+                        Button("Save to Apple Health", systemImage: "heart") {
+                            Task { await HealthSync.write(activity, using: health, context: context, includeRoute: healthRoute) }
+                        }
+                        .accessibilityIdentifier("detail.saveToHealth")
+                    }
                     Button("Delete \(activity.sport.title)", systemImage: "trash", role: .destructive) { confirmDelete = true }
                         .accessibilityIdentifier("detail.delete")
                 } label: {
@@ -60,6 +71,11 @@ struct ActivityDetailView: View {
         }
         .confirmationDialog("Delete this \(activity.sport.title.lowercased())?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
+                // Health first: once SwiftData has dropped the row there is no
+                // workout id left to delete with.
+                let health = health
+                let activity = activity
+                Task { await HealthSync.remove(activity, using: health) }
                 context.delete(activity)
                 try? context.save()
                 dismiss()

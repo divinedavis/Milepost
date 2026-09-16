@@ -6,7 +6,10 @@ struct SaveActivitySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SocialStore.self) private var social
     @Environment(SaveCelebration.self) private var celebration
+    @Environment(HealthKitService.self) private var health
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
+    @AppStorage(HealthSettings.enabledKey) private var healthEnabled = HealthSettings.enabledDefault
+    @AppStorage(HealthSettings.routeKey) private var healthRoute = HealthSettings.routeDefault
 
     let summary: RunSummary
     /// true = saved, false = discarded. Cancelling the sheet calls nothing.
@@ -37,6 +40,11 @@ struct SaveActivitySheet: View {
                     LabeledContent(sport.rateLabel("Avg.", unit: unit).replacingOccurrences(of: " (\(sport.rateSuffix(unit: unit)))", with: ""),
                                    value: "\(sport.rateText(Pace.secondsPerUnit(distanceMeters: summary.distanceMeters, seconds: summary.movingSeconds, unit: unit, sport: sport), unit: unit)) \(sport.rateSuffix(unit: unit))")
                     LabeledContent("Splits", value: "\(summary.splits.filter { $0.isComplete(splitMeters: summary.splitMeters) }.count) full")
+                    if healthEnabled, health.canWriteWorkouts {
+                        LabeledContent("Apple Health",
+                                       value: healthRoute ? "Workout + route" : "Workout")
+                            .accessibilityIdentifier("save.health")
+                    }
                 }
                 Section {
                     Button("Save \(sport.title)") { save() }
@@ -73,6 +81,13 @@ struct SaveActivitySheet: View {
         // Stats only, and only when signed in with sharing on; a failed
         // upload is retried by the next session's syncAll.
         Task { await social.share(activity) }
+        // Health is a separate write from the local save: an activity is kept
+        // whether or not Health accepts it.
+        if healthEnabled {
+            Task {
+                await HealthSync.write(activity, using: health, context: context, includeRoute: healthRoute)
+            }
+        }
         celebration.celebrate(title: activity.title, summary: summary)
         onDone(true)
         dismiss()

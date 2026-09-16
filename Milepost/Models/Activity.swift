@@ -19,6 +19,13 @@ final class Activity {
     /// Added after 1.0 shipped. The default is what every stored activity
     /// was, so SwiftData migrates old rows without touching them.
     var sportRaw: String = Sport.run.rawValue
+    /// The UUID of the workout this activity was written to in Apple Health,
+    /// or nil if it was never written. Added after 1.0 with a default, so
+    /// SwiftData migrates stored activities without a mapping model.
+    var healthWorkoutID: String? = nil
+    /// Pauses, for re-writing this activity to Health later. Stored as JSON
+    /// with an empty default for the same migration reason.
+    var pausesData: Data = Data()
 
     init(id: UUID = UUID(),
          title: String,
@@ -29,7 +36,8 @@ final class Activity {
          splitMeters: Double,
          route: [RoutePoint],
          splits: [Split],
-         sport: Sport = .run) {
+         sport: Sport = .run,
+         pauses: [PauseInterval] = []) {
         self.id = id
         self.title = title
         self.startDate = startDate
@@ -40,6 +48,7 @@ final class Activity {
         self.routeData = (try? JSONEncoder().encode(route)) ?? Data()
         self.splitsData = (try? JSONEncoder().encode(splits)) ?? Data()
         self.sportRaw = sport.rawValue
+        self.pausesData = (try? JSONEncoder().encode(pauses)) ?? Data()
     }
 
     convenience init(summary: RunSummary, title: String) {
@@ -51,7 +60,8 @@ final class Activity {
                   splitMeters: summary.splitMeters,
                   route: summary.route,
                   splits: summary.splits,
-                  sport: summary.sport)
+                  sport: summary.sport,
+                  pauses: summary.pauses)
     }
 
     var route: [RoutePoint] {
@@ -63,6 +73,26 @@ final class Activity {
     }
 
     var sport: Sport { Sport(rawValue: sportRaw) ?? .run }
+
+    var pauses: [PauseInterval] {
+        (try? JSONDecoder().decode([PauseInterval].self, from: pausesData)) ?? []
+    }
+
+    var isInAppleHealth: Bool { healthWorkoutID != nil }
+
+    /// The activity as the recorder would have handed it over, so the Health
+    /// writer has one input whether it is called at save time or later.
+    var summary: RunSummary {
+        RunSummary(startDate: startDate,
+                   endDate: endDate,
+                   movingSeconds: movingSeconds,
+                   distanceMeters: distanceMeters,
+                   splitMeters: splitMeters,
+                   route: route,
+                   splits: splits,
+                   sport: sport,
+                   pauses: pauses)
+    }
 
     var recordedUnit: DistanceUnit {
         abs(splitMeters - DistanceUnit.kilometers.meters) < 1 ? .kilometers : .miles

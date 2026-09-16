@@ -4,6 +4,7 @@ import SwiftUI
 struct RecordScreen: View {
     @Environment(LocationService.self) private var location
     @Environment(RunRecorder.self) private var recorder
+    @Environment(MirroredWorkoutMonitor.self) private var mirror
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
     @AppStorage(Sport.storageKey) private var sportRaw = Sport.run.rawValue
     @Binding var tab: Tab
@@ -48,10 +49,17 @@ struct RecordScreen: View {
             }
 
             VStack(spacing: 0) {
-                statsCard
+                // While the watch is recording, the phone is a remote for it
+                // and its own controls are out of the way.
+                MirroredWorkoutBanner()
                     .padding(.horizontal, 12)
                     .padding(.bottom, 10)
-                bottomBar
+                if !mirror.isMirroring {
+                    statsCard
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 10)
+                    bottomBar
+                }
             }
         }
         .mapScope(mapScope)

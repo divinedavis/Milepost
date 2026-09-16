@@ -55,11 +55,13 @@ struct YouScreen: View {
                     Text(voiceFooter)
                 }
 
+                HealthSection()
+
                 AccountSection()
 
                 Section("About") {
                     LabeledContent("Version", value: Self.versionText)
-                    Text("Routes are stored on this phone only. With friends on, only each activity's stats are shared.")
+                    Text("Routes are stored on this phone only. With friends on, only each activity's stats are shared, and a route reaches Apple Health only if you switch it on above.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

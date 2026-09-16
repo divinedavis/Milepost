@@ -5,21 +5,62 @@ struct RoutePoint: Codable, Hashable {
     var latitude: Double
     var longitude: Double
     var timestamp: Date
+    /// Altitude and fix quality, kept so the route written to Apple Health is
+    /// a real CLLocation rather than a bare coordinate, and so elevation gain
+    /// can be measured. All optional: activities recorded before Health
+    /// support decode unchanged, with nil here.
+    var altitude: Double?
+    var horizontalAccuracy: Double?
+    var verticalAccuracy: Double?
+    var speed: Double?
+    /// Distance the recorder had booked when this fix was accepted. Consecutive
+    /// route points cannot be measured against each other to get this: the gap
+    /// across a pause covers ground the recorder deliberately never counted.
+    /// Optional for the same reason as the fields above.
+    var cumulativeMeters: Double?
 
-    init(latitude: Double, longitude: Double, timestamp: Date) {
+    init(latitude: Double, longitude: Double, timestamp: Date,
+         altitude: Double? = nil, horizontalAccuracy: Double? = nil,
+         verticalAccuracy: Double? = nil, speed: Double? = nil,
+         cumulativeMeters: Double? = nil) {
         self.latitude = latitude
         self.longitude = longitude
         self.timestamp = timestamp
+        self.altitude = altitude
+        self.horizontalAccuracy = horizontalAccuracy
+        self.verticalAccuracy = verticalAccuracy
+        self.speed = speed
+        self.cumulativeMeters = cumulativeMeters
     }
 
-    init(_ location: CLLocation) {
+    init(_ location: CLLocation, cumulativeMeters: Double? = nil) {
         latitude = location.coordinate.latitude
         longitude = location.coordinate.longitude
         timestamp = location.timestamp
+        altitude = location.altitude
+        horizontalAccuracy = location.horizontalAccuracy
+        verticalAccuracy = location.verticalAccuracy
+        speed = location.speed
+        self.cumulativeMeters = cumulativeMeters
     }
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    /// HealthKit refuses route points with a non-positive horizontal accuracy,
+    /// so a point stored before the field existed reports the worst fix the
+    /// engine would ever have accepted — an honest upper bound, not a guess at
+    /// a better one. A nil altitude is published with an invalid vertical
+    /// accuracy, which is how CoreLocation says "no altitude".
+    var location: CLLocation {
+        CLLocation(coordinate: coordinate,
+                   altitude: altitude ?? 0,
+                   horizontalAccuracy: horizontalAccuracy ?? RunRecorder.maxHorizontalAccuracy,
+                   verticalAccuracy: altitude == nil ? -1 : (verticalAccuracy ?? -1),
+                   course: -1,
+                   speed: speed ?? -1,
+                   timestamp: timestamp)
     }
 }
 
@@ -39,4 +80,14 @@ struct Split: Codable, Hashable, Identifiable {
     func pace(unit: DistanceUnit, sport: Sport = .run) -> Double? {
         Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: seconds, unit: unit, sport: sport)
     }
+}
+
+/// A stretch of a recording where the clock was stopped. Apple Health derives
+/// a workout's duration from pause/resume events, so without these Health
+/// would show elapsed time where Milepost shows moving time.
+struct PauseInterval: Codable, Hashable {
+    var start: Date
+    var end: Date?
+
+    var duration: TimeInterval { (end ?? start).timeIntervalSince(start) }
 }

@@ -174,6 +174,91 @@ final class RunRecorderTests: XCTestCase {
         XCTAssertEqual(r.state, .paused)
     }
 
+    // MARK: Pauses, for Apple Health
+
+    /// Health derives a workout's duration by subtracting pause/resume events
+    /// from the wall clock. Without these the workout would show elapsed time
+    /// where Milepost shows moving time, and the two would never agree.
+    func testSummaryCarriesEachPauseAsAClosedInterval() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        r.ingest(fix(0, at: 0))
+        clock = clock.addingTimeInterval(60)
+        r.ingest(fix(200, at: 60))
+
+        clock = clock.addingTimeInterval(0)
+        r.pause()
+        clock = clock.addingTimeInterval(120)
+        r.resume()
+
+        clock = clock.addingTimeInterval(60)
+        r.ingest(fix(400, at: 240))
+        clock = clock.addingTimeInterval(1)
+
+        let summary = r.finish()
+        XCTAssertEqual(summary?.pauses.count, 1)
+        XCTAssertEqual(summary?.pauses.first?.duration ?? 0, 120, accuracy: 0.5)
+        // The pause total is exactly the gap between elapsed and wall clock.
+        let wall = (summary?.endDate.timeIntervalSince(summary!.startDate)) ?? 0
+        let paused = summary?.pauses.reduce(0) { $0 + $1.duration } ?? 0
+        XCTAssertEqual(wall - paused, summary?.movingSeconds ?? 0, accuracy: 1)
+    }
+
+    /// Finishing while already paused leaves that pause open. Dropping it would
+    /// hand Health a workout whose duration overstates the run by however long
+    /// the phone sat in a pocket before Stop was tapped.
+    func testFinishingWhilePausedClosesTheTrailingPause() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        r.ingest(fix(0, at: 0))
+        clock = clock.addingTimeInterval(60)
+        r.ingest(fix(300, at: 60))
+        r.pause()
+        clock = clock.addingTimeInterval(300)
+
+        let summary = r.finish()
+        XCTAssertEqual(summary?.pauses.count, 1)
+        XCTAssertEqual(summary?.pauses.first?.duration ?? 0, 300, accuracy: 1)
+        XCTAssertEqual(summary?.movingSeconds ?? 0, 60, accuracy: 1)
+    }
+
+    /// A run that was never paused must not carry a zero-length interval:
+    /// HealthKit rejects a pause and resume at the same instant.
+    func testAnUninterruptedRunHasNoPauses() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        r.ingest(fix(0, at: 0))
+        clock = clock.addingTimeInterval(120)
+        r.ingest(fix(400, at: 120))
+        XCTAssertEqual(r.finish()?.pauses.count, 0)
+    }
+
+    /// Every accepted fix records the distance booked at that moment. Health's
+    /// lap timings are interpolated from it, and measuring consecutive fixes
+    /// instead would count the ground covered while paused.
+    func testRoutePointsCarryTheDistanceBookedSoFar() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        r.ingest(fix(0, at: 0))
+        clock = clock.addingTimeInterval(60)
+        r.ingest(fix(200, at: 60))
+
+        r.pause()
+        clock = clock.addingTimeInterval(60)
+        r.resume()
+        // Moved 500 m while the clock was stopped; the recorder counts none of
+        // it, and the route point must agree.
+        clock = clock.addingTimeInterval(60)
+        r.ingest(fix(700, at: 180))
+        clock = clock.addingTimeInterval(60)
+        r.ingest(fix(900, at: 240))
+
+        let booked = r.route.compactMap(\.cumulativeMeters)
+        XCTAssertEqual(booked.count, r.route.count)
+        XCTAssertEqual(booked.last ?? 0, r.distanceMeters, accuracy: 0.001)
+        XCTAssertEqual(booked, booked.sorted())
+    }
+
     func testStartWhileActiveIsIgnored() {
         let r = makeRecorder()
         r.start(unit: .miles)

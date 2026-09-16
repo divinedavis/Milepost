@@ -181,6 +181,102 @@ Live Activity (`MilepostWidget/`, `RunActivityController`):
 - Splits are stored in the unit the run was recorded with (`splitMeters`);
   the detail view labels them from that, not from the current setting.
 
+Apple Health (`Milepost/Services/HealthKit*`, `HealthSync`, `HealthSection`, added 2026-09-16):
+- **Both switches start off.** `HealthSettings.enabledDefault` and `.routeDefault`
+  are false, and `HealthTests.testHealthAndRouteWritingAreBothOffByDefault` pins
+  them. Saving stats and handing over a map of where the user runs are two
+  different promises; the route toggle only appears once saving is on.
+- Writing goes through `HKWorkoutBuilder`: distance under the sport's type
+  (`distanceCycling` for a ride, `distanceWalkingRunning` otherwise), estimated
+  active energy, pause/resume events, and a `.lap` event per completed split.
+  Health derives a workout's **duration from the pause events** — leave them out
+  and Health shows elapsed time where Milepost shows moving time.
+- The route builder must be taken off the workout builder with
+  `seriesBuilder(for: HKSeriesType.workoutRoute())`. A standalone
+  `HKWorkoutRouteBuilder` finished by hand orphans the route. The watch is the
+  exception: it makes its own and calls `finishRoute(with:)` itself.
+- `RoutePoint` gained `altitude`, `horizontalAccuracy`, `verticalAccuracy`,
+  `speed` and `cumulativeMeters`, all **optional** so activities stored before
+  Health decode unchanged. HealthKit drops a route point whose horizontal
+  accuracy is not positive, so a legacy point reports
+  `RunRecorder.maxHorizontalAccuracy` — the worst fix the engine would have
+  accepted, an honest upper bound rather than a flattering guess.
+- `cumulativeMeters` is the recorder's own booked distance at that fix, not
+  something to re-derive: measuring consecutive route points would count the
+  ground covered while paused, because no points are appended during a pause but
+  the two either side of it can be far apart. `SplitTimeline` interpolates lap
+  boundaries from it, and returns **nothing** for a legacy route rather than
+  spacing laps evenly and claiming a precision that is fictional.
+- Elevation ignores fixes with a negative `verticalAccuracy` (no altitude
+  reading) and rises under a metre (a barometer wanders standing still; summing
+  that noise over an hour invents hundreds of feet).
+- Calories are modelled, never measured, on the phone: ACSM walking/running
+  equations, Compendium MET bands for cycling, minus one MET because Health's
+  Move ring counts energy *above* resting. Out-of-bounds speeds produce nil —
+  a nonsense number written to Health is worse than no number.
+- Reads are by **date range**, not against a stored workout, so a run recorded
+  on the phone still shows the heart rate an Apple Watch was recording at the
+  same time, whoever wrote the workout. Health never reports whether a read was
+  granted; a denied type simply returns nothing.
+- `Sport+HealthKit.swift` is separate from `Sport.swift` on purpose: `Sport` is
+  compiled into the widget and must not drag HealthKit in with it.
+- App Privacy is unchanged. A HealthKit write stays on the user's device and is
+  not "collected" by the developer, so nothing new is declared.
+
+Apple Watch (`MilepostWatch/`, added 2026-09-16):
+- Single-target watchOS app, `com.divinedavis.milepost.watchkitapp`, watchOS 10+,
+  embedded by the iOS app (`Embed Watch Content`). `WKRunsIndependentlyOfCompanionApp`
+  is true: it records with no phone nearby.
+- **Two engines, on purpose.** `HKWorkoutSession` owns the session — it is the
+  only thing that keeps the app alive with the wrist down, and the only source
+  of heart rate and active energy. `RunRecorder`, the app's own unchanged
+  engine, owns distance, pace and splits from GPS, so a mile split on the watch
+  is computed by exactly the same rules as one on the phone.
+- Therefore `disableCollection(for:)` is called for **both** distance types on
+  the `HKLiveWorkoutDataSource`. Leave automatic collection on and HealthKit's
+  fused distance and Milepost's GPS distance both land on the same workout;
+  Health shows the sum.
+- `UIBackgroundModes` needs `workout-processing` (or the session is suspended
+  and the run stops) **and** `location` (what `allowsBackgroundLocationUpdates`
+  requires, exactly as on iOS).
+- Finished activities reach the phone with `transferUserInfo`, not
+  `sendMessage`: it is queued and survives the watch app being killed, so a run
+  finished out of range still lands. The phone dedupes on `payload.id` because
+  WatchConnectivity retries a transfer it never saw acknowledged.
+- The payload carries `healthWorkoutID`. The watch already wrote the workout, so
+  a non-nil value is what stops the phone writing a **second copy** of the same
+  run into Health.
+- Heart rate and calories are deliberately **not** stored on `Activity`. The
+  watch wrote them to Health; the detail screen reads them back by date range.
+  That is also what keeps them structurally unable to reach the friends backend
+  (`WatchSyncTests.testAWatchActivityStillSharesStatsOnly`).
+- The "Include route" switch is the phone's, and the watch honours it through
+  `updateApplicationContext` — a setting has no history worth queueing, only a
+  current value. A watch that has never heard from its phone defaults to **not**
+  writing a route, matching the phone.
+- Mirroring is a separate channel from WatchConnectivity:
+  `startMirroringToCompanionDevice()` on the watch,
+  `workoutSessionMirroringStartHandler` on the phone, and
+  `sendToRemoteWorkoutSession(data:)` both ways. It works with either app in the
+  background, which is why the phone can show a live run at all. The watch
+  pushes a `MirroredWorkoutState` every 2s; the phone sends
+  `WorkoutRemoteCommand`s. Both are wrapped in `WorkoutRemoteMessage` so an
+  older build decodes nothing rather than misreading a message.
+- While a mirrored session is live the Record tab hides its own controls. Two
+  recorders on one run means two activities and two workouts in Health.
+- The watch target compiles the app's `Sport`, `Units`, `RoutePoint`,
+  `VoiceCue`, `RunRecorder`, `CalorieEstimator`, `SplitTimeline`,
+  `Sport+HealthKit`, `Theme` and `SportIcon` — same reason the widget compiles
+  its three: a watch app cannot link the iPhone app.
+- A `ModelContainer` must be **held** for as long as its context is used.
+  `let context = try makeContainer().mainContext` in a test helper reads as
+  harmless and takes the whole test process down inside SwiftData, with no
+  assertion failure — xcodebuild reports "Restarting after unexpected exit" and
+  names the tests without saying why. Keep the container in a property.
+- **Building needs the watchOS platform installed** (`xcodebuild -downloadPlatform
+  watchOS`, ~4 GB). Without it even the iOS scheme fails, because it embeds a
+  watch app: "watchOS 26.5 must be installed in order to run the scheme".
+
 ## App Store submission (all in `scripts/`, run with `~/.venvs/spendcap/bin/python`)
 
 - `asc_metadata.py` — the whole listing (categories, subtitle, description,

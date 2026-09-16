@@ -10,6 +10,9 @@ struct MilepostApp: App {
     /// the life of the process.
     @State private var liveActivity: RunActivityController
     @State private var social: SocialStore
+    @State private var health = HealthKitService()
+    @State private var watchSync: PhoneWatchSync
+    @State private var mirror = MirroredWorkoutMonitor()
     @State private var celebration = SaveCelebration()
 
     let container: ModelContainer
@@ -20,6 +23,11 @@ struct MilepostApp: App {
             // Settings must not leak from one UI run into the next (an aborted
             // test once left voice cues on and broke the following run).
             UserDefaults.standard.removePersistentDomain(forName: bundle)
+        }
+        // Lets the Health section be driven without tapping the toggle that
+        // raises Apple's permission sheet, which the runner cannot dismiss.
+        if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-health-on") {
+            UserDefaults.standard.set(true, forKey: HealthSettings.enabledKey)
         }
         let location = LocationService()
         let recorder = RunRecorder()
@@ -55,6 +63,15 @@ struct MilepostApp: App {
         let context = container.mainContext
         social.localActivities = { (try? context.fetch(FetchDescriptor<Activity>())) ?? [] }
         _social = State(initialValue: social)
+
+        // Activities recorded on the Apple Watch arrive here, usually while
+        // the app is in the background.
+        let watchSync = PhoneWatchSync()
+        watchSync.onReceive = { payload in
+            guard let activity = WatchActivityImporter.store(payload, in: context) else { return }
+            Task { await social.share(activity) }
+        }
+        _watchSync = State(initialValue: watchSync)
     }
 
     /// Under `-uitest` the session is in memory (the runner cannot write the
@@ -76,8 +93,23 @@ struct MilepostApp: App {
                 .environment(recorder)
                 .environment(announcer)
                 .environment(social)
+                .environment(health)
+                .environment(watchSync)
+                .environment(mirror)
                 .environment(celebration)
                 .preferredColorScheme(.dark)
+                .task {
+                    watchSync.activate()
+                    // The watch calls startMirroringToCompanionDevice when a
+                    // workout begins; without this handler installed the phone
+                    // never hears about it.
+                    mirror.begin()
+                    // The weight the calorie estimate scales with. Asking for
+                    // it here rather than mid-save keeps the save instant, and
+                    // it is a no-op until the user has allowed Health.
+                    guard UserDefaults.standard.bool(forKey: HealthSettings.enabledKey) else { return }
+                    await health.refreshBodyMass()
+                }
         }
         .modelContainer(container)
     }

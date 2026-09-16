@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Milepost reads heart rate and other metrics your Apple Watch recorded during an activity, and your weight, so it can estimate calories more accurately.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Milepost adds your saved runs, walks and rides to Apple Health as workouts, so they count toward your rings and other fitness apps can read them. Your route is only included if you switch it on.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.</string>
 	<key>NSSupportsLiveActivities</key>

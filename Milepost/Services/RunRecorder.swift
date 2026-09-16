@@ -11,6 +11,9 @@ struct RunSummary: Equatable {
     var route: [RoutePoint]
     var splits: [Split]
     var sport: Sport
+    /// Every stretch where the clock was stopped, so Apple Health can be told
+    /// the same moving time Milepost shows.
+    var pauses: [PauseInterval] = []
 }
 
 /// The recording engine. Pure state + arithmetic: it is fed CLLocations by
@@ -38,6 +41,7 @@ final class RunRecorder {
     private(set) var startDate: Date?
     private(set) var unit: DistanceUnit = .miles
     private(set) var sport: Sport = .run
+    private(set) var pauses: [PauseInterval] = []
 
     /// Fired each time the run crosses a half-unit boundary (0.5, 1, 1.5 …).
     /// The voice announcer decides which of those to say; the engine has no
@@ -87,6 +91,7 @@ final class RunRecorder {
         accumulated = 0
         route = []
         splits = [Split(index: 1, distanceMeters: 0, seconds: 0)]
+        pauses = []
         nextMilestoneMeters = milestoneMeters
         lastAccepted = nil
         let t = now()
@@ -103,6 +108,7 @@ final class RunRecorder {
         // The next fix after a resume must not add the distance covered while
         // paused, so the anchor is dropped here.
         lastAccepted = nil
+        pauses.append(PauseInterval(start: now(), end: nil))
         state = .paused
         stopTicker()
         refreshElapsed()
@@ -110,7 +116,11 @@ final class RunRecorder {
 
     func resume() {
         guard state == .paused else { return }
-        segmentStart = now()
+        let t = now()
+        if let last = pauses.indices.last, pauses[last].end == nil {
+            pauses[last].end = t
+        }
+        segmentStart = t
         state = .recording
         startTicker()
         refreshElapsed()
@@ -123,14 +133,27 @@ final class RunRecorder {
         guard isActive else { return nil }
         if state == .recording { pause() }
         guard hasMovement, let startDate else { return nil }
+        let end = now()
         return RunSummary(startDate: startDate,
-                          endDate: now(),
+                          endDate: end,
                           movingSeconds: elapsed,
                           distanceMeters: distanceMeters,
                           splitMeters: splitMeters,
                           route: route,
                           splits: splits,
-                          sport: sport)
+                          sport: sport,
+                          // finish() pauses first, so the trailing interval is
+                          // still open. Closing it at the end date covers both
+                          // cases: it is zero-length for a run stopped while
+                          // recording, and the real gap for one stopped while
+                          // already paused.
+                          pauses: closedPauses(at: end))
+    }
+
+    /// Pauses with the trailing open interval closed off at `end`.
+    private func closedPauses(at end: Date) -> [PauseInterval] {
+        pauses.map { $0.end == nil ? PauseInterval(start: $0.start, end: max($0.start, end)) : $0 }
+              .filter { $0.duration > 0 }
     }
 
     func discard() {
@@ -144,6 +167,7 @@ final class RunRecorder {
         distanceMeters = 0
         route = []
         splits = []
+        pauses = []
     }
 
     func refreshElapsed() {
@@ -162,7 +186,7 @@ final class RunRecorder {
 
         guard let last = lastAccepted else {
             lastAccepted = location
-            route.append(RoutePoint(location))
+            route.append(RoutePoint(location, cumulativeMeters: distanceMeters))
             return
         }
 
@@ -179,7 +203,7 @@ final class RunRecorder {
 
         add(distance: step, seconds: seconds)
         distanceMeters += step
-        route.append(RoutePoint(location))
+        route.append(RoutePoint(location, cumulativeMeters: distanceMeters))
         lastAccepted = location
         emitMilestones(step: step, seconds: seconds)
     }

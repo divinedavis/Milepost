@@ -26,9 +26,19 @@ APP="$DERIVED/Build/Products/Debug-iphonesimulator/Milepost.app"
 
 # XcodeGen quietly drops resources that are declared in the wrong place.
 [ -f "$APP/Assets.car" ] || { echo "Assets.car missing from bundle — icon/accent not shipped"; exit 1; }
-for key in NSLocationWhenInUseUsageDescription UIBackgroundModes; do
+for key in NSLocationWhenInUseUsageDescription UIBackgroundModes NSHealthUpdateUsageDescription NSHealthShareUsageDescription; do
   /usr/libexec/PlistBuddy -c "Print :$key" "$APP/Info.plist" >/dev/null 2>&1 || { echo "Info.plist missing $key"; exit 1; }
 done
+
+# The watch app rides inside the iPhone app. If the embed phase is missing the
+# iOS build still succeeds and TestFlight simply has no watch app, silently.
+WATCH_APP="$APP/Watch/MilepostWatch.app"
+[ -d "$WATCH_APP" ] || { echo "watch app not embedded at $WATCH_APP"; exit 1; }
+for key in WKCompanionAppBundleIdentifier NSHealthUpdateUsageDescription NSLocationWhenInUseUsageDescription; do
+  /usr/libexec/PlistBuddy -c "Print :$key" "$WATCH_APP/Info.plist" >/dev/null 2>&1 || { echo "watch Info.plist missing $key"; exit 1; }
+done
+/usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$WATCH_APP/Info.plist" 2>/dev/null | grep -q workout-processing || {
+  echo "watch app missing the workout-processing background mode — a run would stop with the wrist down"; exit 1; }
 
 echo "== boot $DEVICE =="
 xcrun simctl boot "$DEVICE" 2>/dev/null || true

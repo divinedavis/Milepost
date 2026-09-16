@@ -154,6 +154,40 @@ final class MilepostUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Distance (mi)"].waitForExistence(timeout: 6))
     }
 
+    /// Apple Health starts off, and so does the route. Tapping the first
+    /// toggle raises Apple's own permission sheet, which the runner cannot
+    /// dismiss, so this checks the state around it instead of driving it.
+    func testAppleHealthAndRouteBothStartOff() {
+        tap("tab.you")
+        app.swipeUp()
+        let health = app.switches["you.healthEnabled"]
+        XCTAssertTrue(health.waitForExistence(timeout: 6))
+        XCTAssertEqual(health.value as? String, "0", "saving to Health must be opt-in")
+        // The route switch is not even on screen until saving is on.
+        XCTAssertFalse(app.switches["you.healthRoute"].exists)
+    }
+
+    func testRouteStaysOffWhenHealthIsTurnedOn() {
+        app.terminate()
+        app.launchArguments += ["-uitest-health-on"]
+        app.launch()
+        tap("tab.you")
+        app.swipeUp()
+        let route = app.switches["you.healthRoute"]
+        XCTAssertTrue(route.waitForExistence(timeout: 6))
+        // Allowing Health is not the same as agreeing to hand over a map of
+        // where you run. This is the promise the You tab and the listing make.
+        XCTAssertEqual(route.value as? String, "0")
+
+        let footer = app.staticTexts["you.healthFooter"]
+        XCTAssertTrue(footer.waitForExistence(timeout: 4))
+        XCTAssertTrue(footer.label.contains("route is not written"), footer.label)
+
+        route.switches.firstMatch.exists ? route.switches.firstMatch.tap() : route.tap()
+        XCTAssertEqual(route.value as? String, "1")
+        XCTAssertTrue(footer.label.contains("stays on this device"), footer.label)
+    }
+
     func testVoiceCuesSettingEnablesPreviewAndPersists() {
         tap("tab.you")
         app.swipeUp()
