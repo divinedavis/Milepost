@@ -45,12 +45,9 @@ struct MilepostWatchApp: App {
                     // activity list, so it goes through the same queue.
                     workout.onRemoteEnd = { [sync] payload in sync.send(payload) }
                     workout.includeRouteInHealth = sync.includeRouteInHealth
-                    // Asked once, on first launch, so the Start button never
-                    // stalls behind two system sheets mid-run.
-                    await workout.requestAuthorization()
-                    if workout.location.isUndetermined {
-                        workout.location.requestPermission()
-                    }
+                    // Health is asked for when a run starts, not here. Opening
+                    // an app should not put permission sheets in your face
+                    // before you have done anything.
                 }
         }
     }

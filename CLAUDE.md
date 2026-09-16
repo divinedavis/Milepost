@@ -309,6 +309,30 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   before `segmentStart` is dropped by the engine (inject the clock and advance
   it), and a pause with no clock movement is a zero-length interval that
   `closedPauses` drops on purpose.
+- The sport picker is a **2x2 grid of square tiles**, not a list: as a list,
+  Ride sat below the fold on every watch size. Tile side is bounded by the
+  **visible height** as well as the width — at full column width two rows are a
+  few points too tall and the bottom row clips. `aspectRatio(1, .fit)` cannot
+  do this inside a `ScrollView`: a scroll view offers unbounded height, so it
+  falls back to the content's natural size and the tiles come out half-width,
+  silently. The `GeometryReader` goes **outside** the `ScrollView` for the same
+  reason.
+- Labels fall back to the mark alone when they will not fit on one line, via
+  `ViewThatFits` with a 13pt / 11pt / icon-only ladder. `ViewThatFits` only
+  works if the candidates are `.fixedSize`, or every one of them "fits". A
+  mark-only tile needs an explicit `accessibilityLabel` or VoiceOver says
+  "button". "Stroller Run" is the string that decides this: labelled at 46mm,
+  mark-only at 42mm.
+- **No permission sheet on app entry** (a standing rule across these apps).
+  Location is requested on the tap that needs it, and the run waits for the
+  answer via `pendingSport` rather than starting underneath the alert — an
+  alert landing on a half-swapped screen is what made the first press of Start
+  look broken. Health is requested inside `attachWorkoutSession`, which runs
+  after recording has already begun, so nothing waits on it.
+- **Never surface a raw HealthKit error.** `Missing
+  com.apple.developer.healthkit entitlement` means nothing to someone wearing a
+  watch; say what they lost (heart rate and calories) and what still works
+  (distance, pace, splits).
 - **Pause is on the metrics page as well as the controls page.** Pausing is the
   commonest thing you do mid-run and metrics is the page a run opens on; a
   control behind a swipe you have to know about is not usable with cold hands.

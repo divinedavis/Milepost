@@ -126,7 +126,8 @@ final class WatchWorkoutController: NSObject {
             try await store.requestAuthorization(toShare: shareTypes, read: readTypes)
             errorText = nil
         } catch {
-            errorText = error.localizedDescription
+            // Same reason as above: never show the raw HealthKit error.
+            errorText = "Milepost could not reach Apple Health. Runs are still recorded on the watch."
             return false
         }
         return store.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized
@@ -162,6 +163,12 @@ final class WatchWorkoutController: NSObject {
     /// not cost the run, which carries on from GPS alone.
     private func attachWorkoutSession(sport: Sport) async {
         guard Self.isSupported, session == nil, phase == .running || phase == .paused else { return }
+        // Asked here rather than at launch: this runs after recording has
+        // already begun, so the sheet appears over a run that is underway and
+        // nothing waits on the answer. Health only ever prompts once.
+        if store.authorizationStatus(for: HKObjectType.workoutType()) == .notDetermined {
+            await requestAuthorization()
+        }
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = sport.workoutActivityType
         configuration.locationType = .outdoor
@@ -194,7 +201,10 @@ final class WatchWorkoutController: NSObject {
             errorText = nil
         } catch {
             // Degrade to a GPS-only run rather than taking the run down with it.
-            errorText = error.localizedDescription
+            // The raw error here is things like "Missing
+            // com.apple.developer.healthkit entitlement", which means nothing to
+            // anyone wearing the watch; say what they actually lost instead.
+            errorText = "Heart rate and calories are unavailable — Apple Health did not start a workout. Distance, pace and splits are still being recorded."
             session = nil
             builder = nil
             routeBuilder = nil
