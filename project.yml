@@ -168,10 +168,14 @@ targets:
         WKCompanionAppBundleIdentifier: com.divinedavis.milepost
         # The watch app records on its own; it must not need the phone nearby.
         WKRunsIndependentlyOfCompanionApp: true
+        # watchOS uses WKBackgroundModes, NOT UIBackgroundModes. Getting this
+        # wrong builds, archives, exports and passes local validation; the App
+        # Store upload is the first thing that says no (error 90362, "Invalid
+        # value 'workout-processing' for Info.plist key UIBackgroundModes").
         # workout-processing is what keeps the app running with the wrist down;
         # without it the session is suspended and the run stops. location is
-        # what allowsBackgroundLocationUpdates requires, exactly as on iOS.
-        UIBackgroundModes:
+        # what allowsBackgroundLocationUpdates requires.
+        WKBackgroundModes:
           - workout-processing
           - location
         NSHealthUpdateUsageDescription: Milepost saves your runs, walks and rides to Apple Health as workouts, with heart rate and calories from your watch.

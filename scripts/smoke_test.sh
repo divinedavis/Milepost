@@ -37,8 +37,12 @@ WATCH_APP="$APP/Watch/MilepostWatch.app"
 for key in WKCompanionAppBundleIdentifier NSHealthUpdateUsageDescription NSLocationWhenInUseUsageDescription; do
   /usr/libexec/PlistBuddy -c "Print :$key" "$WATCH_APP/Info.plist" >/dev/null 2>&1 || { echo "watch Info.plist missing $key"; exit 1; }
 done
-/usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$WATCH_APP/Info.plist" 2>/dev/null | grep -q workout-processing || {
-  echo "watch app missing the workout-processing background mode — a run would stop with the wrist down"; exit 1; }
+# WKBackgroundModes, not UIBackgroundModes: watchOS has its own key and the
+# wrong one only fails at App Store upload (90362), long after a green build.
+/usr/libexec/PlistBuddy -c "Print :WKBackgroundModes" "$WATCH_APP/Info.plist" 2>/dev/null | grep -q workout-processing || {
+  echo "watch app missing the workout-processing WKBackgroundModes entry — a run would stop with the wrist down"; exit 1; }
+/usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$WATCH_APP/Info.plist" >/dev/null 2>&1 && {
+  echo "watch app has UIBackgroundModes — watchOS wants WKBackgroundModes; the App Store will reject this"; exit 1; }
 
 echo "== boot $DEVICE =="
 xcrun simctl boot "$DEVICE" 2>/dev/null || true

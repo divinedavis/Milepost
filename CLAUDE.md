@@ -236,9 +236,14 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   the `HKLiveWorkoutDataSource`. Leave automatic collection on and HealthKit's
   fused distance and Milepost's GPS distance both land on the same workout;
   Health shows the sum.
-- `UIBackgroundModes` needs `workout-processing` (or the session is suspended
-  and the run stops) **and** `location` (what `allowsBackgroundLocationUpdates`
-  requires, exactly as on iOS).
+- Background modes go in **`WKBackgroundModes`**, not `UIBackgroundModes` —
+  watchOS has its own key. The wrong one builds, archives, exports and passes
+  `builtin-validationUtility`; the App Store upload is the first thing that
+  says no (`ERROR 90362: Invalid value 'workout-processing' for Info.plist key
+  UIBackgroundModes`), after the build number has already been bumped.
+  `smoke_test.sh` now fails on either mistake. It needs `workout-processing`
+  (or the session is suspended and the run stops) **and** `location` (what
+  `allowsBackgroundLocationUpdates` requires, as on iOS).
 - Finished activities reach the phone with `transferUserInfo`, not
   `sendMessage`: it is queued and survives the watch app being killed, so a run
   finished out of range still lands. The phone dedupes on `payload.id` because

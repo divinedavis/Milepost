@@ -26,13 +26,13 @@
 	<string>Milepost saves your runs, walks and rides to Apple Health as workouts, with heart rate and calories from your watch.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Milepost uses your location to measure distance and pace and to record your route while you move, including with your wrist down.</string>
-	<key>UIBackgroundModes</key>
+	<key>WKApplication</key>
+	<true/>
+	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
 		<string>location</string>
 	</array>
-	<key>WKApplication</key>
-	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.divinedavis.milepost</string>
 	<key>WKRunsIndependentlyOfCompanionApp</key>
