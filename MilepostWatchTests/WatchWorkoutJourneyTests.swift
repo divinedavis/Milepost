@@ -169,6 +169,51 @@ final class WatchWorkoutJourneyTests: XCTestCase {
         XCTAssertEqual(controller.phase, .running)
     }
 
+    /// What the Pause button on the metrics page actually promises: the clock
+    /// stops, and the ground covered while it is stopped does not count. Both
+    /// controls call `toggle`, so this covers the pair of them.
+    func testPauseStopsTheClockAndResumeStartsItAgain() {
+        controller.start(sport: .run, unit: .miles)
+        run(meters: 400, over: 120)
+        controller.toggle()
+        let frozen = controller.recorder.elapsed
+        let covered = controller.recorder.distanceMeters
+
+        // Two minutes standing at a light, moving 300 m up the street after it
+        // changes but before Resume is pressed.
+        clock = clock.addingTimeInterval(120)
+        controller.recorder.ingest(fix(700))
+        controller.recorder.refreshElapsed()
+        XCTAssertEqual(controller.recorder.elapsed, frozen, accuracy: 0.001,
+                       "a paused clock must not tick")
+        XCTAssertEqual(controller.recorder.distanceMeters, covered, accuracy: 0.001,
+                       "and ground covered while paused must not count")
+
+        controller.toggle()
+        clock = clock.addingTimeInterval(30)
+        controller.recorder.refreshElapsed()
+        XCTAssertEqual(controller.recorder.elapsed, frozen + 30, accuracy: 1,
+                       "and Resume has to start it again")
+    }
+
+    /// The root screen follows the phase, so the press of Start is the thing
+    /// that changes the screen. Nothing else may.
+    func testPhaseDrivesWhichScreenIsShown() async {
+        XCTAssertEqual(controller.phase, .idle)         // start screen
+        controller.start(sport: .run, unit: .miles)
+        XCTAssertEqual(controller.phase, .running)      // live screen
+        controller.toggle()
+        XCTAssertEqual(controller.phase, .paused)       // still the live screen
+        // Resume first: a paused recorder ignores fixes, so a run that stayed
+        // paused would cover no ground and rightly not be saved at all.
+        controller.toggle()
+        run(meters: 900, over: 240)
+        _ = await controller.end()
+        XCTAssertEqual(controller.phase, .finished)     // summary
+        controller.clearFinished()
+        XCTAssertEqual(controller.phase, .idle)         // back to start
+    }
+
     /// A ride is measured in speed and files under cycling distance. Getting
     /// this wrong reads "-:--" for a whole ride, because the pace lands outside
     /// the run bounds.

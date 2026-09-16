@@ -33,6 +33,9 @@ struct MilepostWatchApp: App {
                             workout.enterPreviewSummary()
                         } else {
                             workout.enterPreviewState()
+                            if ProcessInfo.processInfo.arguments.contains("-watch-preview-paused") {
+                                workout.pause()
+                            }
                         }
                         return
                     }

@@ -57,8 +57,13 @@ struct WatchStartView: View {
     /// Synchronous on purpose. `start` returns immediately and the screen
     /// changes on the same run loop pass, so there is no window where the
     /// button has been pressed and nothing has happened.
+    ///
+    /// It deliberately does **not** ask for location here. The app asks once at
+    /// launch, and `requestWhenInUseAuthorization` only ever prompts once
+    /// anyway, so a second call does nothing except risk the system alert
+    /// appearing on top of the screen that is mid-swap — which is exactly what
+    /// the first press of Start looked like it was doing.
     private func start(_ sport: Sport) {
-        if workout.location.isUndetermined { workout.location.requestPermission() }
         workout.start(sport: sport, unit: unit)
     }
 }

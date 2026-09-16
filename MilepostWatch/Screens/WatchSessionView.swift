@@ -1,8 +1,12 @@
 import SwiftUI
 
-/// The live workout, as three swipeable pages in the order the wrist wants
-/// them: controls to the left where a thumb lands, metrics in the middle as the
-/// default, splits to the right.
+/// The live workout, as three vertically paged screens: controls above,
+/// metrics in the middle where a run opens, splits below.
+///
+/// Pause is on **both** the controls page and the metrics page, on purpose.
+/// Pausing is the thing you do most during a run and metrics is the page you
+/// are already looking at; a control that needs a swipe you have to know about
+/// is not a control you can use with cold hands at a red light.
 struct WatchSessionView: View {
     @Environment(WatchWorkoutController.self) private var workout
     @State private var page = Page.initial
@@ -91,6 +95,7 @@ private struct WatchMetricsPage: View {
 
     private var unit: DistanceUnit { workout.recorder.isActive ? workout.recorder.unit : (DistanceUnit(rawValue: unitRaw) ?? .miles) }
     private var sport: Sport { workout.recorder.sport }
+    private var isPaused: Bool { workout.phase == .paused }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -99,12 +104,12 @@ private struct WatchMetricsPage: View {
             // Activity on the phone uses.
             if let anchor = workout.recorder.elapsedAnchor, workout.phase == .running {
                 Text(anchor, style: .timer)
-                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .font(.system(size: 32, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Theme.orange)
             } else {
                 Text(Format.clock(workout.recorder.elapsed))
-                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .font(.system(size: 32, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Theme.paused)
             }
@@ -118,7 +123,21 @@ private struct WatchMetricsPage: View {
             if let kcal = workout.activeKilocalories {
                 metric("\(Int(kcal.rounded()))", "kcal")
             }
-            Spacer(minLength: 0)
+
+            Spacer(minLength: 6)
+
+            // End deliberately stays on the controls page. Ending by accident
+            // loses a run; pausing by accident costs a tap.
+            Button {
+                workout.toggle()
+            } label: {
+                Label(isPaused ? "Resume" : "Pause",
+                      systemImage: isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .tint(isPaused ? Theme.orange : Theme.paused)
+            .accessibilityIdentifier("watch.metrics.toggle")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("watch.metrics")
@@ -127,7 +146,7 @@ private struct WatchMetricsPage: View {
     private func metric(_ value: String, _ suffix: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             Text(value)
-                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
                 .monospacedDigit()
             Text(suffix)
                 .font(.caption2)

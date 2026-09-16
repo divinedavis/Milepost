@@ -309,10 +309,25 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   before `segmentStart` is dropped by the engine (inject the clock and advance
   it), and a pause with no clock movement is a zero-length interval that
   `closedPauses` drops on purpose.
+- **Pause is on the metrics page as well as the controls page.** Pausing is the
+  commonest thing you do mid-run and metrics is the page a run opens on; a
+  control behind a swipe you have to know about is not usable with cold hands.
+  End stays on controls only — ending by accident loses a run, pausing by
+  accident costs a tap.
+- `WatchRootView` is a `ZStack` with a cross-fade, not a bare `switch`. A bare
+  switch swaps whole view *types* (a `NavigationStack`+`List` for a paged
+  `TabView`), which SwiftUI tears down and rebuilds with no transition, and the
+  first press of Start visibly snaps.
+- Never call `requestWhenInUseAuthorization` on the tap that also changes the
+  screen: the system alert lands on the half-swapped view. It only prompts once
+  ever, so asking at launch is enough and a second call buys nothing.
 - `-watch-preview` (DEBUG only, `WatchPreviewData`) fills the screens with a
   real twelve-minute run driven through the real recorder, so the watch UI can
-  be looked at and captured at all; `-watch-preview-summary` and
-  `-watch-preview-page-{splits,controls}` reach the other screens. Verified
+  be looked at and captured at all; `-watch-preview-summary`,
+  `-watch-preview-paused` and `-watch-preview-page-{splits,controls}` reach the
+  other screens. The preview sets heart rate and calories, so it is also the
+  worst case for vertical space on the metrics page — check a capture after any
+  layout change there. Verified
   absent from the Release binary with `strings`.
 - watchOS has no XCUITest, so `scripts/smoke_test_watch.sh` (build, install,
   cold launch in a watch simulator, then check the process is still alive) is
