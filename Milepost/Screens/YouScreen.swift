@@ -8,6 +8,7 @@ struct YouScreen: View {
     @AppStorage(VoiceCueInterval.enabledKey) private var voiceEnabled = true
     @Environment(VoiceAnnouncer.self) private var announcer
     @Environment(RunRecorder.self) private var recorder
+    @Environment(PhoneWatchSync.self) private var watchSync
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
     private var voice: VoiceCueInterval { VoiceCueInterval(rawValue: voiceRaw) ?? .half }
@@ -34,6 +35,7 @@ struct YouScreen: View {
                         .accessibilityIdentifier("you.voiceEnabled")
                         .onChange(of: voiceEnabled) { _, enabled in
                             if !enabled { announcer.stop() }
+                            watchSync.pushSettings()
                         }
 
                     Picker("Announce distance", selection: $voiceRaw) {
@@ -43,9 +45,10 @@ struct YouScreen: View {
                     }
                     .disabled(!voiceEnabled)
                     .accessibilityIdentifier("you.voiceCues")
+                    .onChange(of: voiceRaw) { _, _ in watchSync.pushSettings() }
 
                     Button("Preview voice") {
-                        announcer.speak(VoiceCuePhrase.text(for: VoiceAnnouncer.sample(unit: voiceUnit, interval: voice)))
+                        announcer.play(VoiceAnnouncer.sample(unit: voiceUnit, interval: voice))
                     }
                     .disabled(!voiceEnabled)
                     .accessibilityIdentifier("you.voicePreview")

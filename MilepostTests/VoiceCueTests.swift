@@ -188,6 +188,70 @@ final class VoiceCueTests: XCTestCase {
         XCTAssertEqual(VoiceCuePhrase.spoken(seconds: 0), "0 seconds")
     }
 
+    // MARK: Recorded voice
+
+    func testScriptStitchesTheSameWordsAsThePhrase() {
+        let mile = Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 9 * 60 + 12, unit: .miles)
+        XCTAssertEqual(VoiceCueScript.clips(for: mile),
+                       ["dist_mi_1", "phrase_time", "num_9", "word_minutes", "num_12", "word_seconds",
+                        "phrase_avg_pace", "num_9", "word_minutes", "num_12", "word_seconds", "unit_per_mi"])
+        let jitter = Milestone(distanceMeters: DistanceUnit.miles.meters / 2, elapsed: 30, unit: .miles)
+        XCTAssertEqual(VoiceCueScript.clips(for: jitter), ["dist_mi_0h", "phrase_time", "num_30", "word_seconds"])
+        let long = Milestone(distanceMeters: DistanceUnit.kilometers.meters * 10.5, elapsed: 3600 + 60, unit: .kilometers)
+        XCTAssertEqual(VoiceCueScript.clips(for: long)!.prefix(5),
+                       ["dist_km_10h", "phrase_time", "num_1", "word_hour", "num_1"])
+        let ride = Milestone(distanceMeters: DistanceUnit.miles.meters * 2, elapsed: 2 * 3600 / 14.2, unit: .miles, sport: .bike)
+        XCTAssertEqual(VoiceCueScript.clips(for: ride)!.suffix(5),
+                       ["phrase_avg_speed", "num_14", "word_point", "num_2", "unit_mph"])
+        // Spoken text and clip text say the same words, so the fallback says
+        // the same thing (the number/word clips carry no sentence punctuation).
+        let library = VoiceCueScript.library
+        let words = { (text: String) in text.filter { !".,".contains($0) } }
+        let stitched = VoiceCueScript.clips(for: mile)!.map { library[$0]! }.joined(separator: " ")
+        XCTAssertEqual(words(stitched), words(VoiceCuePhrase.text(for: mile)))
+    }
+
+    func testScriptGivesUpPastTheLibrary() {
+        let ultra = Milestone(distanceMeters: DistanceUnit.miles.meters * 31, elapsed: 5 * 3600, unit: .miles)
+        XCTAssertNil(VoiceCueScript.clips(for: ultra), "past 30 miles the system voice takes over")
+        XCTAssertNotNil(VoiceCueScript.clips(for: Milestone(distanceMeters: DistanceUnit.miles.meters * 30, elapsed: 5 * 3600, unit: .miles)))
+        XCTAssertNotNil(VoiceCueScript.clips(for: Milestone(distanceMeters: DistanceUnit.kilometers.meters * 50, elapsed: 5 * 3600, unit: .kilometers)))
+    }
+
+    /// The render script and the Swift library are two copies of one list.
+    /// This is what catches them drifting, and a clip that never got rendered.
+    func testEveryClipInTheLibraryIsBundled() throws {
+        let bundle = Bundle(for: RunRecorder.self)
+        let url = try XCTUnwrap(bundle.url(forResource: VoiceCueScript.manifestName, withExtension: "json"),
+                                "VoiceCues.json missing: run scripts/make_voice_cues.py")
+        let manifest = try JSONDecoder().decode(VoiceCueScript.Manifest.self, from: Data(contentsOf: url))
+        let library = VoiceCueScript.library
+        XCTAssertEqual(Set(manifest.clips.keys), Set(library.keys), "make_voice_cues.py and VoiceCueScript.library disagree")
+        for (name, text) in library {
+            XCTAssertEqual(manifest.clips[name], text, "\(name) was rendered from different text")
+            XCTAssertNotNil(bundle.url(forResource: VoiceCueScript.clipPrefix + name, withExtension: "mp3"), "\(name).mp3 not in the bundle")
+        }
+        XCTAssertEqual(library.count, 236)
+    }
+
+    func testAnnouncerPrefersTheRecordedVoiceAndFallsBackPastIt() {
+        let defaults = UserDefaults(suiteName: "VoiceCueTests.announcer")!
+        defaults.removePersistentDomain(forName: "VoiceCueTests.announcer")
+        let announcer = VoiceAnnouncer(defaults: defaults, bundle: Bundle(for: RunRecorder.self), isMuted: true)
+        XCTAssertTrue(announcer.hasRecordedVoice)
+        announcer.announce(Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 9 * 60 + 12, unit: .miles))
+        XCTAssertEqual(announcer.lastCue, .clips(VoiceCueScript.clips(for: Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 9 * 60 + 12, unit: .miles))!))
+        announcer.announce(Milestone(distanceMeters: DistanceUnit.miles.meters * 31, elapsed: 5 * 3600, unit: .miles))
+        XCTAssertEqual(announcer.lastCue, .synthesized("31 miles complete. Time, 5 hours. Average pace, 9 minutes 41 seconds per mile."))
+        // Every clip the preview can ask for is on hand, for both units.
+        for unit in DistanceUnit.allCases {
+            for interval in VoiceCueInterval.selectable {
+                announcer.play(VoiceAnnouncer.sample(unit: unit, interval: interval))
+                if case .synthesized = announcer.lastCue { XCTFail("preview for \(unit) \(interval) fell back to the system voice") }
+            }
+        }
+    }
+
     func testFullPhraseIncludesPaceOnlyWhenPlausible() {
         let mile = Milestone(distanceMeters: DistanceUnit.miles.meters, elapsed: 9 * 60 + 12, unit: .miles)
         XCTAssertEqual(VoiceCuePhrase.text(for: mile),

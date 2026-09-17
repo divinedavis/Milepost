@@ -82,6 +82,24 @@ struct Split: Codable, Hashable, Identifiable {
     }
 }
 
+extension Array where Element == Split {
+    /// The best pace over a full split, which is what "fastest pace" means on
+    /// Nike Run Club and Strava's "best mile". A split still in progress is
+    /// never counted: a 40 m opening sprint would otherwise be the fastest
+    /// pace of every run. Nil until the first split completes.
+    func fastestPace(splitMeters: Double, unit: DistanceUnit, sport: Sport = .run) -> Double? {
+        filter { $0.isComplete(splitMeters: splitMeters) }
+            .compactMap { $0.pace(unit: unit, sport: sport) }
+            .min()
+    }
+
+    /// The index of the split `fastestPace` came from, for marking it in a list.
+    func fastestIndex(splitMeters: Double, unit: DistanceUnit, sport: Sport = .run) -> Int? {
+        guard let best = fastestPace(splitMeters: splitMeters, unit: unit, sport: sport) else { return nil }
+        return first { $0.isComplete(splitMeters: splitMeters) && $0.pace(unit: unit, sport: sport) == best }?.index
+    }
+}
+
 /// A stretch of a recording where the clock was stopped. Apple Health derives
 /// a workout's duration from pause/resume events, so without these Health
 /// would show elapsed time where Milepost shows moving time.

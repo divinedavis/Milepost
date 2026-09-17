@@ -36,6 +36,12 @@ struct ActivityDetailView: View {
                     tile("Avg. \(activity.sport.rateNoun)",
                          "\(activity.sport.rateText(activity.averagePace(unit: unit), unit: unit)) \(activity.sport.rateSuffix(unit: unit))")
                     tile("Elapsed", Format.duration(activity.endDate.timeIntervalSince(activity.startDate)))
+                    tile("Fastest \(activity.recordedUnit.splitNoun.lowercased())",
+                         "\(activity.sport.rateText(activity.fastestSplitPace, unit: activity.recordedUnit)) \(activity.sport.rateSuffix(unit: activity.recordedUnit))",
+                         id: "detail.fastestSplit")
+                    tile("Elevation gain",
+                         "\(Format.elevation(activity.elevationGainMeters, unit: unit)) \(unit.elevationAbbreviation)",
+                         id: "detail.elevation")
                 }
 
                 HealthMetricsSection(activity: activity)
@@ -120,10 +126,11 @@ struct ActivityDetailView: View {
         }
     }
 
-    private func tile(_ label: String, _ value: String) -> some View {
+    private func tile(_ label: String, _ value: String, id: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.title3.weight(.semibold)).monospacedDigit()
+                .accessibilityIdentifier(id ?? "")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -141,9 +148,16 @@ struct ActivityDetailView: View {
                 let paces = splits.compactMap { $0.pace(unit: recorded, sport: sport) }
                 let fastest = paces.min() ?? 0
                 let slowest = paces.max() ?? 0
+                let fastestIndex = activity.fastestSplitIndex
                 ForEach(splits) { split in
                     let complete = split.isComplete(splitMeters: activity.splitMeters)
                     HStack(spacing: 12) {
+                        // The bolt marks the split the "Fastest" tile came from.
+                        Image(systemName: "bolt.fill")
+                            .font(.caption2)
+                            .foregroundStyle(split.index == fastestIndex ? Theme.orange : .clear)
+                            .accessibilityHidden(split.index != fastestIndex)
+                            .accessibilityLabel("Fastest")
                         Text(complete ? "\(split.index)" : String(format: "%.2f", split.distanceMeters / recorded.meters))
                             .font(.subheadline.weight(.semibold))
                             .monospacedDigit()

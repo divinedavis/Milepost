@@ -4,6 +4,10 @@ import SwiftUI
 struct MilepostWatchApp: App {
     @State private var workout: WatchWorkoutController
     @State private var sync = WatchPhoneSync()
+    /// Not observed by any view; held so the milestone cues have a voice for
+    /// the life of the process. Settings are mirrored from the phone by
+    /// WatchPhoneSync into this watch's defaults, which is what it reads.
+    @State private var announcer = VoiceAnnouncer()
 
     init() {
         #if DEBUG
@@ -13,7 +17,11 @@ struct MilepostWatchApp: App {
             return
         }
         #endif
-        _workout = State(initialValue: WatchWorkoutController())
+        let controller = WatchWorkoutController()
+        let announcer = VoiceAnnouncer()
+        controller.recorder.onMilestone = { announcer.announce($0) }
+        _workout = State(initialValue: controller)
+        _announcer = State(initialValue: announcer)
     }
 
     var body: some Scene {

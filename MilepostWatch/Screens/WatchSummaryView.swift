@@ -18,6 +18,13 @@ struct WatchSummaryView: View {
                         row("Time", Format.duration(payload.movingSeconds))
                         row(payload.sport.showsSpeed ? "Avg. speed" : "Avg. pace",
                             "\(payload.sport.rateText(Pace.secondsPerUnit(distanceMeters: payload.distanceMeters, seconds: payload.movingSeconds, unit: unit, sport: payload.sport), unit: unit)) \(payload.sport.rateSuffix(unit: unit))")
+                        if let fastest = payload.splits.fastestPace(splitMeters: payload.splitMeters, unit: unit, sport: payload.sport) {
+                            row("Fastest \(unit.splitNoun.lowercased())",
+                                "\(payload.sport.rateText(fastest, unit: unit)) \(payload.sport.rateSuffix(unit: unit))")
+                        }
+                        if let climb = SplitTimeline.elevationAscended(route: payload.route) {
+                            row("Elevation gain", "\(Format.elevation(climb, unit: unit)) \(unit.elevationAbbreviation)")
+                        }
                         if let bpm = payload.averageHeartRate {
                             row("Avg. heart rate", "\(Int(bpm.rounded())) bpm")
                         }

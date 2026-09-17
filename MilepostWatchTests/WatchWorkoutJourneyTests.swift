@@ -37,25 +37,37 @@ final class WatchWorkoutJourneyTests: XCTestCase {
     private let origin = CLLocationCoordinate2D(latitude: 40.6602, longitude: -73.9690)
 
     /// A fix `metersNorth` up the meridian, taken at the current clock.
-    private func fix(_ metersNorth: Double, speed: CLLocationSpeed = 3.2) -> CLLocation {
+    private func fix(_ metersNorth: Double, speed: CLLocationSpeed = 3.2, altitude: Double = 12) -> CLLocation {
         CLLocation(coordinate: CLLocationCoordinate2D(latitude: origin.latitude + metersNorth / 111_320,
                                                       longitude: origin.longitude),
-                   altitude: 12, horizontalAccuracy: 5, verticalAccuracy: 4,
+                   altitude: altitude, horizontalAccuracy: 5, verticalAccuracy: 4,
                    course: 0, speed: speed,
                    timestamp: clock)
     }
 
     /// Covers ground, the way the location service would, advancing the clock
     /// with it so pace and splits are computed from real elapsed time.
-    private func run(meters: Double, over seconds: TimeInterval, step: Double = 50) {
+    ///
+    /// `continuing` carries on from wherever the last call stopped, for a
+    /// journey with more than one pace in it. Without it a second call starts
+    /// back at the origin: a 2 km jump in zero seconds that the engine books
+    /// as distance, because nothing about a single fix says it is wrong.
+    private var covered = 0.0
+    private var altitude = 12.0
+    private func run(meters: Double, over seconds: TimeInterval, step: Double = 50,
+                     climbPerStep: Double = 0, continuing: Bool = false) {
         let steps = max(1, Int((meters / step).rounded()))
         let perStep = seconds / Double(steps)
-        var covered = 0.0
-        controller.recorder.ingest(fix(0))
+        if !continuing {
+            covered = 0
+            altitude = 12
+            controller.recorder.ingest(fix(0, altitude: altitude))
+        }
         for _ in 0..<steps {
             covered += step
+            altitude += climbPerStep
             clock = clock.addingTimeInterval(perStep)
-            controller.recorder.ingest(fix(covered, speed: step / perStep))
+            controller.recorder.ingest(fix(covered, speed: step / perStep, altitude: altitude))
         }
         controller.recorder.refreshElapsed()
     }
@@ -245,6 +257,25 @@ final class WatchWorkoutJourneyTests: XCTestCase {
 
     /// Pauses travel to the phone and on into Health, which derives a workout's
     /// duration from them.
+    /// The two stats runners asked for beyond distance and splits: a steady
+    /// climb shows up as elevation gain on the metrics page and the summary,
+    /// and the fastest full split is the one the summary names.
+    func testClimbAndFastestSplitReachTheSummary() async {
+        controller.start(sport: .run, unit: .kilometers)
+        run(meters: 1000, over: 330, climbPerStep: 2)                       // 5:30, +40 m
+        run(meters: 1000, over: 300, climbPerStep: 0, continuing: true)     // 5:00, flat
+        run(meters: 300, over: 45, climbPerStep: 0, continuing: true)       // a partial sprint at 2:30
+        XCTAssertEqual(controller.recorder.elevationGainMeters!, 40, accuracy: 0.5)
+        XCTAssertEqual(controller.recorder.fastestSplitPace!, 300, accuracy: 2)
+
+        let payload = await controller.end()
+        guard let payload else { return XCTFail("no payload") }
+        XCTAssertEqual(SplitTimeline.elevationAscended(route: payload.route)!, 40, accuracy: 0.5)
+        XCTAssertEqual(payload.splits.fastestPace(splitMeters: 1000, unit: .kilometers)!, 300, accuracy: 2)
+        XCTAssertEqual(payload.splits.fastestIndex(splitMeters: 1000, unit: .kilometers), 2,
+                       "the partial 2:30 sprint must not beat a full kilometer")
+    }
+
     func testPausesReachThePayload() async {
         controller.start(sport: .run, unit: .miles)
         run(meters: 800, over: 200)

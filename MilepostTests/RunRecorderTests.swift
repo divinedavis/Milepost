@@ -22,10 +22,11 @@ final class RunRecorderTests: XCTestCase {
     }()
 
     /// Points spaced along a meridian: `metersNorth` metres north of a base.
-    private func fix(_ metersNorth: Double, at seconds: TimeInterval, accuracy: CLLocationAccuracy = 5, speed: CLLocationSpeed = -1) -> CLLocation {
+    private func fix(_ metersNorth: Double, at seconds: TimeInterval, accuracy: CLLocationAccuracy = 5, speed: CLLocationSpeed = -1,
+                     altitude: Double = 10, verticalAccuracy: CLLocationAccuracy = 5) -> CLLocation {
         let lat = Self.baseLatitude + metersNorth / Self.metersPerDegree
         return CLLocation(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: -73.97),
-                          altitude: 10, horizontalAccuracy: accuracy, verticalAccuracy: 5,
+                          altitude: altitude, horizontalAccuracy: accuracy, verticalAccuracy: verticalAccuracy,
                           course: 0, speed: speed,
                           timestamp: Date(timeIntervalSince1970: 1_700_000_000 + seconds))
     }
@@ -131,6 +132,38 @@ final class RunRecorderTests: XCTestCase {
         XCTAssertEqual(second.distanceMeters, 200, accuracy: 1)
         XCTAssertEqual(second.seconds, 60, accuracy: 1)
         XCTAssertEqual(second.pace(unit: .kilometers)!, 300, accuracy: 2)
+    }
+
+    func testElevationGainCountsClimbsAndIgnoresBarometerNoise() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        XCTAssertNil(r.elevationGainMeters, "nothing to measure before two fixes")
+        r.ingest(fix(0, at: 0, altitude: 10))
+        r.ingest(fix(100, at: 30, altitude: 10.4))     // wobble, not a hill
+        r.ingest(fix(200, at: 60, altitude: 15))       // +5
+        r.ingest(fix(300, at: 90, altitude: 12))       // descent does not count
+        r.ingest(fix(400, at: 120, altitude: 20))      // +8
+        XCTAssertEqual(r.elevationGainMeters!, 13, accuracy: 0.01)
+        // A fix with no usable altitude is skipped, not counted as a drop to 0.
+        r.ingest(fix(500, at: 150, altitude: 0, verticalAccuracy: -1))
+        r.ingest(fix(600, at: 180, altitude: 21))
+        XCTAssertEqual(r.elevationGainMeters!, 14, accuracy: 0.01)
+        let summary = r.finish()!
+        XCTAssertEqual(SplitTimeline.elevationAscended(route: summary.route)!, 14, accuracy: 0.01,
+                       "the live number must be the number the saved activity shows")
+    }
+
+    func testFastestSplitIsTheBestCompletedSplit() {
+        let r = makeRecorder()
+        r.start(unit: .kilometers)
+        r.ingest(fix(0, at: 0))
+        XCTAssertNil(r.fastestSplitPace, "nothing completed yet")
+        r.ingest(fix(1000, at: 330))                   // 5:30 km
+        XCTAssertEqual(r.fastestSplitPace!, 330, accuracy: 1)
+        r.ingest(fix(2000, at: 630))                   // 5:00 km
+        r.ingest(fix(2200, at: 660))                   // a 200 m sprint at 2:30/km, still in progress
+        XCTAssertEqual(r.fastestSplitPace!, 300, accuracy: 1, "a partial split never counts")
+        XCTAssertEqual(r.splits.fastestIndex(splitMeters: 1000, unit: .kilometers), 2)
     }
 
     func testOneHugeStepSpansSeveralSplits() {

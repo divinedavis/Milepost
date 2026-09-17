@@ -73,6 +73,16 @@ final class RunRecorder {
     var averagePace: Double? {
         Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: elapsed, unit: unit, sport: sport)
     }
+    /// Best completed split so far; nil until one completes.
+    var fastestSplitPace: Double? {
+        splits.fastestPace(splitMeters: splitMeters, unit: unit, sport: sport)
+    }
+    /// Climb so far, by the same rule the saved activity and Apple Health use,
+    /// so the number on the live screen is the number on the summary. Nil
+    /// until two fixes with a real altitude have been accepted.
+    var elevationGainMeters: Double? {
+        SplitTimeline.elevationAscended(route: route)
+    }
     /// The instant a stopwatch would have started to read `elapsed` right
     /// now; nil while paused. Stable for the whole recording segment, so a
     /// clock counting from it (the Live Activity's) needs no update per second.

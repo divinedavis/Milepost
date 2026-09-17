@@ -13,6 +13,9 @@ enum DistanceUnit: String, CaseIterable, Identifiable {
     var splitNoun: String { self == .miles ? "Mile" : "Kilometer" }
     var speedAbbreviation: String { self == .miles ? "mph" : "km/h" }
     var speedSpokenSuffix: String { self == .miles ? "miles per hour" : "kilometers per hour" }
+    /// Climb is read in feet alongside miles and in meters alongside kilometers.
+    var elevationAbbreviation: String { self == .miles ? "ft" : "m" }
+    var elevationMeters: Double { self == .miles ? 0.3048 : 1 }
 }
 
 /// Pace is seconds per unit distance. Anything outside a plausible range for
@@ -35,6 +38,14 @@ enum Pace {
 enum Format {
     static func distance(_ meters: Double, unit: DistanceUnit) -> String {
         String(format: "%.2f", meters / unit.meters)
+    }
+
+    /// Whole feet or meters of climb: "128". "--" when the route carried no
+    /// altitude (activities recorded before Health support, or an indoor
+    /// simulator run), which is different from a flat "0".
+    static func elevation(_ meters: Double?, unit: DistanceUnit) -> String {
+        guard let meters, meters.isFinite else { return "--" }
+        return String(Int((meters / unit.elevationMeters).rounded()))
     }
 
     /// The same number a pace is built from, read the other way round:

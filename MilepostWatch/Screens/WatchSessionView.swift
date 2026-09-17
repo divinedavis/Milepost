@@ -117,6 +117,8 @@ private struct WatchMetricsPage: View {
             metric(Format.distance(workout.recorder.distanceMeters, unit: unit), unit.abbreviation)
             metric(sport.rateText(workout.recorder.currentSplitPace ?? workout.recorder.averagePace, unit: unit),
                    sport.rateSuffix(unit: unit))
+            metric(Format.elevation(workout.recorder.elevationGainMeters, unit: unit),
+                   "\(unit.elevationAbbreviation) up")
             if let bpm = workout.heartRate {
                 metric("\(Int(bpm.rounded()))", "bpm")
             }
@@ -162,6 +164,7 @@ private struct WatchSplitsPage: View {
         let unit = workout.recorder.unit
         let sport = workout.recorder.sport
         let splits = workout.recorder.splits.reversed()
+        let fastestIndex = workout.recorder.splits.fastestIndex(splitMeters: workout.recorder.splitMeters, unit: unit, sport: sport)
         List {
             if splits.isEmpty {
                 Text("Splits appear after your first \(unit.splitNoun.lowercased()).")
@@ -175,6 +178,10 @@ private struct WatchSplitsPage: View {
                          : String(format: "%.2f", split.distanceMeters / unit.meters))
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
+                    if split.index == fastestIndex {
+                        Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(Theme.orange)
+                            .accessibilityLabel("Fastest")
+                    }
                     Spacer()
                     Text(sport.rateText(split.pace(unit: unit, sport: sport), unit: unit))
                         .font(.body.weight(.semibold))

@@ -33,6 +33,17 @@ final class WatchPhoneSync: NSObject {
     }
 
     private func apply(_ context: [String: Any]) {
+        // Voice settings land in the watch's own defaults, which is where its
+        // announcer reads them, so a change on the phone applies at the next
+        // milestone with nothing else to wire.
+        let defaults = UserDefaults.standard
+        if let enabled = context[VoiceCueInterval.enabledKey] as? Bool {
+            defaults.set(enabled, forKey: VoiceCueInterval.enabledKey)
+        }
+        if let interval = context[VoiceCueInterval.storageKey] as? String,
+           VoiceCueInterval(rawValue: interval) != nil {
+            defaults.set(interval, forKey: VoiceCueInterval.storageKey)
+        }
         guard let includeRoute = context[HealthSettings.routeKey] as? Bool else { return }
         includeRouteInHealth = includeRoute
     }

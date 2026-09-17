@@ -149,6 +149,9 @@ targets:
       - path: Milepost/Models/RoutePoint.swift
       - path: Milepost/Models/VoiceCue.swift
       - path: Milepost/Models/HealthSettings.swift
+      - path: Milepost/Services/VoiceAnnouncer.swift
+      # The recorded voice cues, the same clips the phone plays.
+      - path: Milepost/Resources/VoiceCues
       - path: Milepost/Models/WatchActivityPayload.swift
       - path: Milepost/Models/WorkoutRemoteCommand.swift
       - path: Milepost/Services/RunRecorder.swift

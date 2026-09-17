@@ -68,6 +68,46 @@ Sports (`Sport.swift`, `SportPicker`):
   SwiftData migrates existing stored runs without a mapping model. Do not
   make it non-optional without a default.
 
+Voice cues (`VoiceCue.swift`, `VoiceAnnouncer.swift`, `Resources/VoiceCues/`, recorded voice added 2026-09-16):
+- The voice is ElevenLabs (Sarah, `eleven_flash_v2_5`), rendered ONCE by
+  `scripts/make_voice_cues.py` into 236 short mp3 clips (1.4 MB) that ship
+  in both the phone and watch bundles. The app never calls ElevenLabs: no key
+  in the binary, no network needed mid-run, no per-mile cost.
+- A cue is stitched: one whole distance phrase (`cue_dist_mi_3h` = "3 and a
+  half miles complete.") then number/word clips for time and pace.
+  `VoiceCueScript.clips(for:)` is the stitcher; `VoiceCueScript.library` is
+  the full clip list; `VoiceCues.json` is the render script's copy of it and
+  `testEveryClipInTheLibraryIsBundled` fails if the two drift or a clip is
+  missing. Past 30 mi / 50 km (or an hour count over 59) it returns nil and
+  the system voice (`AVSpeechSynthesizer`) says the same sentence.
+- Adding a phrase: add it to BOTH `library()` in the script and
+  `VoiceCueScript.library`, run the script (idempotent, renders only what is
+  missing, hard-capped at 8,000 chars/run), run `generate.sh`, run tests.
+  Changing the voice: change `VOICE_ID` and run with `--force` (~4.5k chars,
+  ~2.2k credits on Flash). Key is keychain `nemo-elevenlabs`; the
+  `lovili-elevenlabs` one is dead (401).
+- Phrase text lives in `VoiceCuePhrase.distance` / `Format.spokenDuration`
+  and the script's `distance_phrase`; keep them identical or the fallback
+  says something different from the clips.
+- The watch plays the same clips through the same class (`#if os(watchOS)`
+  branch: no ducking options, `activate(options:)` instead of `setActive`).
+  Its settings are the phone's, mirrored over `updateApplicationContext`
+  into the watch's own UserDefaults by `WatchPhoneSync.apply`. Never heard
+  on a real wrist; watchOS 11 routes to the speaker when no headphones are
+  paired, older watchOS may show a route picker at the first cue.
+
+Stats beyond distance and splits (added 2026-09-16, a runner asked for
+"splits, fastest pace, elevation, distance"):
+- **Fastest split** = best pace over a *completed* split
+  (`[Split].fastestPace`). A partial split never counts or the opening
+  sprint wins every run. Shown on the detail tiles, the live recorder, the
+  watch summary, and as a bolt on the split row.
+- **Elevation gain** = `SplitTimeline.elevationAscended` over the stored
+  route (1 m hysteresis; fixes with no vertical accuracy are skipped), the
+  same number Health is given. Read as ft with miles, m with km
+  (`Format.elevation`). "--" means no altitude in the route (simulator
+  routes from `simctl location` have none), which is not "0".
+
 Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
 - The Activities tab is now **Block**, with a Mine / Friends switch. `Tab.block`,
   ids `tab.block`, `block.rowTitle`, `block.empty`; `-open-tab block`.

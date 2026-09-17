@@ -37,10 +37,21 @@ final class PhoneWatchSync: NSObject {
     /// value. It matters that this reaches the watch at all — without it the
     /// watch would have to pick its own default for whether a route goes into
     /// Health, and the honest default and the useful one are not the same.
-    func pushSettings(includeRouteInHealth: Bool) {
+    ///
+    /// The voice settings ride along: a runner who turned announcements off on
+    /// the phone must not get them back on the wrist. Nil reads the current
+    /// values off UserDefaults, which is where every toggle has already
+    /// written by the time its onChange fires.
+    func pushSettings(includeRouteInHealth: Bool? = nil) {
         guard let session, session.activationState == .activated else { return }
+        let defaults = UserDefaults.standard
+        let context: [String: Any] = [
+            HealthSettings.routeKey: includeRouteInHealth ?? defaults.bool(forKey: HealthSettings.routeKey),
+            VoiceCueInterval.enabledKey: defaults.bool(forKey: VoiceCueInterval.enabledKey),
+            VoiceCueInterval.storageKey: defaults.string(forKey: VoiceCueInterval.storageKey) ?? VoiceCueInterval.half.rawValue,
+        ]
         do {
-            try session.updateApplicationContext([HealthSettings.routeKey: includeRouteInHealth])
+            try session.updateApplicationContext(context)
             lastError = nil
         } catch {
             lastError = error.localizedDescription

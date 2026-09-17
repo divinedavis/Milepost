@@ -32,6 +32,15 @@ final class FormatTests: XCTestCase {
         XCTAssertEqual(Format.duration(3720), "1h 02m")
     }
 
+    func testElevation() {
+        XCTAssertEqual(Format.elevation(nil, unit: .miles), "--", "no altitude is not the same as flat")
+        XCTAssertEqual(Format.elevation(0, unit: .miles), "0")
+        XCTAssertEqual(Format.elevation(39.0, unit: .miles), "128")
+        XCTAssertEqual(Format.elevation(39.4, unit: .kilometers), "39")
+        XCTAssertEqual(DistanceUnit.miles.elevationAbbreviation, "ft")
+        XCTAssertEqual(DistanceUnit.kilometers.elevationAbbreviation, "m")
+    }
+
     func testDistance() {
         XCTAssertEqual(Format.distance(1609.344, unit: .miles), "1.00")
         XCTAssertEqual(Format.distance(2500, unit: .kilometers), "2.50")

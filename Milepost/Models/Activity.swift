@@ -103,6 +103,23 @@ final class Activity {
     func averagePace(unit: DistanceUnit) -> Double? {
         Pace.secondsPerUnit(distanceMeters: distanceMeters, seconds: movingSeconds, unit: unit, sport: sport)
     }
+
+    /// Best full split, in the unit the activity was recorded in — splits
+    /// cannot be re-cut to another unit after the fact.
+    var fastestSplitPace: Double? {
+        splits.fastestPace(splitMeters: splitMeters, unit: recordedUnit, sport: sport)
+    }
+
+    var fastestSplitIndex: Int? {
+        splits.fastestIndex(splitMeters: splitMeters, unit: recordedUnit, sport: sport)
+    }
+
+    /// Derived from the stored route on every read rather than stored: the
+    /// rule can improve without a migration, and it stays identical to what
+    /// Health was told.
+    var elevationGainMeters: Double? {
+        SplitTimeline.elevationAscended(route: route)
+    }
 }
 
 struct ActivityTotals: Equatable {

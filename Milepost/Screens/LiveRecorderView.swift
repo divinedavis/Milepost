@@ -19,7 +19,17 @@ struct LiveRecorderView: View {
             bigStat(Format.distance(recorder.distanceMeters, unit: recorder.unit),
                     "Distance (\(recorder.unit.abbreviation))",
                     size: 110, id: "live.distance")
-            Spacer(minLength: 24)
+            Spacer(minLength: 16)
+            HStack(spacing: 0) {
+                smallStat(recorder.sport.rateText(recorder.fastestSplitPace, unit: recorder.unit),
+                          "Fastest \(recorder.unit.splitNoun.lowercased()) (\(recorder.sport.rateSuffix(unit: recorder.unit)))",
+                          id: "live.fastestSplit")
+                smallStat(Format.elevation(recorder.elevationGainMeters, unit: recorder.unit),
+                          "Elev. gain (\(recorder.unit.elevationAbbreviation))",
+                          id: "live.elevation")
+            }
+            .padding(.horizontal, 16)
+            Spacer(minLength: 16)
             SplitsBar(splits: recorder.splits, unit: recorder.unit, sport: recorder.sport)
                 .padding(.horizontal, 24)
             Text("Splits (\(recorder.unit.abbreviation))")
@@ -89,6 +99,20 @@ struct LiveRecorderView: View {
                 .foregroundStyle(Theme.secondaryText)
         }
         .padding(.horizontal, 16)
+    }
+
+    private func smallStat(_ value: String, _ label: String, id: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.stat(30))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+                .accessibilityIdentifier(id)
+            Text(label)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var controls: some View {

@@ -106,6 +106,8 @@ final class MilepostRouteUITests: XCTestCase {
         let e = expectation(for: moved, evaluatedWith: distance)
         wait(for: [e], timeout: 45)
         sleep(20)   // let a few hundred metres and a split pace accrue
+        XCTAssertTrue(app.staticTexts["live.elevation"].exists, "no elevation on the live recorder")
+        XCTAssertTrue(app.staticTexts["live.fastestSplit"].exists, "no fastest split on the live recorder")
 
         // Marketing captures only (MILEPOST_LONG_RUN=1): keep going past the
         // first split so the recorder, detail and totals show a real run, and
@@ -180,6 +182,9 @@ final class MilepostRouteUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["detail.title"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["Distance"].exists)
         XCTAssertTrue(app.staticTexts["Splits (mi)"].exists)
+        XCTAssertTrue(app.staticTexts["detail.fastestSplit"].exists, "no fastest-split tile")
+        XCTAssertTrue(app.staticTexts["detail.elevation"].exists, "no elevation tile")
+        XCTAssertTrue(app.staticTexts["detail.elevation"].label.hasSuffix(" ft"))
         snap("route-detail")
 
         // Marketing captures only: the You tab with a real run behind its
