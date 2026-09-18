@@ -11,7 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "9"
+    CURRENT_PROJECT_VERSION: "16"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 configs:
@@ -55,11 +55,12 @@ targets:
         CFBundleIconName: AppIcon
         # Location keeps the process alive while the screen is off mid-run.
         # Without this key, allowsBackgroundLocationUpdates traps at runtime.
-        # Audio lets the voice cues play with the screen off: without it the
-        # playback session refuses to activate in the background (silently).
+        # NO `audio`: App Review rejected 1.0 under 2.5.4 (2026-09-18) because
+        # spoken cues are not "persistent audio". Without it the cues only
+        # play while the app is on screen; bringing it back needs a
+        # physical-device recording in the review notes.
         UIBackgroundModes:
           - location
-          - audio
         NSLocationWhenInUseUsageDescription: Milepost uses your location to measure distance and pace and to draw your route while you run, including while the screen is off.
         # The Dynamic Island / lock-screen run card. Without this key
         # Activity.request throws and the run simply has no card.

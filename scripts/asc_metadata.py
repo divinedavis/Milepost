@@ -75,7 +75,7 @@ HOW TO TEST
 4. Block tab: the saved run with its route map, tiles and splits. You tab: weekly/all-time totals, the miles/km switch, and Voice cues (spoken split announcements, off by default).
 
 BACKGROUND LOCATION
-The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization and reads location solely between Start and Finish. The audio background mode is used only for the optional spoken voice cues during a run.
+The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization and reads location solely between Start and Finish.
 
 CONTACT
 Any question at all: the email and phone number above.
