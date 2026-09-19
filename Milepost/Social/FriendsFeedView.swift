@@ -133,7 +133,7 @@ struct FriendActivityRow: View {
                     .accessibilityIdentifier("friends.rowTitle")
             } icon: {
                 SportIcon(sport: item.sport)
-                    .foregroundStyle(Theme.orange)
+                    .foregroundStyle(Theme.accent)
                     .accessibilityLabel(item.sport.title)
             }
             Text(item.startDate.activityDateText)

@@ -67,7 +67,7 @@ private struct WatchControlsPage: View {
                         .labelStyle(.iconOnly)
                         .font(.title2)
                 }
-                .tint(workout.phase == .paused ? Theme.orange : Theme.paused)
+                .tint(workout.phase == .paused ? Theme.accent : Theme.paused)
                 .accessibilityIdentifier("watch.toggle")
             }
 
@@ -106,7 +106,7 @@ private struct WatchMetricsPage: View {
                 Text(anchor, style: .timer)
                     .font(.system(size: 32, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(Theme.orange)
+                    .foregroundStyle(Theme.accent)
             } else {
                 Text(Format.clock(workout.recorder.elapsed))
                     .font(.system(size: 32, weight: .semibold, design: .rounded))
@@ -138,7 +138,7 @@ private struct WatchMetricsPage: View {
                     .font(.system(size: 15, weight: .semibold))
                     .frame(maxWidth: .infinity)
             }
-            .tint(isPaused ? Theme.orange : Theme.paused)
+            .tint(isPaused ? Theme.accent : Theme.paused)
             .accessibilityIdentifier("watch.metrics.toggle")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -179,14 +179,14 @@ private struct WatchSplitsPage: View {
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
                     if split.index == fastestIndex {
-                        Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(Theme.orange)
+                        Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(Theme.accent)
                             .accessibilityLabel("Fastest")
                     }
                     Spacer()
                     Text(sport.rateText(split.pace(unit: unit, sport: sport), unit: unit))
                         .font(.body.weight(.semibold))
                         .monospacedDigit()
-                        .foregroundStyle(split.isComplete(splitMeters: workout.recorder.splitMeters) ? Theme.orange : .secondary)
+                        .foregroundStyle(split.isComplete(splitMeters: workout.recorder.splitMeters) ? Theme.accent : .secondary)
                 }
             }
         }

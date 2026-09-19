@@ -58,7 +58,7 @@ struct RunLiveActivity: Widget {
             } minimal: {
                 RunnerMark(sport: context.attributes.sport, isPaused: context.state.isPaused)
             }
-            .keylineTint(Theme.orange)
+            .keylineTint(Theme.accent)
         }
     }
 }
@@ -77,7 +77,7 @@ private struct RunnerMark: View {
                 SportIcon(sport: sport, size: 15, weight: .bold)
             }
         }
-            .foregroundStyle(isPaused ? Theme.paused : Theme.orange)
+            .foregroundStyle(isPaused ? Theme.paused : Theme.accent)
             // The compact island has no room for the word, so this icon is
             // the only thing that says a run is paused. Spell it out for
             // VoiceOver (and it is what the UI test asserts on).
@@ -92,7 +92,7 @@ private struct SportTile: View {
     let size: CGFloat
     var body: some View {
         RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-            .fill(isPaused ? Theme.paused : Theme.orange)
+            .fill(isPaused ? Theme.paused : Theme.accent)
             .frame(width: size, height: size)
             .overlay(
                 SportIcon(sport: sport, size: size * 0.46, weight: .bold)
@@ -108,7 +108,7 @@ private struct LiveIndicator: View {
     var body: some View {
         Image(systemName: isPaused ? "pause.circle.fill" : "dot.radiowaves.left.and.right")
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(isPaused ? Theme.paused : Theme.orange)
+            .foregroundStyle(isPaused ? Theme.paused : Theme.accent)
             .accessibilityLabel(isPaused ? "Paused" : "Recording")
     }
 }

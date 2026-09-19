@@ -10,7 +10,7 @@ Output: build/asc-screenshots/{1..5}.png at 1290x2796, the 6.7" slot the API
 
 Portfolio style: five panels alternating brand colour and white, one short
 lowercase headline per panel, the screen inside a rounded device frame, the
-wordmark small in the corner of the accent panels. Brand orange = Theme.orange.
+wordmark small in the corner of the accent panels. Brand navy = Theme.accent.
 
     ~/.venvs/spendcap/bin/python scripts/asc_make_screenshots.py
 """
@@ -25,22 +25,22 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "build.nosync" / "screenshots-raw"
 OUT_DIR = ROOT / "build" / "asc-screenshots"
-# "dark" = white ink for dark/orange fields; "light" = dark ink for white fields.
+# "dark" = white ink for dark/navy fields; "light" = dark ink for white fields.
 WORDMARK = ROOT / "marketing" / "logo" / "runner-wordmark-dark-transparent.png"
 WORDMARK_DARK = ROOT / "marketing" / "logo" / "runner-wordmark-light-transparent.png"
 CANVAS = (1290, 2796)
-ORANGE = (255, 92, 26)          # Theme.orange (1.0, 0.36, 0.10)
+NAVY = (61, 107, 224)           # Theme.accent (0.24, 0.42, 0.88)
 INK = (14, 14, 14)              # Theme.background
 WHITE = (255, 255, 255)
 SOFT = (110, 110, 115)
 
 # (capture name, headline, background, subline)
 PANELS = [
-    ("map-route",       "press start.\nthat's it.",      ORANGE, "Your route draws in as you go, screen on or off."),
+    ("map-route",       "press start.\nthat's it.",      NAVY, "Your route draws in as you go, screen on or off."),
     ("route-recording", "time. pace.\ndistance. live.",  WHITE,  "Numbers you can read mid-stride, and a splits bar."),
-    ("route-detail",    "every run,\nmapped.",           ORANGE, "Route, distance, pace and each split, saved on your phone."),
+    ("route-detail",    "every run,\nmapped.",           NAVY, "Route, distance, pace and each split, saved on your phone."),
     ("you-totals",      "this week.\nall time.",         WHITE,  "Totals in miles or kilometres. Voice cues if you want them."),
-    ("activities-list", "your routes\nstay yours.",      ORANGE, "Friends see your stats. Your maps stay on your phone."),
+    ("activities-list", "your routes\nstay yours.",      NAVY, "Friends see your stats. Your maps stay on your phone."),
 ]
 
 
@@ -62,11 +62,11 @@ def font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont:
 def composite(raw: Image.Image, headline: str, subline: str, bg: tuple, out: pathlib.Path) -> None:
     canvas = Image.new("RGB", CANVAS, bg)
     draw = ImageDraw.Draw(canvas)
-    ink = WHITE if bg == ORANGE else INK
-    sub_ink = (255, 226, 210) if bg == ORANGE else SOFT
+    ink = WHITE if bg == NAVY else INK
+    sub_ink = (214, 226, 255) if bg == NAVY else SOFT
 
-    # Wordmark top-left on every panel (white on orange, dark on white).
-    wm = Image.open(WORDMARK if bg == ORANGE else WORDMARK_DARK).convert("RGBA")
+    # Wordmark top-left on every panel (white on navy, dark on white).
+    wm = Image.open(WORDMARK if bg == NAVY else WORDMARK_DARK).convert("RGBA")
     wm_w = 300
     wm = wm.resize((wm_w, int(wm.height * wm_w / wm.width)), Image.LANCZOS)
     canvas.paste(wm, (96, 96), wm)
@@ -90,7 +90,7 @@ def composite(raw: Image.Image, headline: str, subline: str, bg: tuple, out: pat
     frame_h = screen_h + 2 * bezel
     frame = Image.new("RGBA", (frame_w, frame_h), (0, 0, 0, 0))
     ImageDraw.Draw(frame).rounded_rectangle((0, 0, frame_w, frame_h), radius=120,
-                                            fill=(30, 30, 30) if bg == ORANGE else INK)
+                                            fill=(30, 30, 30) if bg == NAVY else INK)
     screen = raw.resize((screen_w, screen_h), Image.LANCZOS).convert("RGBA")
     mask = Image.new("L", (screen_w, screen_h), 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, screen_w, screen_h), radius=100, fill=255)

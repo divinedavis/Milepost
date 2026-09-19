@@ -42,11 +42,11 @@ struct SportPicker: View {
         let isSelected = sport == selection
         return HStack(spacing: 14) {
             Circle()
-                .fill(isSelected ? Theme.orange : Color(white: 0.2))
+                .fill(isSelected ? Theme.accent : Color(white: 0.2))
                 .frame(width: 52, height: 52)
                 .overlay(
                     SportIcon(sport: sport, size: 22)
-                        .foregroundStyle(isSelected ? .white : Theme.orange)
+                        .foregroundStyle(isSelected ? .white : Theme.accent)
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(sport.title)
@@ -61,7 +61,7 @@ struct SportPicker: View {
             if isSelected {
                 Image(systemName: "checkmark")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Theme.orange)
+                    .foregroundStyle(Theme.accent)
             }
         }
         .padding(12)

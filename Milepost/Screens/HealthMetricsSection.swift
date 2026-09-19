@@ -18,7 +18,7 @@ struct HealthMetricsSection: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Label("From Apple Health", systemImage: "heart.fill")
                         .font(.headline)
-                        .foregroundStyle(Theme.orange)
+                        .foregroundStyle(Theme.accent)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                         if let bpm = metrics.averageHeartRate {
                             tile("Avg. heart rate", "\(Int(bpm.rounded())) bpm")

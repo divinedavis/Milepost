@@ -66,7 +66,7 @@ struct CelebrationView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
-                        .background(Theme.orange, in: Capsule())
+                        .background(Theme.accent, in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 20)
@@ -94,18 +94,18 @@ struct CelebrationView: View {
     private var badge: some View {
         ZStack {
             Circle()
-                .fill(Theme.orange.opacity(0.18))
+                .fill(Theme.accent.opacity(0.18))
                 .frame(width: 168, height: 168)
                 .scaleEffect(appeared ? 1 : 0.6)
             Circle()
-                .fill(Theme.orange)
+                .fill(Theme.accent)
                 .frame(width: 120, height: 120)
                 .overlay(SportIcon(sport: sport, size: 52).foregroundStyle(.white))
                 .overlay(alignment: .bottomTrailing) {
                     Circle()
                         .fill(.white)
                         .frame(width: 38, height: 38)
-                        .overlay(Image(systemName: "checkmark").font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.orange))
+                        .overlay(Image(systemName: "checkmark").font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.accent))
                 }
                 .scaleEffect(appeared ? 1 : 0.3)
         }
@@ -156,7 +156,7 @@ private struct Confetti: View {
         let color: Color
     }
 
-    private static let colors: [Color] = [Theme.orange, Theme.paused, Theme.splitBlue, .white]
+    private static let colors: [Color] = [Theme.accent, Theme.paused, Theme.splitBlue, .white]
 
     @State private var pieces: [Piece] = (0..<48).map { i in
         Piece(x: .random(in: 0...1),

@@ -27,7 +27,7 @@ struct RecordScreen: View {
                 UserAnnotation()
                 if recorder.route.count > 1 {
                     MapPolyline(coordinates: recorder.route.map(\.coordinate))
-                        .stroke(Theme.orange, lineWidth: 5)
+                        .stroke(Theme.accent, lineWidth: 5)
                 }
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
@@ -181,9 +181,9 @@ struct RecordScreen: View {
                     Circle()
                         .fill(Color(white: 0.2))
                         .frame(width: 72, height: 72)
-                        .overlay(SportIcon(sport: sport, size: 28).foregroundStyle(Theme.orange))
+                        .overlay(SportIcon(sport: sport, size: 28).foregroundStyle(Theme.accent))
                     Circle()
-                        .fill(Theme.orange)
+                        .fill(Theme.accent)
                         .frame(width: 18, height: 18)
                         .overlay(Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.black))
                 }
@@ -200,14 +200,14 @@ struct RecordScreen: View {
         VStack(spacing: 8) {
             Button(action: startTapped) {
                 Circle()
-                    .fill(Theme.orange)
+                    .fill(Theme.accent)
                     .frame(width: 88, height: 88)
                     .overlay(Image(systemName: "play.fill").font(.system(size: 34)).foregroundStyle(.white))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Start")
             .accessibilityIdentifier("record.start")
-            Text("Start").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.orange)
+            Text("Start").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
         }
     }
 

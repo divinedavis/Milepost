@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "marketing" / "logo"
 FONT = "/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf"
 
-ORANGE = "#FF5B1A"
+NAVY = "#3D6BE0"
 BG_DARK = "#0E0E0E"
 BG_LIGHT = "#FFFFFF"
 
@@ -90,17 +90,17 @@ def build(name: str, content: str, png_width: int) -> None:
 
 def main() -> None:
     for variant, ink, bg in (("dark", "#FFFFFF", BG_DARK), ("light", "#111111", BG_LIGHT)):
-        body, w, h = wordmark(ink, ORANGE)
+        body, w, h = wordmark(ink, NAVY)
         build(f"runner-wordmark-{variant}", svg(w, h, body, bg), 2400)
         build(f"runner-wordmark-{variant}-transparent", svg(w, h, body, None), 2400)
-        body, w, h = mark(ink, ORANGE)
+        body, w, h = mark(ink, NAVY)
         build(f"runner-mark-{variant}", svg(w, h, body, bg), 1024)
         build(f"runner-mark-{variant}-transparent", svg(w, h, body, None), 1024)
-    # All-orange versions for one-colour placements.
-    body, w, h = wordmark(ORANGE, ORANGE)
-    build("runner-wordmark-orange-transparent", svg(w, h, body, None), 2400)
-    body, w, h = mark(ORANGE, ORANGE)
-    build("runner-mark-orange-transparent", svg(w, h, body, None), 1024)
+    # All-navy versions for one-colour placements.
+    body, w, h = wordmark(NAVY, NAVY)
+    build("runner-wordmark-navy-transparent", svg(w, h, body, None), 2400)
+    body, w, h = mark(NAVY, NAVY)
+    build("runner-mark-navy-transparent", svg(w, h, body, None), 1024)
 
     tiles = [("runner-wordmark-dark", 1400), ("runner-wordmark-light", 1400), ("runner-mark-dark", 400), ("runner-mark-light", 400)]
     imgs = []

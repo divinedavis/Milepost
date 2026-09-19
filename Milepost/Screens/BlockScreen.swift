@@ -98,7 +98,7 @@ struct ActivityRow: View {
                     .accessibilityIdentifier("block.rowTitle")
             } icon: {
                 SportIcon(sport: activity.sport)
-                    .foregroundStyle(Theme.orange)
+                    .foregroundStyle(Theme.accent)
                     .accessibilityLabel(activity.sport.title)
             }
             Text(activity.startDate.activityDateText)

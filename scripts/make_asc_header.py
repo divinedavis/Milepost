@@ -3,7 +3,7 @@
 
 Style reference: Facebook's App Store header (flat brand-colour field, the
 wordmark centred, small floating pieces of the product around it, no phone).
-For Milepost: orange field, white runner wordmark, and around it a route
+For Milepost: navy field, white runner wordmark, and around it a route
 circle, a split tile, a pace chip, a mile badge, a clock chip and a Start pill.
 
 Sizes: 5244x2950 (Apple's large size) and a 1280x720 downscale. The upload is
@@ -21,13 +21,13 @@ import sys
 from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from asc_make_screenshots import INK, ORANGE, WHITE, WORDMARK, font  # noqa: E402
+from asc_make_screenshots import INK, NAVY, WHITE, WORDMARK, font  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "marketing" / "asc-header"
 W, H = 5244, 2950
-ORANGE_TOP = (255, 112, 48)
-ORANGE_BOTTOM = (242, 78, 14)
+NAVY_TOP = (78, 124, 236)
+NAVY_BOTTOM = (46, 88, 204)
 CARD = (22, 22, 22)
 BLUE = (41, 112, 224)          # Theme.splitBlue
 GREEN = (52, 199, 89)
@@ -40,7 +40,7 @@ def gradient() -> Image.Image:
     px = im.load()
     for y in range(H):
         t = y / (H - 1)
-        px[0, y] = tuple(int(a + (b - a) * t) for a, b in zip(ORANGE_TOP, ORANGE_BOTTOM))
+        px[0, y] = tuple(int(a + (b - a) * t) for a, b in zip(NAVY_TOP, NAVY_BOTTOM))
     return im.resize((W, H))
 
 
@@ -73,7 +73,7 @@ def route_circle(diameter: int) -> Image.Image:
     s = diameter
     pts = [(0.30, 0.68), (0.36, 0.42), (0.50, 0.30), (0.62, 0.40), (0.58, 0.58), (0.70, 0.72)]
     pts = [(int(x * s), int(y * s)) for x, y in pts]
-    d.line(pts, fill=ORANGE, width=int(s * 0.055), joint="curve")
+    d.line(pts, fill=NAVY, width=int(s * 0.055), joint="curve")
     r = int(s * 0.05)
     for (x, y), c in ((pts[0], GREEN), (pts[-1], RED)):
         d.ellipse((x - r, y - r, x + r, y + r), fill=c, outline=WHITE, width=int(r * 0.35))
@@ -96,7 +96,7 @@ def split_tile(size: tuple[int, int]) -> Image.Image:
         d.rounded_rectangle((x, top, x + col_w, base), radius=int(col_w * 0.12), fill=fill)
         if i == 1:
             d.text((x + int(col_w * 0.16), top - int(h * 0.15)), "7:40", fill=WHITE, font=font(int(h * 0.11)))
-            d.rectangle((x, base + int(h * 0.02), x + col_w, base + int(h * 0.045)), fill=ORANGE)
+            d.rectangle((x, base + int(h * 0.02), x + col_w, base + int(h * 0.045)), fill=NAVY)
         x += col_w + gap
     return im
 
@@ -123,8 +123,8 @@ def start_pill(h: int) -> Image.Image:
     im, d = rounded((w, h), h // 2, WHITE)
     # play triangle
     cx, cy, r = int(h * 0.5), h // 2, int(h * 0.17)
-    d.polygon([(cx - r, cy - r), (cx - r, cy + r), (cx + r, cy)], fill=ORANGE)
-    d.text((int(h * 0.85), int(h * 0.22)), "Start", fill=ORANGE, font=f)
+    d.polygon([(cx - r, cy - r), (cx - r, cy + r), (cx + r, cy)], fill=NAVY)
+    d.text((int(h * 0.85), int(h * 0.22)), "Start", fill=NAVY, font=f)
     return im
 
 
@@ -148,7 +148,7 @@ def main() -> int:
     circle = route_circle(int(H * 0.32))
     cpos = (int(W * 0.045), int(H * 0.46))
     shadow(canvas, circle, cpos)
-    badge = chip("1 mi", None, int(H * 0.085), WHITE, ORANGE, ORANGE)
+    badge = chip("1 mi", None, int(H * 0.085), WHITE, NAVY, NAVY)
     # Top-right rim: the route's start and end dots sit low on the disc.
     canvas.paste(badge, (cpos[0] + circle.width - badge.width + int(H * 0.02),
                          cpos[1] - int(H * 0.005)), badge)

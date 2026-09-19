@@ -27,7 +27,7 @@ struct SignInCard: View {
         VStack(spacing: 16) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 44))
-                .foregroundStyle(Theme.orange)
+                .foregroundStyle(Theme.accent)
             Text("Run with friends")
                 .font(.title2.weight(.bold))
             Text("See your friends' runs, walks and rides here, and let them see yours.")

@@ -72,7 +72,7 @@ struct RootView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .foregroundStyle(tab == item ? Theme.orange : .secondary)
+                    .foregroundStyle(tab == item ? Theme.accent : .secondary)
                 }
                 .accessibilityIdentifier("tab.\(item.rawValue)")
                 .accessibilityAddTraits(tab == item ? .isSelected : [])

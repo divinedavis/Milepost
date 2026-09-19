@@ -29,7 +29,7 @@ people you accept, and their activities show up under Block > Friends.
 ## Logo
 
 `scripts/make_wordmark.py` draws the runner wordmark and mark into `marketing/logo/`
-(SVG + PNG, dark / light / orange); `scripts/make_icon.py` builds the app icon,
+(SVG + PNG, dark / light / navy); `scripts/make_icon.py` builds the app icon,
 launch image and in-app wordmark from it.
 
 ## Develop

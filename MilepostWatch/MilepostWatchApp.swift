@@ -29,7 +29,7 @@ struct MilepostWatchApp: App {
             WatchRootView()
                 .environment(workout)
                 .environment(sync)
-                .tint(Theme.orange)
+                .tint(Theme.accent)
                 .onChange(of: sync.includeRouteInHealth) { _, include in
                     workout.includeRouteInHealth = include
                 }

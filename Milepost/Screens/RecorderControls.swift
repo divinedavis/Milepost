@@ -22,11 +22,11 @@ struct RecorderControls: View {
     var body: some View {
         HStack(spacing: 12) {
             if recorder.state == .recording {
-                pill("Pause", symbol: "pause.fill", fill: Theme.orange, text: .white, id: "\(prefix).pause") {
+                pill("Pause", symbol: "pause.fill", fill: Theme.accent, text: .white, id: "\(prefix).pause") {
                     recorder.pause()
                 }
             } else {
-                pill("Resume", symbol: "play.fill", fill: Theme.orange, text: .white, id: "\(prefix).resume") {
+                pill("Resume", symbol: "play.fill", fill: Theme.accent, text: .white, id: "\(prefix).resume") {
                     recorder.resume()
                 }
                 pill("Finish", symbol: "flag.checkered", fill: .white, text: .black, id: "\(prefix).finish") {

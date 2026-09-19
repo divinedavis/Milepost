@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One bar per split, taller = faster. The split in progress is blue with an
-/// orange underline; empty slots pad the row out so a fresh run still shows
+/// accent underline; empty slots pad the row out so a fresh run still shows
 /// three bars.
 struct SplitsBar: View {
     let splits: [Split]
@@ -30,7 +30,7 @@ struct SplitsBar: View {
                         .fill(isCurrent ? Theme.splitBlue : Theme.barIdle)
                         .frame(height: height(for: split.pace(unit: unit, sport: sport), fastest: fastest, slowest: slowest, isCurrent: isCurrent))
                     Rectangle()
-                        .fill(isCurrent ? Theme.orange : .clear)
+                        .fill(isCurrent ? Theme.accent : .clear)
                         .frame(height: 4)
                 }
                 .frame(maxWidth: .infinity)

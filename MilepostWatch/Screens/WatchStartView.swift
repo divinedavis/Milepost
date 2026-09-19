@@ -93,7 +93,7 @@ struct WatchStartView: View {
     }
 
     private func tile(_ option: Sport, side: CGFloat) -> some View {
-        let tint: Color = option == sport ? Theme.orange : .primary
+        let tint: Color = option == sport ? Theme.accent : .primary
         return Button {
             sportRaw = option.rawValue
             start(option)
@@ -119,7 +119,7 @@ struct WatchStartView: View {
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(option == sport ? Theme.orange : .clear, lineWidth: 2)
+                .stroke(option == sport ? Theme.accent : .clear, lineWidth: 2)
         )
         // The mark-only tile has no text, so the name has to be said here or
         // VoiceOver announces nothing but "button".

@@ -14,7 +14,7 @@ struct MirroredWorkoutBanner: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "applewatch")
-                        .foregroundStyle(Theme.orange)
+                        .foregroundStyle(Theme.accent)
                     Text("Recording on Apple Watch")
                         .font(.subheadline.weight(.semibold))
                     Spacer()

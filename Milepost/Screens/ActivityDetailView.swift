@@ -103,7 +103,7 @@ struct ActivityDetailView: View {
     private var routeMap: some View {
         if coordinates.count > 1, let rect = RouteGeometry.fittedRect(coordinates) {
             Map(initialPosition: .rect(rect), interactionModes: [.pan, .zoom]) {
-                MapPolyline(coordinates: coordinates).stroke(Theme.orange, lineWidth: 5)
+                MapPolyline(coordinates: coordinates).stroke(Theme.accent, lineWidth: 5)
                 if let first = coordinates.first {
                     Annotation("Start", coordinate: first, anchor: .center) {
                         Circle().fill(.green).frame(width: 12, height: 12).overlay(Circle().stroke(.white, lineWidth: 2))
@@ -155,7 +155,7 @@ struct ActivityDetailView: View {
                         // The bolt marks the split the "Fastest" tile came from.
                         Image(systemName: "bolt.fill")
                             .font(.caption2)
-                            .foregroundStyle(split.index == fastestIndex ? Theme.orange : .clear)
+                            .foregroundStyle(split.index == fastestIndex ? Theme.accent : .clear)
                             .accessibilityHidden(split.index != fastestIndex)
                             .accessibilityLabel("Fastest")
                         Text(complete ? "\(split.index)" : String(format: "%.2f", split.distanceMeters / recorded.meters))
@@ -164,7 +164,7 @@ struct ActivityDetailView: View {
                             .frame(width: 44, alignment: .leading)
                         GeometryReader { geo in
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(complete ? Theme.orange : Theme.splitBlue)
+                                .fill(complete ? Theme.accent : Theme.splitBlue)
                                 .frame(width: geo.size.width * width(for: split.pace(unit: recorded, sport: sport), fastest: fastest, slowest: slowest))
                         }
                         .frame(height: 14)
