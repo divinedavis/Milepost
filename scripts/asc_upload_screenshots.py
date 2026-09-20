@@ -57,6 +57,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--replace", action="store_true")
     ap.add_argument("--display", default=DISPLAY_TYPE)
+    ap.add_argument("--dir", default=None,
+                    help="directory of PNGs to upload (default build/asc-screenshots). "
+                         "The watch set lives in marketing/asc-watch-screenshots.")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -69,13 +72,16 @@ def main() -> int:
         for s in asc.get(f"/appScreenshotSets/{set_id}/appScreenshots")["data"]:
             asc.delete(f"/appScreenshots/{s['id']}")
         print("cleared existing screenshots")
-    pngs = sorted(p for p in SCREENSHOTS_DIR.glob("*.png") if not p.name.startswith("_"))
+    source = pathlib.Path(args.dir) if args.dir else SCREENSHOTS_DIR
+    if not source.is_absolute():
+        source = ROOT / source
+    pngs = sorted(p for p in source.glob("*.png") if not p.name.startswith("_"))
     if not pngs:
-        raise SystemExit(f"no PNGs in {SCREENSHOTS_DIR} — run asc_make_screenshots.py first")
+        raise SystemExit(f"no PNGs in {source} — run asc_make_screenshots.py first")
     for png in pngs:
         upload(asc, set_id, png)
         print(f"  ✓ {png.name}")
-    print(f"{len(pngs)} screenshot(s) in {args.display} en-US")
+    print(f"{len(pngs)} screenshot(s) from {source} in {args.display} en-US")
     return 0
 
 

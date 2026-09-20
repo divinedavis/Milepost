@@ -466,6 +466,25 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
 - `asc_submit_for_review.py --check` then without `--check` to submit
   (reviewSubmissions). Pricing and App Privacy are invisible to the pre-flight;
   read `meta.associatedErrors` on a 409.
+- **A build with the watch app needs watch screenshots or the submission is
+  refused** (`STATE_ERROR.SCREENSHOT_REQUIRED.APP_WATCH_SERIES_4`), which
+  never came up while 1.0 carried build 17. `APP_WATCH_SERIES_4` is
+  368x448, exactly the screen of the **Apple Watch SE 3 (44mm)** simulator;
+  the 46mm and Ultra sims are the wrong size. Upload with
+  `asc_upload_screenshots.py --display APP_WATCH_SERIES_4 --dir
+  marketing/asc-watch-screenshots`.
+- Capturing them is awkward and `simctl io <watch sim> screenshot` is the
+  stale-framebuffer trap, so record instead: start `recordVideo`, launch,
+  wait, stop, and extract with `ffmpeg -vsync 0` (the file is variable rate,
+  so `-vf fps=N` throws most of it away). The sim's screen sleeps about a
+  second after the launch animation, so only screens that hold it awake come
+  out: `-watch-preview` (metrics), `-watch-preview-page-controls`, and
+  `-watch-preview-summary` all captured; the sport picker never did.
+- Swapping the build on a version that is WAITING_FOR_REVIEW means cancelling
+  the submission first (`PATCH /reviewSubmissions/{id} {"canceled": true}`),
+  which drops it to DEVELOPER_REJECTED and **loses its place in the queue**.
+  `attach_build.py` refuses in-review versions on purpose, so this is a
+  deliberate two-step, not something to automate into the ship script.
 - `attach_build.py --build N` after every ship, or the version keeps the old build.
 - Privacy/support pages live in Personal-Website `milepost/{privacy,support}/`
   and deploy by scp to 159.203.110.79:/var/www/divinedavis/ (no auto-deploy).
