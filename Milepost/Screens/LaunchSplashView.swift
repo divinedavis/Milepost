@@ -112,6 +112,11 @@ enum Splash {
     static let launchBox = CGSize(width: 180, height: 150)
     static let launchM = CGPoint(x: 60, y: 124)     // M origin, baseline in mark()
 
+    /// How much of the screen's width the finished wordmark spans, toe of
+    /// the runner to the end of the T. 0.86 was edge to edge and loud; this
+    /// is the proportion the Netflix cold start holds.
+    static let widthFraction: CGFloat = 0.66
+
     static let unbounded = CGSize(width: CGFloat.infinity, height: CGFloat.infinity)
     static let ink = Color.white
     static let accent = Theme.accent
@@ -126,8 +131,13 @@ enum Splash {
         // (cap * tan 12°) the skew adds on the right.
         let inkWidth = legOverhang + wordWidth + cap * -skew
 
-        // Final pose: the ink centred, at most 86% of the width.
-        let finalScale = min(launchScale, size.width * 0.86 / inkWidth)
+        // Final pose: the ink centred at `widthFraction` of the screen.
+        // Always the fraction, never the natural size, so the wordmark is
+        // the same proportion of every phone. Nothing here reads a font
+        // metric or a text style, so the phone's text-size setting cannot
+        // change it: `Splash.font` is `.custom(_:fixedSize:)`, or a
+        // `.system(size:)` fallback, both of which opt out of Dynamic Type.
+        let finalScale = size.width * widthFraction / inkWidth
         let finalOrigin = CGPoint(x: centre.x - inkWidth * finalScale / 2 + legOverhang * finalScale,
                                   y: centre.y + cap * finalScale / 2)   // baseline
         let launchOrigin = CGPoint(x: centre.x - launchBox.width * launchScale / 2 + launchM.x * launchScale,

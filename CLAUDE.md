@@ -77,6 +77,12 @@ Launch splash (`LaunchSplashView.swift`, added 2026-09-20, modelled on Netflix's
   stall hides inside the hold instead of swallowing the choreography. The
   `.task` that activates the watch session is on the `Group`, so it still runs
   at launch.
+- The finished wordmark spans `widthFraction` (0.66) of the screen's width,
+  toe to T, measured identical on a 17 Pro and a 17 Pro Max and at
+  AccessibilityXXXL — nothing in it reads a font metric or a text style, and
+  `Splash.font` is `.custom(_:fixedSize:)` with a `.system(size:)` fallback,
+  so Dynamic Type cannot reach it. 0.86 was edge to edge and read as loud.
+  Measure it by recording a launch and taking the widest dark frame's ink box.
 - The M holds `holdLaunchPose` (0.55 s) before moving: the system's own
   cross-fade from the launch snapshot was still finishing at 0.4 s in the
   simulator and left a ghost M. Never timed on a phone.
