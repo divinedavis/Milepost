@@ -120,12 +120,14 @@ struct RecordScreen: View {
                     }
                 }
             }
-            HStack(alignment: .firstTextBaseline) {
+            // Equal thirds, not Spacers: with Spacers each column is as wide
+            // as its own text, so the middle stat slides whenever a
+            // neighbour's changes — "Avg. pace (/mi)" to "Avg. speed (mph)",
+            // or the distance passing 10.
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
                 stat(Format.clock(recorder.elapsed), "Time", id: "record.time")
-                Spacer()
                 stat(sport.rateText(recorder.averagePace, unit: unit),
                      sport.rateLabel("Avg.", unit: unit), id: "record.pace")
-                Spacer()
                 stat(Format.distance(recorder.distanceMeters, unit: unit), "Distance (\(unit.abbreviation))", id: "record.distance")
             }
         }
@@ -144,6 +146,9 @@ struct RecordScreen: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText)
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Bottom bar
@@ -159,14 +164,17 @@ struct RecordScreen: View {
                 RecorderControls(layout: .map)
                     .padding(.horizontal, 20)
             } else {
-                HStack(alignment: .top) {
+                // Equal thirds, not Spacers. With Spacers every column was
+                // as wide as its own label, so picking Stroller Run — a
+                // label wider than both the circle above it and "History" —
+                // grew the left column and shoved Start off centre. Thirds
+                // put Start on the screen's centre line whatever is chosen.
+                HStack(alignment: .top, spacing: 0) {
                     sportChip
-                    Spacer()
                     startButton
-                    Spacer()
                     historyChip
                 }
-                .padding(.horizontal, 36)
+                .padding(.horizontal, 24)
             }
         }
         .padding(.bottom, 12)
@@ -194,6 +202,7 @@ struct RecordScreen: View {
             .accessibilityIdentifier("record.sport")
             Text(sport.title).font(.subheadline).foregroundStyle(.white)
         }
+        .modifier(ControlColumn())
     }
 
     private var startButton: some View {
@@ -209,6 +218,7 @@ struct RecordScreen: View {
             .accessibilityIdentifier("record.start")
             Text("Start").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
         }
+        .modifier(ControlColumn())
     }
 
     private var historyChip: some View {
@@ -224,6 +234,7 @@ struct RecordScreen: View {
             .accessibilityIdentifier("record.history")
             Text("History").font(.subheadline).foregroundStyle(.white)
         }
+        .modifier(ControlColumn())
     }
 
     // MARK: Actions
@@ -243,5 +254,18 @@ struct RecordScreen: View {
         location.startTracking()
         recorder.start(unit: unit, sport: sport)
         showLive = true
+    }
+}
+
+/// One of the three columns under the map. Each takes exactly a third of the
+/// row so the Start button sits on the screen's centre line no matter how
+/// long the sport's name is; a name too long for its third shrinks rather
+/// than widening the column and moving everything else.
+private struct ControlColumn: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity)
     }
 }

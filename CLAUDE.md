@@ -46,6 +46,38 @@ Gotchas:
 - Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
   `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+- A row of labelled chips separated by `Spacer()` is **not** centred: each
+  column is as wide as its own label, so the longest label (Stroller Run,
+  wider than both the circle above it and "History") grows its column and
+  shoves the middle one off the screen's centre line. The Record tab's
+  controls and its three stats are equal thirds (`ControlColumn`,
+  `maxWidth: .infinity`) for that reason, and
+  `testStartStaysCentredForEverySport` pins it.
+
+Launch splash (`LaunchSplashView.swift`, added 2026-09-20, modelled on Netflix's cold start):
+- The static launch screen is the runner M (`LaunchLogo`, 144x120 pt) centred
+  on `LaunchBackground`. The splash draws the same M at the same place and
+  colour, holds, slides it left while I‑L‑E‑P‑O‑S‑T unfold beside it, holds,
+  and cross-fades into the app. All vector, a straight port of
+  `make_wordmark.py` (Arial Rounded MT Bold, 12° skew, the M as paths), so
+  a wordmark change means changing both.
+- **The clock counts rendered frames, not wall time.** The App body is
+  evaluated a second before the launch screen fades, and mounting `RootView`
+  (the map) stalls the main thread for most of a second: a wall clock had the
+  whole thing over before it was seen, or lost the fade to the stall. Each
+  frame adds at most `maxFrameStep`, so a stall pauses the show.
+- `RootView` is mounted by `onReveal`, once the last letter has landed, so the
+  stall hides inside the hold instead of swallowing the choreography. The
+  `.task` that activates the watch session is on the `Group`, so it still runs
+  at launch.
+- The M holds `holdLaunchPose` (0.55 s) before moving: the system's own
+  cross-fade from the launch snapshot was still finishing at 0.4 s in the
+  simulator and left a ghost M. Never timed on a phone.
+- `-uitest` alone turns it off (every test would pay two seconds a launch);
+  `MilepostSplashUITests` opts in with `-uitest-splash` and checks the
+  hand-off. Cold launches only: the flags are `@State` set once per process.
+- Checking it: `simctl io <sim> recordVideo` around a `simctl launch`, then
+  `ffmpeg -vf fps=20` and a contact sheet. A single screenshot cannot judge it.
 
 Sports (`Sport.swift`, `SportPicker`):
 - Run / Stroller Run / Walk / Ride, chosen from the chip on the Record tab, remembered in

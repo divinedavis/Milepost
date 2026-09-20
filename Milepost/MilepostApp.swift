@@ -14,6 +14,11 @@ struct MilepostApp: App {
     @State private var watchSync: PhoneWatchSync
     @State private var mirror = MirroredWorkoutMonitor()
     @State private var celebration = SaveCelebration()
+    /// Cold launches only: both are set once per process, so coming back from
+    /// the background never replays the splash. The app itself mounts only
+    /// when the splash says so (see `LaunchSplashView.onReveal`).
+    @State private var splash = LaunchSplashView.isEnabled
+    @State private var appMounted = !LaunchSplashView.isEnabled
 
     let container: ModelContainer
 
@@ -88,7 +93,13 @@ struct MilepostApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            Group {
+                if appMounted {
+                    RootView()
+                } else {
+                    Theme.launchBackground.ignoresSafeArea()
+                }
+            }
                 .environment(location)
                 .environment(recorder)
                 .environment(announcer)
@@ -98,6 +109,16 @@ struct MilepostApp: App {
                 .environment(mirror)
                 .environment(celebration)
                 .preferredColorScheme(.dark)
+                // The wordmark plays on an idle main thread; the app is laid
+                // out (map included) under the hold, so the fade lands on a
+                // ready screen.
+                .overlay {
+                    if splash {
+                        LaunchSplashView(onReveal: { appMounted = true },
+                                         onFinished: { splash = false })
+                            .zIndex(2)
+                    }
+                }
                 .task {
                     watchSync.activate()
                     // The watch calls startMirroringToCompanionDevice when a

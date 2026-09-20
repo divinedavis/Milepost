@@ -42,6 +42,22 @@ final class MilepostSportUITests: XCTestCase {
         tap("sport.\(sport)")
     }
 
+    /// The Start button sits on the screen's centre line for every sport.
+    /// It used to drift: the three columns were sized by their own labels, so
+    /// "Stroller Run" — wider than the circle above it and wider than
+    /// "History" — grew the left column and pushed Start right.
+    func testStartStaysCentredForEverySport() {
+        let screen = app.windows.firstMatch.frame
+        for sport in ["run", "strollerRun", "walk", "bike"] {
+            choose(sport)
+            let start = app.buttons["record.start"]
+            XCTAssertTrue(start.waitForExistence(timeout: 6), "no Start button after choosing \(sport)")
+            let offset = start.frame.midX - screen.midX
+            XCTAssertLessThan(abs(offset), 1.5, "Start is \(offset) pt off centre with \(sport) selected")
+        }
+        snap("record-start-centred")
+    }
+
     /// Every sport is reachable and the chip follows the choice.
     func testPickerOffersEverySportAndTheChipFollows() {
         tap("record.sport")
