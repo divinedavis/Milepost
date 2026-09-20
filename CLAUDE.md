@@ -46,6 +46,13 @@ Gotchas:
 - Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
   `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+- **The two moving suites are flaky in a full run**, both in the same way: a
+  save that works everywhere else does not show up in Block, and the test
+  passes alone and passes when its own class is run in sequence.
+  `MilepostRideUITests` did it on 2026-09-19 and
+  `MilepostRouteUITests/testSavingWithAppleHealthOnKeepsTheActivityAndOffers\
+Health` on 2026-09-20. Re-run the class before believing it; a real
+  regression fails alone too.
 - A row of labelled chips separated by `Spacer()` is **not** centred: each
   column is as wide as its own label, so the longest label (Stroller Run,
   wider than both the circle above it and "History") grows its column and
