@@ -488,7 +488,13 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   368x448, exactly the screen of the **Apple Watch SE 3 (44mm)** simulator;
   the 46mm and Ultra sims are the wrong size. Upload with
   `asc_upload_screenshots.py --display APP_WATCH_SERIES_4 --dir
-  marketing/asc-watch-screenshots`.
+  marketing/asc-watch-screenshots-navy`.
+- **iMessage's App Store link preview shows the first WATCH screenshot**, not
+  the iPhone one (seen 2026-09-24). The raw black watch capture looked broken
+  there, so the uploaded set is composed: `make_watch_screenshots.py` puts the
+  raw captures in `marketing/asc-watch-screenshots/` on the navy field with
+  the wordmark and a headline, into `marketing/asc-watch-screenshots-navy/`.
+  Upload that directory, never the raw one. Panel 1 is the preview.
 - Capturing them is awkward and `simctl io <watch sim> screenshot` is the
   stale-framebuffer trap, so record instead: start `recordVideo`, launch,
   wait, stop, and extract with `ffmpeg -vsync 0` (the file is variable rate,
