@@ -131,4 +131,26 @@ final class MilepostHealthUITests: XCTestCase {
         XCTAssertFalse(app.buttons["mirror.toggle"].exists)
         XCTAssertFalse(app.buttons["mirror.end"].exists)
     }
+
+    /// The Oura guide is reachable with Health off (someone arriving with a
+    /// ring should find it before they know Health is the answer), and its
+    /// first step tracks the real switch.
+    func testOuraGuideTracksTheHealthSwitch() {
+        openHealthSettings()
+        tap("you.oura")
+        var step = app.descendants(matching: .any)["oura.stepHealth"]
+        XCTAssertTrue(step.waitForExistence(timeout: 6), "the Oura guide never opened")
+        XCTAssertTrue(step.label.contains("Go back and turn on"), step.label)
+
+        relaunch(healthOn: true)
+        openHealthSettings()
+        tap("you.oura")
+        step = app.descendants(matching: .any)["oura.stepHealth"]
+        XCTAssertTrue(step.waitForExistence(timeout: 6))
+        XCTAssertTrue(step.label.contains("On."), step.label)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "oura-guide"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
 }

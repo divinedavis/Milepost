@@ -38,6 +38,13 @@ struct HealthSection: View {
                     Toggle("Show heart rate and Watch data", isOn: $readMetrics)
                         .accessibilityIdentifier("you.healthMetrics")
                 }
+
+                NavigationLink {
+                    OuraGuideView()
+                } label: {
+                    Label("Use with Oura Ring", systemImage: "circle.circle")
+                }
+                .accessibilityIdentifier("you.oura")
             } header: {
                 Text("Apple Health")
             } footer: {
@@ -55,14 +62,14 @@ struct HealthSection: View {
             return "Milepost cannot add workouts yet. Turn Milepost on in Health > Sharing > Apps > Milepost."
         }
         if !enabled {
-            return "Add every activity to Health as a workout, so its distance, time and calories count toward your rings and any other fitness app can read them. Turning this on is also what lets Milepost show the heart rate your Apple Watch recorded."
+            return "Add every activity to Health as a workout, so its distance, time and calories count toward your rings and any other fitness app can read them. Turning this on is also what lets Milepost show the heart rate your Apple Watch or Oura Ring recorded."
         }
         var lines = ["Each saved activity becomes a workout in Health, with its splits as laps and an estimated calorie burn."]
         lines.append(includeRoute
             ? "Your route is written to Health too. It stays on this device — Health does not send it to Milepost or to your friends."
             : "Your route is not written. Only the numbers go to Health.")
         if readMetrics {
-            lines.append("Heart rate and other metrics recorded by an Apple Watch are shown on each activity.")
+            lines.append("Heart rate and other metrics recorded by an Apple Watch or Oura Ring are shown on each activity.")
         }
         return lines.joined(separator: " ")
     }

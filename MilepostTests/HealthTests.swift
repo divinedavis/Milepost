@@ -57,6 +57,23 @@ final class HealthTests: XCTestCase {
         XCTAssertGreaterThan(fast, slow)
     }
 
+    // MARK: Heart rate source
+
+    func testHeartRateSourceNamesOuraAlone() {
+        XCTAssertEqual(HealthMetrics.sourceLabel(["Oura", "Oura"]), "Oura")
+    }
+
+    func testHeartRateSourceListsRingAndWatchInAStableOrder() {
+        let label = HealthMetrics.sourceLabel(["Oura", "Jo's Apple Watch"])
+        XCTAssertEqual(label, HealthMetrics.sourceLabel(["Jo's Apple Watch", "Oura"]))
+        XCTAssertEqual(label, "Jo's Apple Watch and Oura")
+    }
+
+    func testNoSourceMeansNoLabel() {
+        XCTAssertNil(HealthMetrics.sourceLabel([]))
+        XCTAssertNil(HealthMetrics.sourceLabel([""]))
+    }
+
     // MARK: Split timeline
 
     private func route(from start: Date, meters: Double, seconds: TimeInterval, step: Double = 50) -> [RoutePoint] {

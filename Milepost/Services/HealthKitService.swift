@@ -15,11 +15,22 @@ struct HealthMetrics: Equatable {
     var averageStrideLengthMeters: Double?
     var averageCyclingPower: Double?
     var averageCyclingCadence: Double?
+    /// Who measured the heart rate — "Oura", a Watch's name, a strap's app —
+    /// so a ring's minute-by-minute readings are not mistaken for a Watch's.
+    var heartRateSource: String?
 
     var isEmpty: Bool {
         averageHeartRate == nil && maxHeartRate == nil && activeKilocalories == nil
             && stepCount == nil && averageRunningPower == nil && averageStrideLengthMeters == nil
             && averageCyclingPower == nil && averageCyclingCadence == nil
+    }
+
+    /// "Oura", or "Oura and Jo's Apple Watch" when two things were measuring.
+    /// Health reports one source per app or device, in no fixed order.
+    static func sourceLabel(_ names: [String]) -> String? {
+        let unique = Array(Set(names.filter { !$0.isEmpty })).sorted()
+        guard !unique.isEmpty else { return nil }
+        return ListFormatter.localizedString(byJoining: unique)
     }
 }
 
@@ -304,7 +315,7 @@ final class HealthKitService {
     }
 
     /// Whatever Health holds for the window this activity covers — heart rate
-    /// from a Watch or strap, real active energy, running or cycling form.
+    /// from a Watch, strap or Oura ring, real active energy, running or cycling form.
     /// Queried by date range rather than against a stored workout so that a
     /// run Milepost recorded on the phone still picks up the Watch's heart
     /// rate, whoever wrote the workout.
@@ -318,6 +329,9 @@ final class HealthKitService {
             .averageQuantity()?.doubleValue(for: beatsPerMinute)
         metrics.maxHeartRate = await statistic(HKQuantityType(.heartRate), predicate, .discreteMax)?
             .maximumQuantity()?.doubleValue(for: beatsPerMinute)
+        if metrics.averageHeartRate != nil {
+            metrics.heartRateSource = HealthMetrics.sourceLabel(await sourceNames(HKQuantityType(.heartRate), predicate))
+        }
         metrics.activeKilocalories = await statistic(HKQuantityType(.activeEnergyBurned), predicate, .cumulativeSum)?
             .sumQuantity()?.doubleValue(for: .kilocalorie())
 
@@ -346,6 +360,15 @@ final class HealthKitService {
         await withCheckedContinuation { continuation in
             let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: options) { _, statistics, _ in
                 continuation.resume(returning: statistics)
+            }
+            store.execute(query)
+        }
+    }
+
+    private func sourceNames(_ type: HKSampleType, _ predicate: NSPredicate) async -> [String] {
+        await withCheckedContinuation { continuation in
+            let query = HKSourceQuery(sampleType: type, samplePredicate: predicate) { _, sources, _ in
+                continuation.resume(returning: sources.map { $0.map(\.name) } ?? [])
             }
             store.execute(query)
         }

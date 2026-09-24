@@ -4,8 +4,8 @@ import SwiftUI
 ///
 /// Milepost records none of this itself. It is read back out of Health for the
 /// window the activity covers, so a run tracked on the phone still shows the
-/// heart rate an Apple Watch was recording at the same time, whichever app
-/// wrote the workout.
+/// heart rate an Apple Watch or Oura ring was recording at the same time,
+/// whichever app wrote the workout.
 struct HealthMetricsSection: View {
     let activity: Activity
     @Environment(HealthKitService.self) private var health
@@ -19,6 +19,12 @@ struct HealthMetricsSection: View {
                     Label("From Apple Health", systemImage: "heart.fill")
                         .font(.headline)
                         .foregroundStyle(Theme.accent)
+                    if let source = metrics.heartRateSource {
+                        Text("Heart rate from \(source)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("detail.healthSource")
+                    }
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                         if let bpm = metrics.averageHeartRate {
                             tile("Avg. heart rate", "\(Int(bpm.rounded())) bpm")

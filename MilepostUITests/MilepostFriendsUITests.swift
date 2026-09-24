@@ -127,6 +127,9 @@ final class MilepostFriendsUITests: XCTestCase {
         XCTAssertTrue(element("you.username").waitForExistence(timeout: 6))
         XCTAssertTrue(element("you.username").label.contains("@you_demo"), element("you.username").label)
         XCTAssertTrue(element("you.share").exists)
+        // The rest of the section can still be below the fold (the Oura row
+        // pushed it there), so scroll again instead of assuming it is on screen.
+        scrollToElement("you.deleteAccount")
         XCTAssertTrue(element("you.deleteAccount").exists, "App Store 5.1.1(v)")
 
         let signOut = element("you.signOut")

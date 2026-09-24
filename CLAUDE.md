@@ -308,6 +308,22 @@ Apple Health (`Milepost/Services/HealthKit*`, `HealthSync`, `HealthSection`, add
 - App Privacy is unchanged. A HealthKit write stays on the user's device and is
   not "collected" by the developer, so nothing new is declared.
 
+Oura Ring (`OuraGuideView`, added 2026-09-23, user request):
+- **There is no direct Oura link, by design.** The ring talks only to the Oura
+  app, which trades with Apple Health: it WRITES heart rate (1-minute samples),
+  active energy, steps, sleep; it READS workouts. So Oura support = the Health
+  write + read that already existed, plus a guide (You > Apple Health > Use
+  with Oura Ring) for the two Oura-side switches. The Oura Cloud API (OAuth,
+  needs a server-held secret) was considered and not built.
+- Oura imports a Health workout only on the **same day** and only while the
+  Oura app is **open**. Nothing live reaches Milepost mid-run.
+- The detail screen names who measured the heart rate (`HealthMetrics
+  .heartRateSource`, an `HKSourceQuery` over the activity window), so a ring's
+  sparse readings are not mistaken for a Watch's.
+- Oura's own activity detection (10 min+) can log the same run a second time
+  in Oura. Milepost cannot touch Oura's list; the guide says so.
+- Never tried with a real ring.
+
 Apple Watch (`MilepostWatch/`, added 2026-09-16):
 - Single-target watchOS app, `com.divinedavis.milepost.watchkitapp`, watchOS 10+,
   embedded by the iOS app (`Embed Watch Content`). `WKRunsIndependentlyOfCompanionApp`
