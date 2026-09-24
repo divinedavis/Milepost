@@ -153,6 +153,23 @@ Stats beyond distance and splits (added 2026-09-16, a runner asked for
   (`Format.elevation`). "--" means no altitude in the route (simulator
   routes from `simctl location` have none), which is not "0".
 
+Past-route heatmap (`RouteHeatmap.swift`, Record tab, added 2026-09-24, user request):
+- Every saved activity in the window is drawn on the Record map: covered once
+  = light orange, darker each time another activity covers the same street
+  (five shades, `RouteHeatmap.colors`, 1 / 2 / 3-4 / 5-9 / 10+ passes).
+  Window defaults to **30 days**; the capsule under the wordmark switches
+  7 / 30 / 90 days / All time / Off (`HeatmapWindow`, UserDefaults).
+- "Same street" = a 15 m grid; each activity claims its cells plus their
+  neighbours (GPS wanders 5-10 m between runs), counted once per activity so
+  one loop of a track is not ten passes. A block over (60 m+) never counts.
+  A stretch is as dark as its lighter end. No line across a >200 m gap.
+- Routes are decoded on the main actor (SwiftData), the grid runs detached;
+  recomputed only when the window or the activity id list changes.
+- Local only: routes still never leave the phone.
+- Polylines are not in the accessibility tree, so `record.heatWindow`
+  carries "N activities" as its value; `MilepostHeatmapUITests` seeds three
+  walks with `-uitest-seed-heatmap` (DEBUG, `HeatmapPreviewData`).
+
 Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
 - The Activities tab is now **Block**, with a Mine / Friends switch. `Tab.block`,
   ids `tab.block`, `block.rowTitle`, `block.empty`; `-open-tab block`.

@@ -64,6 +64,14 @@ struct MilepostApp: App {
                                             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
 
+        #if DEBUG
+        // Past activities for the Record map's heatmap, so it can be driven
+        // and captured on an in-memory store.
+        if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-seed-heatmap") {
+            HeatmapPreviewData.seed(into: container.mainContext)
+        }
+        #endif
+
         let social = SocialStore(backend: Self.socialBackend(isUITest: isUITest))
         let context = container.mainContext
         social.localActivities = { (try? context.fetch(FetchDescriptor<Activity>())) ?? [] }

@@ -1,4 +1,5 @@
 import MapKit
+import SwiftData
 import SwiftUI
 
 struct RecordScreen: View {
@@ -7,6 +8,8 @@ struct RecordScreen: View {
     @Environment(MirroredWorkoutMonitor.self) private var mirror
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
     @AppStorage(Sport.storageKey) private var sportRaw = Sport.run.rawValue
+    @AppStorage(HeatmapWindow.storageKey) private var heatRaw = HeatmapWindow.default.rawValue
+    @Query(sort: \Activity.startDate, order: .reverse) private var activities: [Activity]
     @Binding var tab: Tab
 
     @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
@@ -14,9 +17,13 @@ struct RecordScreen: View {
     @State private var showSportPicker = false
     @State private var showDenied = false
     @State private var pendingStart = false
+    /// Past routes, coloured by how often each street was covered.
+    @State private var heat: [HeatSegment] = []
     @Namespace private var mapScope
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
+    private var heatWindow: HeatmapWindow { HeatmapWindow(rawValue: heatRaw) ?? .default }
+    private var heatActivities: [Activity] { activities.filter { heatWindow.includes($0.startDate) } }
     /// While a run is live the recorder's own sport wins: the setting could
     /// otherwise be changed from another screen mid-run and relabel the card.
     private var sport: Sport { recorder.isActive ? recorder.sport : (Sport(rawValue: sportRaw) ?? .run) }
@@ -25,6 +32,11 @@ struct RecordScreen: View {
         ZStack(alignment: .bottom) {
             Map(position: $position, scope: mapScope) {
                 UserAnnotation()
+                ForEach(heat) { segment in
+                    MapPolyline(coordinates: segment.coordinates)
+                        .stroke(RouteHeatmap.color(level: segment.level),
+                                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                }
                 if recorder.route.count > 1 {
                     MapPolyline(coordinates: recorder.route.map(\.coordinate))
                         .stroke(Theme.accent, lineWidth: 5)
@@ -39,13 +51,16 @@ struct RecordScreen: View {
                     .padding(.trailing, 12)
             }
             .overlay(alignment: .topLeading) {
-                Image("Wordmark")
-                    .accessibilityLabel("Milepost")
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(Theme.card.opacity(0.9), in: Capsule())
-                    .padding(.top, 8)
-                    .padding(.leading, 12)
+                VStack(alignment: .leading, spacing: 8) {
+                    Image("Wordmark")
+                        .accessibilityLabel("Milepost")
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Theme.card.opacity(0.9), in: Capsule())
+                    heatWindowMenu
+                }
+                .padding(.top, 8)
+                .padding(.leading, 12)
             }
 
             VStack(spacing: 0) {
@@ -63,6 +78,16 @@ struct RecordScreen: View {
             }
         }
         .mapScope(mapScope)
+        .task(id: HeatKey(window: heatWindow, ids: heatActivities.map(\.id))) {
+            // Decoding the stored routes has to happen here (SwiftData
+            // models stay on the main actor); the grid work does not.
+            let routes = heatActivities.map(\.coordinates)
+            let segments = await Task.detached(priority: .userInitiated) {
+                RouteHeatmap.segments(routes: routes)
+            }.value
+            guard !Task.isCancelled else { return }
+            heat = segments
+        }
         .fullScreenCover(isPresented: $showLive) {
             LiveRecorderView()
         }
@@ -92,6 +117,37 @@ struct RecordScreen: View {
                 showDenied = true
             }
         }
+    }
+
+    // MARK: Heatmap
+
+    private var heatWindowMenu: some View {
+        Menu {
+            Picker("Show past activities", selection: $heatRaw) {
+                ForEach(HeatmapWindow.allCases) { window in
+                    Text(window.title).tag(window.rawValue)
+                }
+            }
+            Text("Streets get darker orange each time you cover them again.")
+        } label: {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(heatWindow == .off ? Color(white: 0.4) : RouteHeatmap.color(level: 2))
+                    .frame(width: 8, height: 8)
+                Text(heatWindow == .off ? "Past routes off" : heatWindow.title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Theme.card.opacity(0.9), in: Capsule())
+        }
+        .accessibilityLabel("Past activities, \(heatWindow.title)")
+        .accessibilityValue("\(heatWindow == .off ? 0 : heatActivities.count) activities")
+        .accessibilityIdentifier("record.heatWindow")
     }
 
     // MARK: Stats card
@@ -255,6 +311,12 @@ struct RecordScreen: View {
         recorder.start(unit: unit, sport: sport)
         showLive = true
     }
+}
+
+/// What the heatmap is drawn from; a new id list or window recomputes it.
+private struct HeatKey: Hashable {
+    let window: HeatmapWindow
+    let ids: [UUID]
 }
 
 /// One of the three columns under the map. Each takes exactly a third of the
