@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Supabase
 
@@ -35,6 +36,11 @@ protocol SocialBackend: AnyObject {
     func upsert(_ rows: [SharedActivityPayload]) async throws
     func deleteShared(ids: [UUID], owner: UUID) async throws
     func deleteAllShared(owner: UUID) async throws
+
+    func upsertStreets(_ rows: [SharedStreetsPayload]) async throws
+    func deleteAllStreets(owner: UUID) async throws
+    /// Friends' street cells from activities since `since` (nil = all time).
+    func friendStreets(since: Date?) async throws -> [FriendStreets]
 }
 
 enum Secrets {
@@ -229,6 +235,23 @@ final class SupabaseSocialBackend: SocialBackend {
     func deleteAllShared(owner: UUID) async throws {
         try await client.from("shared_activities").delete().eq("user_id", value: owner).execute()
     }
+
+    func upsertStreets(_ rows: [SharedStreetsPayload]) async throws {
+        guard !rows.isEmpty else { return }
+        try await client.from("shared_streets")
+            .upsert(rows, onConflict: "user_id,activity_id", returning: .minimal)
+            .execute()
+    }
+
+    func deleteAllStreets(owner: UUID) async throws {
+        try await client.from("shared_streets").delete().eq("user_id", value: owner).execute()
+    }
+
+    func friendStreets(since: Date?) async throws -> [FriendStreets] {
+        struct Params: Encodable { let since_ts: String?; let max_rows: Int }
+        return try await client.rpc("friend_streets", params: Params(since_ts: since.map(SocialDates.format), max_rows: 300))
+            .execute().value
+    }
 }
 
 #if DEBUG
@@ -345,6 +368,37 @@ final class DemoSocialBackend: SocialBackend {
         for id in ids { shared[id] = nil }
     }
 
-    func deleteAllShared(owner: UUID) async throws { shared = [:] }
+    func deleteAllShared(owner: UUID) async throws {
+        shared = [:]
+        sharedStreets = [:]
+    }
+
+    private(set) var sharedStreets: [UUID: SharedStreetsPayload] = [:]
+
+    func upsertStreets(_ rows: [SharedStreetsPayload]) async throws {
+        for r in rows { sharedStreets[r.activity_id] = r }
+    }
+
+    func deleteAllStreets(owner: UUID) async throws { sharedStreets = [:] }
+
+    /// Jamie's walk near the UI tests' pinned fix: up Vanderbilt Ave (where
+    /// the seeded heatmap walks go too, so it turns green) and on west along
+    /// a street only Jamie has covered (blue).
+    func friendStreets(since: Date?) async throws -> [FriendStreets] {
+        guard people.contains(where: { $0.id == Self.jamie && $0.status == .friend && visible($0) }) else { return [] }
+        // A fix every ~8 m, as a real walk records: corners alone are more
+        // than `gapMeters` apart and would rightly not be joined.
+        let corners = [(40.6835, -73.9680), (40.6880, -73.9690), (40.6890, -73.9760)]
+        var walk: [CLLocationCoordinate2D] = []
+        for (a, b) in zip(corners, corners.dropFirst()) {
+            for i in 0..<60 {
+                let t = Double(i) / 60
+                walk.append(CLLocationCoordinate2D(latitude: a.0 + (b.0 - a.0) * t, longitude: a.1 + (b.1 - a.1) * t))
+            }
+        }
+        walk.append(CLLocationCoordinate2D(latitude: 40.6890, longitude: -73.9760))
+        let cells = RouteHeatmap.orderedCells(walk).map(RouteHeatmap.pack)
+        return [FriendStreets(userID: Self.jamie, activityID: UUID(), cells: cells)]
+    }
 }
 #endif

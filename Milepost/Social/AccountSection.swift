@@ -5,6 +5,7 @@ import SwiftUI
 struct AccountSection: View {
     @Environment(SocialStore.self) private var social
     @AppStorage(SocialStore.shareKey) private var share = true
+    @AppStorage(SocialStore.streetsKey) private var shareStreets = false
     @State private var showSetup = false
     @State private var confirmDelete = false
     @State private var deleteError: String?
@@ -37,6 +38,13 @@ struct AccountSection: View {
                         .onChange(of: share) { _, on in
                             Task { await social.sharingChanged(to: on) }
                         }
+                    if share {
+                        Toggle("Share streets with friends", isOn: $shareStreets)
+                            .accessibilityIdentifier("you.shareStreets")
+                            .onChange(of: shareStreets) { _, on in
+                                Task { await social.streetsChanged(to: on) }
+                            }
+                    }
                 } else if social.profileLoaded {
                     Button("Choose a username") { showSetup = true }
                         .accessibilityIdentifier("you.pickUsername")
@@ -75,11 +83,12 @@ struct AccountSection: View {
     private var footer: String {
         switch social.phase {
         case .signedIn where social.profile != nil:
-            return share
-                ? "Friends see each activity's sport, title, distance, pace and time. Routes and maps never leave this phone."
-                : "Nothing is shared. Friends still show up in the Block tab."
+            if !share { return "Nothing is shared. Friends still show up in the Block tab." }
+            return shareStreets
+                ? "Friends see each activity's sport, title, distance, pace and time, and the streets you covered as blue on their map. The first and last 200 m of every activity, times and exact GPS points never leave this phone."
+                : "Friends see each activity's sport, title, distance, pace and time. Routes and maps never leave this phone. Turn on Share streets to show friends the streets you covered, not where you start or finish."
         default:
-            return "Sign in to add friends and see their activities in the Block tab. Routes and maps never leave this phone."
+            return "Sign in to add friends and see their activities in the Block tab and the streets they share on your map. Routes and maps never leave this phone unless you turn on Share streets."
         }
     }
 }

@@ -79,4 +79,56 @@ final class RouteHeatmapTests: XCTestCase {
         XCTAssertTrue(HeatmapWindow.all.includes(.distantPast, now: now))
         XCTAssertFalse(HeatmapWindow.off.includes(now, now: now))
     }
+
+    // MARK: Friends
+
+    private func cells(_ route: [CLLocationCoordinate2D]) -> [RouteHeatmap.Cell] {
+        RouteHeatmap.orderedCells(route)
+    }
+
+    func testAFriendsStreetAloneIsBlue() {
+        let segments = RouteHeatmap.segments(routes: [], friendStreets: [cells(line(40.68, -73.97))])
+        XCTAssertFalse(segments.isEmpty)
+        XCTAssertEqual(Set(segments.map(\.owner)), [.friends])
+    }
+
+    func testAStreetYouAndAFriendBothCoveredIsGreen() {
+        let segments = RouteHeatmap.segments(routes: [line(40.68, -73.97)],
+                                             friendStreets: [cells(line(40.68, -73.97, eastOffset: 6))])
+        XCTAssertEqual(Set(segments.map(\.owner)), [.both], "no blue drawn under or beside the green")
+        XCTAssertEqual(Set(segments.map(\.level)), [1], "green is shaded by both passes")
+    }
+
+    func testAFriendOnTheNextStreetStaysBlueAndYoursStaysOrange() {
+        let segments = RouteHeatmap.segments(routes: [line(40.68, -73.97)],
+                                             friendStreets: [cells(line(40.68, -73.97, eastOffset: 80))])
+        XCTAssertEqual(Set(segments.map(\.owner)), [.mine, .friends])
+    }
+
+    func testGreenDrawsOverOrangeOverBlue() {
+        let long = line(40.68, -73.97, meters: 800)
+        let friend = cells(line(40.68, -73.97, meters: 300)) + cells(line(40.68, -73.96, meters: 300))
+        let owners = RouteHeatmap.segments(routes: [long], friendStreets: [friend]).map(\.owner)
+        XCTAssertEqual(owners, owners.sorted())
+        XCTAssertEqual(Set(owners), [.friends, .mine, .both])
+    }
+
+    func testSharedStreetsTrimBothEndsAndSkipShortActivities() {
+        XCTAssertTrue(RouteHeatmap.streetCells(route: line(40.68, -73.97, meters: 350)).isEmpty,
+                      "under 400 m there is nothing left once both ends are trimmed")
+        let route = line(40.68, -73.97, meters: 1000)
+        let shared = RouteHeatmap.streetCells(route: route)
+        XCTAssertFalse(shared.isEmpty)
+        for c in shared {
+            let p = RouteHeatmap.center(c)
+            XCTAssertGreaterThan(RouteHeatmap.distance(p, route.first!), RouteHeatmap.privacyTrimMeters - RouteHeatmap.cellMeters)
+            XCTAssertGreaterThan(RouteHeatmap.distance(p, route.last!), RouteHeatmap.privacyTrimMeters - RouteHeatmap.cellMeters)
+        }
+    }
+
+    func testCellsSurviveTheTripToTheServer() {
+        for c in [RouteHeatmap.Cell(x: -416_000, y: 299_800), .init(x: 0, y: -1), .init(x: 12, y: 0)] {
+            XCTAssertEqual(RouteHeatmap.unpack(RouteHeatmap.pack(c)), c)
+        }
+    }
 }

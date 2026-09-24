@@ -17,6 +17,15 @@ final class SocialStore {
     static let shareKey = "social.shareActivities"
     /// Local deletes that could not reach the server yet.
     static let pendingDeletesKey = "social.pendingDeletes"
+    /// OFF by default: friends were promised stats only, so sending street
+    /// cells is a separate, explicit opt-in.
+    static let streetsKey = "social.shareStreets"
+    /// Activity ids whose streets are already on the server, so a session
+    /// start does not re-upload hundreds of them.
+    static let streetsUploadedKey = "social.streetsUploaded"
+    /// Only the most recent activities' streets are shared; the server caps
+    /// an account at 1,000 rows.
+    static let maxStreetActivities = 500
 
     private(set) var phase: Phase = .restoring
     private(set) var userID: UUID?
@@ -46,6 +55,7 @@ final class SocialStore {
 
     var canUseFriends: Bool { phase == .signedIn && profile != nil }
     var sharingEnabled: Bool { defaults.object(forKey: Self.shareKey) as? Bool ?? true }
+    var streetsEnabled: Bool { defaults.bool(forKey: Self.streetsKey) }
     var incoming: [FriendProfile] { connections.filter { $0.status == .incoming } }
     var outgoing: [FriendProfile] { connections.filter { $0.status == .outgoing } }
     var friends: [FriendProfile] { connections.filter { $0.status == .friend } }
@@ -91,6 +101,7 @@ final class SocialStore {
         feedLoaded = false
         connections = []
         blocked = []
+        defaults.removeObject(forKey: Self.streetsUploadedKey)
         phase = .signedOut
     }
 
@@ -193,12 +204,59 @@ final class SocialStore {
                 return
             }
         }
+        await syncStreets()
+    }
+
+    /// Uploads the streets of recent activities not yet on the server. Runs
+    /// after `syncAll` because a street row must belong to a shared activity.
+    func syncStreets() async {
+        guard let me = userID, profile != nil, sharingEnabled, streetsEnabled else { return }
+        var uploaded = Set(defaults.stringArray(forKey: Self.streetsUploadedKey) ?? [])
+        let recent = localActivities()
+            .sorted { $0.startDate > $1.startDate }
+            .prefix(Self.maxStreetActivities)
+            .filter { !uploaded.contains($0.id.uuidString) }
+        for batch in stride(from: 0, to: recent.count, by: 25) {
+            let slice = recent[batch..<min(batch + 25, recent.count)]
+            let rows = slice.compactMap { SharedStreetsPayload(activity: $0, userID: me) }
+            do {
+                try await backend.upsertStreets(rows)
+            } catch {
+                break
+            }
+            // Too short to share is done too; it never needs another look.
+            uploaded.formUnion(slice.map(\.id.uuidString))
+        }
+        defaults.set(Array(uploaded), forKey: Self.streetsUploadedKey)
     }
 
     func share(_ activity: Activity) async {
         guard let me = userID, profile != nil, sharingEnabled,
               let row = SharedActivityPayload(activity: activity, userID: me) else { return }
-        try? await backend.upsert([row])
+        guard (try? await backend.upsert([row])) != nil else { return }
+        await syncStreets()
+    }
+
+    func streetsChanged(to on: Bool) async {
+        guard let me = userID, profile != nil else { return }
+        if on {
+            await syncStreets()
+        } else {
+            do {
+                try await backend.deleteAllStreets(owner: me)
+                defaults.removeObject(forKey: Self.streetsUploadedKey)
+            } catch {
+                defaults.set(true, forKey: Self.streetsKey)
+                notice = "Couldn't stop sharing streets: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Friends' street cells for the Record map, or nothing when not signed
+    /// in. A failure is an empty layer, never an alert over the map.
+    func loadFriendStreets(since: Date?) async -> [FriendStreets] {
+        guard canUseFriends else { return [] }
+        return (try? await backend.friendStreets(since: since)) ?? []
     }
 
     /// Called after a local delete. A delete that cannot reach the server now
@@ -231,7 +289,9 @@ final class SocialStore {
             await syncAll()
         } else {
             do {
+                // Street rows cascade with the activities they belong to.
                 try await backend.deleteAllShared(owner: me)
+                defaults.removeObject(forKey: Self.streetsUploadedKey)
             } catch {
                 defaults.set(true, forKey: Self.shareKey)
                 notice = "Couldn't stop sharing: \(error.localizedDescription)"

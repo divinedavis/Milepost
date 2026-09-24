@@ -183,6 +183,75 @@ final class SocialTests: XCTestCase {
         XCTAssertTrue(backend.shared.isEmpty, "and nothing new goes up while it is off")
     }
 
+    // MARK: Streets (opt-in)
+
+    /// A 1.2 km walk north, a fix every 8 m.
+    private func walk() -> Activity {
+        let start = Date(timeIntervalSince1970: 1_757_500_000)
+        let route = stride(from: 0.0, through: 1200, by: 8).enumerated().map {
+            RoutePoint(latitude: 40.68 + $0.element / 110_540, longitude: -73.97,
+                       timestamp: start.addingTimeInterval(Double($0.offset) * 6))
+        }
+        return Activity(title: "Walk", startDate: start, endDate: start.addingTimeInterval(900),
+                        movingSeconds: 900, distanceMeters: 1200, splitMeters: 1609.344,
+                        route: route, splits: [], sport: .walk)
+    }
+
+    func testStreetsAreOffByDefault() async {
+        let (s, backend, _) = store()
+        let a = walk()
+        s.localActivities = { [a] }
+        await s.loadProfile()
+        XCTAssertFalse(s.streetsEnabled, "friends were promised stats only; streets are an explicit opt-in")
+        XCTAssertNotNil(backend.shared[a.id])
+        XCTAssertTrue(backend.sharedStreets.isEmpty, "no street cells leave the phone until the user turns it on")
+    }
+
+    func testStreetsPayloadIsTrimmedCellsOnly() throws {
+        let a = walk()
+        let payload = try XCTUnwrap(SharedStreetsPayload(activity: a, userID: UUID()))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any])
+        XCTAssertEqual(Set(json.keys), ["user_id", "activity_id", "start_date", "cells"],
+                       "no coordinates, times or speeds")
+        let cells = payload.cells.map(RouteHeatmap.unpack)
+        let startCell = RouteHeatmap.cell(a.coordinates.first!)
+        let endCell = RouteHeatmap.cell(a.coordinates.last!)
+        XCTAssertFalse(cells.contains { abs($0.y - startCell.y) < 13 }, "nothing within 200 m of the start")
+        XCTAssertFalse(cells.contains { abs($0.y - endCell.y) < 13 }, "nothing within 200 m of the end")
+    }
+
+    func testStreetsUploadWhenOnAndGoWhenOff() async {
+        let (s, backend, defaults) = store()
+        let a = walk()
+        s.localActivities = { [a] }
+        await s.loadProfile()
+        defaults.set(true, forKey: SocialStore.streetsKey)
+        await s.streetsChanged(to: true)
+        XCTAssertNotNil(backend.sharedStreets[a.id])
+
+        defaults.set(false, forKey: SocialStore.streetsKey)
+        await s.streetsChanged(to: false)
+        XCTAssertTrue(backend.sharedStreets.isEmpty)
+        XCTAssertNotNil(backend.shared[a.id], "stats sharing is untouched")
+
+        defaults.set(true, forKey: SocialStore.streetsKey)
+        await s.streetsChanged(to: true)
+        XCTAssertNotNil(backend.sharedStreets[a.id], "turning it back on re-uploads")
+        defaults.set(false, forKey: SocialStore.shareKey)
+        await s.sharingChanged(to: false)
+        XCTAssertTrue(backend.sharedStreets.isEmpty, "stopping sharing takes the streets with it")
+    }
+
+    func testFriendStreetsNeedASignedInUser() async {
+        let (s, _, _) = store()
+        await s.loadProfile()
+        let streets = await s.loadFriendStreets(since: nil)
+        XCTAssertEqual(streets.map(\.userID), [DemoSocialBackend.jamie])
+        await s.signOut()
+        let none = await s.loadFriendStreets(since: nil)
+        XCTAssertTrue(none.isEmpty)
+    }
+
     func testSignOutClearsEverything() async {
         let (s, _, _) = store()
         await s.loadProfile()

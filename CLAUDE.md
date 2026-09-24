@@ -165,7 +165,23 @@ Past-route heatmap (`RouteHeatmap.swift`, Record tab, added 2026-09-24, user req
   A stretch is as dark as its lighter end. No line across a >200 m gap.
 - Routes are decoded on the main actor (SwiftData), the grid runs detached;
   recomputed only when the window or the activity id list changes.
-- Local only: routes still never leave the phone.
+- Friends (added 2026-09-24, user request): **blue** = streets a friend
+  shared, **green** = a street you and a friend both covered (shaded by
+  everyone's passes together), drawn blue < orange < green. Friends' data is
+  `shared_streets` (migrations 0005/0006): ordered 15 m cells packed x<<32|y,
+  first and last 200 m trimmed on the phone (`RouteHeatmap.streetCells`), no
+  times. **Opt-in, OFF by default** (`social.shareStreets`, You > "Share
+  streets with friends") — the stats-only promise stands for everyone who
+  never turns it on. Rows FK to `shared_activities` and cascade, so
+  unsharing / stats-sharing off / account delete remove them. Server caps:
+  10,000 cells a row, 1,000 rows an account; the app sends its 500 newest,
+  tracked in `social.streetsUploaded` so a session start doesn't re-upload.
+  `friend_streets(since_ts)` (invoker, RLS decides, 300 rows) feeds the map.
+  Friend lines go through cell centres and are Douglas-Peucker smoothed or
+  they zig-zag. The demo backend's Jamie walk must be dense: corners >200 m
+  apart are a gap and draw nothing.
+- App Privacy now needs PRECISE_LOCATION (in `asc_push_privacy_iris.py`
+  since 2026-09-24); pushing it needs a fresh `fastlane spaceauth`.
 - Polylines are not in the accessibility tree, so `record.heatWindow`
   carries "N activities" as its value; `MilepostHeatmapUITests` seeds three
   walks with `-uitest-seed-heatmap` (DEBUG, `HeatmapPreviewData`).
@@ -181,7 +197,8 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
 - Migrations go through `POST /v1/projects/<ref>/database/query` (non-default
   User-Agent), then `scripts/e2e_backend.py` must pass — it drives three real
   JWT users through every rule, including the negative ones.
-- **Routes never leave the phone.** `shared_activities` has sport, title,
+- **Routes never leave the phone** — except opt-in street cells, see the
+  heatmap section. `shared_activities` has sport, title,
   start, distance, moving time and nothing else; `SharedActivityPayload` is the
   only thing that uploads, and `SocialTests.testSharedPayloadIsStatsOnly` pins
   its keys. Adding a location column is a privacy-policy change, not a feature.

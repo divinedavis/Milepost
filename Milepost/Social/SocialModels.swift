@@ -133,6 +133,44 @@ struct SharedActivityPayload: Encodable, Equatable {
     }
 }
 
+/// The street cells of one activity, shared only when the user turns on
+/// "Share streets with friends" (off by default). Not a route: 15 m cells in
+/// order, the first and last 200 m trimmed off, no times. Keys match
+/// `public.shared_streets`.
+struct SharedStreetsPayload: Encodable, Equatable {
+    let user_id: UUID
+    let activity_id: UUID
+    let start_date: String
+    let cells: [Int64]
+
+    /// Nil when nothing is left to share after trimming.
+    init?(activity: Activity, userID: UUID) {
+        let cells = RouteHeatmap.streetCells(route: activity.coordinates)
+        guard !cells.isEmpty else { return nil }
+        user_id = userID
+        activity_id = activity.id
+        start_date = SocialDates.format(activity.startDate)
+        self.cells = cells.map(RouteHeatmap.pack)
+    }
+}
+
+/// One friend activity's street cells, for the blue layer on the Record map.
+struct FriendStreets: Decodable, Hashable {
+    let userID: UUID
+    let activityID: UUID
+    let cells: [Int64]
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id", activityID = "activity_id", cells
+    }
+
+    init(userID: UUID, activityID: UUID, cells: [Int64]) {
+        self.userID = userID
+        self.activityID = activityID
+        self.cells = cells
+    }
+}
+
 enum ReportReason: String, CaseIterable, Identifiable {
     case spam = "Spam"
     case offensive = "Offensive name or title"

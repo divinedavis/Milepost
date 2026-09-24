@@ -6,6 +6,7 @@ struct RecordScreen: View {
     @Environment(LocationService.self) private var location
     @Environment(RunRecorder.self) private var recorder
     @Environment(MirroredWorkoutMonitor.self) private var mirror
+    @Environment(SocialStore.self) private var social
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
     @AppStorage(Sport.storageKey) private var sportRaw = Sport.run.rawValue
     @AppStorage(HeatmapWindow.storageKey) private var heatRaw = HeatmapWindow.default.rawValue
@@ -19,6 +20,8 @@ struct RecordScreen: View {
     @State private var pendingStart = false
     /// Past routes, coloured by how often each street was covered.
     @State private var heat: [HeatSegment] = []
+    /// Friends' shared street cells in the window, for blue and green.
+    @State private var friendStreets: [FriendStreets] = []
     @Namespace private var mapScope
 
     private var unit: DistanceUnit { DistanceUnit(rawValue: unitRaw) ?? .miles }
@@ -34,7 +37,7 @@ struct RecordScreen: View {
                 UserAnnotation()
                 ForEach(heat) { segment in
                     MapPolyline(coordinates: segment.coordinates)
-                        .stroke(RouteHeatmap.color(level: segment.level),
+                        .stroke(segment.color,
                                 style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                 }
                 if recorder.route.count > 1 {
@@ -78,12 +81,21 @@ struct RecordScreen: View {
             }
         }
         .mapScope(mapScope)
-        .task(id: HeatKey(window: heatWindow, ids: heatActivities.map(\.id))) {
+        .task(id: FriendKey(window: heatWindow, signedIn: social.canUseFriends)) {
+            guard heatWindow != .off else { friendStreets = []; return }
+            let since = heatWindow.days.map { Date.now.addingTimeInterval(-Double($0) * 86_400) }
+            let streets = await social.loadFriendStreets(since: since)
+            guard !Task.isCancelled else { return }
+            friendStreets = streets
+        }
+        .task(id: HeatKey(window: heatWindow, ids: heatActivities.map(\.id),
+                          friendIDs: friendStreets.map(\.activityID))) {
             // Decoding the stored routes has to happen here (SwiftData
             // models stay on the main actor); the grid work does not.
             let routes = heatActivities.map(\.coordinates)
+            let friends = heatWindow == .off ? [] : friendStreets.map { $0.cells.map(RouteHeatmap.unpack) }
             let segments = await Task.detached(priority: .userInitiated) {
-                RouteHeatmap.segments(routes: routes)
+                RouteHeatmap.segments(routes: routes, friendStreets: friends)
             }.value
             guard !Task.isCancelled else { return }
             heat = segments
@@ -128,7 +140,8 @@ struct RecordScreen: View {
                     Text(window.title).tag(window.rawValue)
                 }
             }
-            Text("Streets get darker orange each time you cover them again.")
+            Text("Orange: your streets, darker each time you cover them again.")
+            Text("Blue: streets friends shared. Green: streets you both covered.")
         } label: {
             HStack(spacing: 6) {
                 Circle()
@@ -146,7 +159,9 @@ struct RecordScreen: View {
             .background(Theme.card.opacity(0.9), in: Capsule())
         }
         .accessibilityLabel("Past activities, \(heatWindow.title)")
-        .accessibilityValue("\(heatWindow == .off ? 0 : heatActivities.count) activities")
+        .accessibilityValue(heatWindow == .off
+            ? "0 activities, 0 from friends"
+            : "\(heatActivities.count) activities, \(friendStreets.count) from friends")
         .accessibilityIdentifier("record.heatWindow")
     }
 
@@ -317,6 +332,13 @@ struct RecordScreen: View {
 private struct HeatKey: Hashable {
     let window: HeatmapWindow
     let ids: [UUID]
+    let friendIDs: [UUID]
+}
+
+/// When to fetch friends' streets again.
+private struct FriendKey: Hashable {
+    let window: HeatmapWindow
+    let signedIn: Bool
 }
 
 /// One of the three columns under the map. Each takes exactly a third of the

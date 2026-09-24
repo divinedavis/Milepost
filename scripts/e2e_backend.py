@@ -36,7 +36,7 @@ SERVICE = keychain("milepost-supabase-service")
 MH = {"Authorization": f"Bearer {PAT}", "User-Agent": "curl/8.7.1", "Content-Type": "application/json"}
 ANON_H = {"apikey": ANON, "Authorization": f"Bearer {ANON}", "Content-Type": "application/json"}
 FUNCTIONS = ["search_profiles", "send_friend_request", "respond_friend_request", "remove_friend",
-             "block_user", "list_blocked", "list_connections", "friend_feed", "delete_account"]
+             "block_user", "list_blocked", "list_connections", "friend_feed", "friend_streets", "delete_account"]
 
 
 def check(cond, msg):
@@ -186,6 +186,37 @@ def main():
         r = b.rest("DELETE", f"shared_activities?user_id=eq.{a.id}&id=eq.{act}", headers={"Prefer": "return=representation"})
         check(r.status_code == 200 and r.json() == [], "B cannot delete A's activity")
 
+        print("== shared streets (opt-in street cells)")
+        cells = [(1 << 32) | 7, (1 << 32) | 8, (2 << 32) | 8]
+        r = a.rest("POST", "shared_streets", json={"user_id": a.id, "activity_id": act,
+                                                   "start_date": "2026-09-10T11:00:00Z", "cells": cells})
+        check(r.status_code == 201, f"A shares streets for a shared activity ({r.status_code} {r.text[:100]})")
+        r = a.rest("POST", "shared_streets", json={"user_id": a.id, "activity_id": str(uuid.uuid4()),
+                                                   "start_date": "2026-09-10T11:00:00Z", "cells": cells})
+        check(r.status_code in (400, 409), f"streets need a shared activity to belong to ({r.status_code})")
+        r = b.rest("POST", "shared_streets", json={"user_id": a.id, "activity_id": act,
+                                                   "start_date": "2026-09-10T11:00:00Z", "cells": cells})
+        check(r.status_code in (401, 403, 409), f"B cannot share streets as A ({r.status_code})")
+        r = a.rest("POST", "shared_streets", headers={"Prefer": "resolution=merge-duplicates"},
+                   json={"user_id": a.id, "activity_id": act, "start_date": "2026-09-10T11:00:00Z",
+                         "cells": list(range(10001))})
+        check(r.status_code == 400, f"more than 10,000 cells refused ({r.status_code})")
+        r = b.rpc("friend_streets", since_ts="2026-09-01T00:00:00Z")
+        rows = r.json() if r.status_code == 200 else []
+        check(len(rows) == 1 and rows[0]["cells"] == cells and rows[0]["user_id"] == a.id,
+              f"B (a friend) reads A's street cells ({r.status_code} {r.text[:160]})")
+        check(set(rows[0]) == {"user_id", "activity_id", "start_date", "cells"}, "the street row carries nothing else")
+        r = b.rpc("friend_streets", since_ts="2026-09-11T00:00:00Z")
+        check(r.status_code == 200 and r.json() == [], "the window excludes older streets")
+        r = c.rpc("friend_streets", since_ts=None)
+        check(r.status_code == 200 and r.json() == [], "C (a stranger) sees no streets")
+        r = c.rest("GET", f"shared_streets?select=cells&user_id=eq.{a.id}")
+        check(r.json() == [], "or through the table")
+        r = requests.get(f"{URL}/rest/v1/shared_streets?select=cells", headers=ANON_H, timeout=30)
+        check(r.status_code == 200 and r.json() == [], "anon reads zero streets")
+        r = b.rest("DELETE", f"shared_streets?user_id=eq.{a.id}", headers={"Prefer": "return=representation"})
+        check(r.status_code == 200 and r.json() == [], "B cannot delete A's streets")
+
         print("== demo friend (App Review)")
         r = c.rpc("search_profiles", q="milepost_demo")
         demo = next((x for x in r.json() if x["username"] == "milepost_demo"), None) if r.status_code == 200 else None
@@ -208,6 +239,8 @@ def main():
         check(r.status_code in (200, 204), f"A blocks B ({r.status_code} {r.text[:100]})")
         r = b.rpc("friend_feed")
         check(r.json() == [], "the block ended B's view of A's activities")
+        r = b.rpc("friend_streets", since_ts=None)
+        check(r.json() == [], "and of A's streets")
         r = b.rpc("search_profiles", q=a.username)
         check(r.json() == [], "the blocker is invisible to the blocked in search")
         r = b.rpc("send_friend_request", target=a.id)
@@ -222,9 +255,10 @@ def main():
         check(r.status_code in (200, 204), f"A deletes account ({r.status_code} {r.text[:100]})")
         rows = sql(f"select (select count(*) from public.profiles where id = '{a.id}') as p, "
                    f"(select count(*) from public.shared_activities where user_id = '{a.id}') as s, "
+                   f"(select count(*) from public.shared_streets where user_id = '{a.id}') as st, "
                    f"(select count(*) from public.reports where target_id = '{a.id}') as r, "
                    f"(select count(*) from auth.users where id = '{a.id}') as u")
-        check(rows[0] == {"p": 0, "s": 0, "r": 0, "u": 0}, f"everything of A's cascaded away ({rows[0]})")
+        check(rows[0] == {"p": 0, "s": 0, "st": 0, "r": 0, "u": 0}, f"everything of A's cascaded away ({rows[0]})")
         a = None
         print("ALL OK")
     finally:

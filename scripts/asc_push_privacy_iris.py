@@ -9,8 +9,11 @@ runs that; the cookie lasts a few days).
 Until 2026-09-10 Milepost was "Data Not Collected". The friends layer changed
 that: an account (Sign in with Apple), a username and display name, and the
 stats of each shared activity, all linked to the account, used only to make
-the feature work, never for tracking. Routes and location are NOT collected —
-they never leave the phone. The declaration below is that, and nothing else.
+the feature work, never for tracking. Since 2026-09-24 an opt-in switch
+(off by default) also sends the 15 m street cells each activity covered,
+ends trimmed, so friends can see them on their map. 15 m is finer than three
+decimal places of latitude, which is Apple's line for PRECISE_LOCATION, so
+that is declared. The declaration below is that, and nothing else.
 
 Existing records are deleted first (a leftover DATA_NOT_COLLECTED record
 would contradict the categories), then one record per (category, purpose),
@@ -41,7 +44,8 @@ COOKIE_FILE = pathlib.Path.home() / ".fastlane" / "spaceship" / "divinejdavis@gm
 #   EMAIL_ADDRESS      - kept by the auth provider if Apple shares one
 #   FITNESS            - sport, distance and moving time of shared activities
 #   OTHER_USER_CONTENT - activity titles, and the reason on a report
-DATA_TYPES = ["USER_ID", "NAME", "EMAIL_ADDRESS", "FITNESS", "OTHER_USER_CONTENT"]
+#   PRECISE_LOCATION   - opt-in shared street cells (15 m grid), 2026-09-24
+DATA_TYPES = ["USER_ID", "NAME", "EMAIL_ADDRESS", "FITNESS", "OTHER_USER_CONTENT", "PRECISE_LOCATION"]
 PURPOSE = "APP_FUNCTIONALITY"
 PROTECTION = "DATA_LINKED_TO_YOU"
 
