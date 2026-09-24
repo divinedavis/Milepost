@@ -77,6 +77,9 @@ HOW TO TEST
 3. Press Pause, then Finish. Name the run and tap Save. (Finishing with under 10 metres of movement shows a "No Movement Detected" alert instead of a save sheet - that is intentional.)
 4. Block tab: the saved run with its route map, tiles and splits. You tab: weekly/all-time totals, the miles/km switch, and Voice cues (spoken split announcements, off by default).
 
+APPLE HEALTH AND OURA RING (OPTIONAL)
+You tab > Apple Health > Save to Apple Health writes each saved activity to Health as a workout; the route is a separate switch, off by default. "Use with Oura Ring" in that section is a setup guide: Milepost never connects to the ring or to Oura's servers. The Oura app writes heart rate to Apple Health and reads workouts from it, and Milepost reads that heart rate back for the activity's time window and labels its source ("Heart rate from Oura"). No ring is needed to review the app; without one the guide still opens and heart rate simply does not appear.
+
 BACKGROUND LOCATION
 The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization and reads location solely between Start and Finish.
 
