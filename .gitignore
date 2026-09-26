@@ -18,3 +18,8 @@ __pycache__/
 
 # Supabase project config (anon key only, still kept out of git)
 Secrets.xcconfig
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
