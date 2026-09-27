@@ -41,11 +41,13 @@ COOKIE_FILE = pathlib.Path.home() / ".fastlane" / "spaceship" / "divinejdavis@gm
 # none used to track, all for app functionality only.
 #   USER_ID            - the Sign in with Apple account id and the username
 #   NAME               - the optional display name
-#   EMAIL_ADDRESS      - kept by the auth provider if Apple shares one
+#   (no EMAIL_ADDRESS: Sign in with Apple asks for .fullName only, email auth
+#    is off, and auth.users holds no email for any Apple account — removed
+#    2026-09-27 as over-declared)
 #   FITNESS            - sport, distance and moving time of shared activities
 #   OTHER_USER_CONTENT - activity titles, and the reason on a report
 #   PRECISE_LOCATION   - opt-in shared street cells (15 m grid), 2026-09-24
-DATA_TYPES = ["USER_ID", "NAME", "EMAIL_ADDRESS", "FITNESS", "OTHER_USER_CONTENT", "PRECISE_LOCATION"]
+DATA_TYPES = ["USER_ID", "NAME", "FITNESS", "OTHER_USER_CONTENT", "PRECISE_LOCATION"]
 PURPOSE = "APP_FUNCTIONALITY"
 PROTECTION = "DATA_LINKED_TO_YOU"
 
