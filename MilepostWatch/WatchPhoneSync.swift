@@ -44,6 +44,9 @@ final class WatchPhoneSync: NSObject {
            VoiceCueInterval(rawValue: interval) != nil {
             defaults.set(interval, forKey: VoiceCueInterval.storageKey)
         }
+        if let autoPause = context[AutoPauseSettings.enabledKey] as? Bool {
+            defaults.set(autoPause, forKey: AutoPauseSettings.enabledKey)
+        }
         guard let includeRoute = context[HealthSettings.routeKey] as? Bool else { return }
         includeRouteInHealth = includeRoute
     }

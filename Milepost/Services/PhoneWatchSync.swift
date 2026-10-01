@@ -49,6 +49,7 @@ final class PhoneWatchSync: NSObject {
             HealthSettings.routeKey: includeRouteInHealth ?? defaults.bool(forKey: HealthSettings.routeKey),
             VoiceCueInterval.enabledKey: defaults.bool(forKey: VoiceCueInterval.enabledKey),
             VoiceCueInterval.storageKey: defaults.string(forKey: VoiceCueInterval.storageKey) ?? VoiceCueInterval.half.rawValue,
+            AutoPauseSettings.enabledKey: AutoPauseSettings.isEnabled(defaults),
         ]
         do {
             try session.updateApplicationContext(context)

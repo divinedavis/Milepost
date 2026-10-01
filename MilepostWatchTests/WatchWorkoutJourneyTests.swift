@@ -330,4 +330,27 @@ final class WatchWorkoutJourneyTests: XCTestCase {
         XCTAssertEqual(back, .state(snapshot))
         XCTAssertGreaterThan(snapshot.distanceMeters, 1000)
     }
+
+    /// Auto-pause lives in the recorder, but the watch's phase (the button,
+    /// the "Paused" label, the workout session) has to follow it both ways.
+    func testAutoPauseMovesTheWatchPhaseBothWays() {
+        UserDefaults.standard.set(true, forKey: AutoPauseSettings.enabledKey)
+        defer { UserDefaults.standard.removeObject(forKey: AutoPauseSettings.enabledKey) }
+        controller.start(sport: .run, unit: .miles)
+        run(meters: 300, over: 100)
+        XCTAssertEqual(controller.phase, .running)
+        for _ in 0..<6 {
+            clock = clock.addingTimeInterval(1)
+            controller.recorder.ingest(fix(covered, speed: 0))
+        }
+        XCTAssertEqual(controller.phase, .paused)
+        XCTAssertTrue(controller.recorder.isAutoPaused)
+        for _ in 0..<4 {
+            clock = clock.addingTimeInterval(1)
+            covered += 3
+            controller.recorder.ingest(fix(covered, speed: 3))
+        }
+        XCTAssertEqual(controller.phase, .running)
+        XCTAssertEqual(controller.recorder.state, .recording)
+    }
 }

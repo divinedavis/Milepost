@@ -188,6 +188,44 @@ final class MilepostUITests: XCTestCase {
         XCTAssertTrue(footer.label.contains("stays on this device"), footer.label)
     }
 
+    /// Off by default; on, a run started standing still stops its own clock
+    /// and says so in the banner.
+    func testAutoPauseStartsOffAndPausesARunStandingStill() {
+        tap("tab.you")
+        app.swipeUp()
+        let toggle = app.switches["you.autoPause"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 6))
+        XCTAssertEqual(toggle.value as? String, "0")
+        // A full swipe can park this row under the navigation bar, where a
+        // tap lands on the bar. Drag it back down into the open.
+        if toggle.frame.minY < 160 {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: 200)))
+        }
+        // The subtitle makes the cell tall and a centre tap lands on the text,
+        // so tap the switch's end of the row. A tap while the list is still
+        // settling is swallowed; try again until the value flips.
+        for _ in 0..<3 where toggle.value as? String != "1" {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == '1'"), object: toggle)], timeout: 2)
+        }
+        XCTAssertEqual(toggle.value as? String, "1")
+
+        tap("tab.record")
+        tap("record.start")
+        allowLocation()
+        if !app.buttons["live.collapse"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
+            tap("record.start")
+        }
+        // Standing still, the run may already be auto-paused by the time the
+        // recorder is on screen, so Pause is not a given here.
+        let banner = app.staticTexts["live.pausedBanner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 25), "standing still never auto-paused")
+        XCTAssertEqual(banner.label, "Auto-paused")
+        XCTAssertTrue(app.buttons["live.resume"].exists)
+        snap("live-autopaused")
+    }
+
     func testVoiceCuesSettingEnablesPreviewAndPersists() {
         tap("tab.you")
         app.swipeUp()

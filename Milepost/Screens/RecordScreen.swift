@@ -323,7 +323,7 @@ struct RecordScreen: View {
 
     private func beginRun() {
         location.startTracking()
-        recorder.start(unit: unit, sport: sport)
+        recorder.start(unit: unit, sport: sport, autoPause: AutoPauseSettings.isEnabled())
         showLive = true
     }
 }

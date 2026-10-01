@@ -71,7 +71,7 @@ private struct WatchControlsPage: View {
                 .accessibilityIdentifier("watch.toggle")
             }
 
-            Text(workout.phase == .paused ? "Paused" : "Recording")
+            Text(workout.phase == .paused ? (workout.recorder.isAutoPaused ? "Auto-paused" : "Paused") : "Recording")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

@@ -301,4 +301,161 @@ final class RunRecorderTests: XCTestCase {
         XCTAssertEqual(r.unit, .miles)
         XCTAssertEqual(r.distanceMeters, 100, accuracy: 1)
     }
+
+    // MARK: Auto-pause
+
+    /// One fix a second up the meridian at `speed`, from `meters` at `second`,
+    /// for `seconds` seconds; advances the clock with it. Returns where it ended.
+    @discardableResult
+    private func move(_ r: RunRecorder, from meters: Double, at second: TimeInterval,
+                      for seconds: Int, speed: CLLocationSpeed) -> Double {
+        var m = meters
+        for t in 1...seconds {
+            m += speed
+            clock = Date(timeIntervalSince1970: 1_700_000_000 + second + Double(t))
+            r.ingest(fix(m, at: second + Double(t), speed: speed))
+        }
+        return m
+    }
+
+    func testAutoPauseIsOffByDefault() {
+        XCTAssertFalse(AutoPauseSettings.enabledDefault)
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        move(r, from: 0, at: 0, for: 20, speed: 0)
+        XCTAssertEqual(r.state, .recording)
+        XCTAssertFalse(r.isAutoPaused)
+    }
+
+    func testARunAutoPausesOnAWalkAndResumesOnARun() {
+        let r = makeRecorder()
+        var events: [Bool] = []
+        r.onAutoPauseChange = { events.append($0) }
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        var m = move(r, from: 0, at: 0, for: 30, speed: 3)            // running
+        XCTAssertEqual(r.state, .recording)
+        m = move(r, from: m, at: 30, for: 6, speed: 1.4)              // walking
+        XCTAssertEqual(r.state, .paused)
+        XCTAssertTrue(r.isAutoPaused)
+        XCTAssertEqual(events, [true])
+
+        let booked = r.distanceMeters
+        let clockAtPause = r.elapsed
+        m = move(r, from: m, at: 36, for: 60, speed: 1.4)             // a minute's walk
+        r.refreshElapsed()
+        XCTAssertEqual(r.distanceMeters, booked, accuracy: 0.001, "a walk on a run is not run distance")
+        XCTAssertEqual(r.elapsed, clockAtPause, accuracy: 0.01, "nor run time")
+
+        m = move(r, from: m, at: 96, for: 4, speed: 3)                // running again
+        XCTAssertEqual(r.state, .recording)
+        XCTAssertFalse(r.isAutoPaused)
+        XCTAssertEqual(events, [true, false])
+        move(r, from: m, at: 100, for: 10, speed: 3)
+        XCTAssertEqual(r.distanceMeters, booked + 30, accuracy: 1, "the first step back counts")
+    }
+
+    func testABriefSlowdownDoesNotPause() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        var m = move(r, from: 0, at: 0, for: 10, speed: 3)
+        m = move(r, from: m, at: 10, for: 4, speed: 0)                // a crossing
+        move(r, from: m, at: 14, for: 10, speed: 3)
+        XCTAssertEqual(r.state, .recording)
+        XCTAssertTrue(r.pauses.isEmpty)
+    }
+
+    func testAWalkPausesOnlyWhenStandingStill() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .walk, autoPause: true)
+        let m = move(r, from: 0, at: 0, for: 30, speed: 1.4)
+        XCTAssertEqual(r.state, .recording, "walking pace is the activity on a walk")
+        move(r, from: m, at: 30, for: 6, speed: 0)
+        XCTAssertTrue(r.isAutoPaused)
+    }
+
+    func testARideKeepsGoingAtWalkingSpeedButPausesAtAStop() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .bike, autoPause: true)
+        let m = move(r, from: 0, at: 0, for: 20, speed: 1.4)          // a slow climb
+        XCTAssertEqual(r.state, .recording)
+        move(r, from: m, at: 20, for: 6, speed: 0)
+        XCTAssertTrue(r.isAutoPaused)
+    }
+
+    func testSpeedIsDerivedWhenCoreLocationHasNone() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        for t in 1...10 {
+            clock = Date(timeIntervalSince1970: 1_700_000_000 + Double(t))
+            r.ingest(fix(Double(t) * 3, at: Double(t)))               // 3 m/s, speed -1
+        }
+        XCTAssertEqual(r.state, .recording)
+        for t in 11...17 {
+            clock = Date(timeIntervalSince1970: 1_700_000_000 + Double(t))
+            r.ingest(fix(30, at: Double(t)))                          // standing, speed -1
+        }
+        XCTAssertTrue(r.isAutoPaused)
+    }
+
+    func testAManualPauseNeverResumesItself() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        let m = move(r, from: 0, at: 0, for: 10, speed: 3)
+        r.pause()
+        move(r, from: m, at: 10, for: 20, speed: 3)
+        XCTAssertEqual(r.state, .paused)
+        XCTAssertFalse(r.isAutoPaused)
+    }
+
+    func testFinishingWhileAutoPausedStaysPaused() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        var m = move(r, from: 0, at: 0, for: 30, speed: 3)
+        m = move(r, from: m, at: 30, for: 6, speed: 0)
+        XCTAssertTrue(r.isAutoPaused)
+        XCTAssertNotNil(r.finish())
+        move(r, from: m, at: 36, for: 10, speed: 3)                   // walks off with the save sheet up
+        XCTAssertEqual(r.state, .paused, "the run must not restart behind the save sheet")
+        XCTAssertFalse(r.isAutoPaused)
+    }
+
+    func testTappingResumeWhileAutoPausedResumes() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        let m = move(r, from: 0, at: 0, for: 30, speed: 3)
+        move(r, from: m, at: 30, for: 6, speed: 0)
+        r.resume()
+        XCTAssertEqual(r.state, .recording)
+        XCTAssertFalse(r.isAutoPaused)
+    }
+
+    /// What the recorder's 0.5 s ticker does, without waiting on the timer.
+    private func tick(_ r: RunRecorder, advancing seconds: TimeInterval) {
+        clock = clock.addingTimeInterval(seconds)
+        r.checkAutoPauseWithoutFixes()
+    }
+
+    func testFixesStoppingAfterASlowOnePauses() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        let m = move(r, from: 0, at: 0, for: 10, speed: 3)
+        move(r, from: m, at: 10, for: 1, speed: 0)                    // one slow fix, then silence
+        tick(r, advancing: 6)
+        XCTAssertTrue(r.isAutoPaused)
+    }
+
+    func testATunnelWhileRunningDoesNotPause() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        move(r, from: 0, at: 0, for: 10, speed: 3)                    // last fix fast, then silence
+        tick(r, advancing: 60)
+        XCTAssertEqual(r.state, .recording)
+    }
+
+    func testNoFixesAtAllPausesAfterTheQuietWindow() {
+        let r = makeRecorder()
+        r.start(unit: .miles, sport: .run, autoPause: true)
+        tick(r, advancing: 11)
+        XCTAssertTrue(r.isAutoPaused)
+    }
 }

@@ -6,6 +6,7 @@ struct YouScreen: View {
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
     @AppStorage(VoiceCueInterval.storageKey) private var voiceRaw = VoiceCueInterval.half.rawValue
     @AppStorage(VoiceCueInterval.enabledKey) private var voiceEnabled = true
+    @AppStorage(AutoPauseSettings.enabledKey) private var autoPause = AutoPauseSettings.enabledDefault
     @Environment(VoiceAnnouncer.self) private var announcer
     @Environment(RunRecorder.self) private var recorder
     @Environment(PhoneWatchSync.self) private var watchSync
@@ -30,6 +31,13 @@ struct YouScreen: View {
                         }
                     }
                     .accessibilityIdentifier("you.units")
+
+                    Toggle(isOn: $autoPause) {
+                        Text("Auto-pause")
+                        Text("Stops the clock when you stand still, or slow to a walk on a run, and restarts it when you get going.")
+                    }
+                    .accessibilityIdentifier("you.autoPause")
+                    .onChange(of: autoPause) { _, _ in watchSync.pushSettings() }
 
                     Toggle("Voice announcements", isOn: $voiceEnabled)
                         .accessibilityIdentifier("you.voiceEnabled")

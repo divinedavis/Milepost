@@ -126,6 +126,8 @@ final class MilepostFriendsUITests: XCTestCase {
         scrollToElement("you.username")
         XCTAssertTrue(element("you.username").waitForExistence(timeout: 6))
         XCTAssertTrue(element("you.username").label.contains("@you_demo"), element("you.username").label)
+        // Auto-pause pushed the share row below the fold too.
+        scrollToElement("you.share")
         XCTAssertTrue(element("you.share").exists)
         // The rest of the section can still be below the fold (the Oura row
         // pushed it there), so scroll again instead of assuming it is on screen.

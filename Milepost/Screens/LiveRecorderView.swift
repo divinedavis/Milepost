@@ -54,7 +54,7 @@ struct LiveRecorderView: View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
                 if isPaused {
-                    Text("Paused")
+                    Text(recorder.isAutoPaused ? "Auto-paused" : "Paused")
                         .font(.headline)
                         .foregroundStyle(.black)
                         .accessibilityIdentifier("live.pausedBanner")

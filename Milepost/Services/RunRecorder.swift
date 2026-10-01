@@ -2,6 +2,19 @@ import CoreLocation
 import Foundation
 import Observation
 
+/// The Auto-pause switch (You > Settings). Off by default: a clock that stops
+/// on its own is a surprise nobody asked for, and slow joggers can sit near
+/// the run threshold. The watch gets the phone's value over the application
+/// context, like the voice settings.
+enum AutoPauseSettings {
+    static let enabledKey = "autoPause.enabled"
+    static let enabledDefault = false
+
+    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: enabledKey) as? Bool ?? enabledDefault
+    }
+}
+
 struct RunSummary: Equatable {
     var startDate: Date
     var endDate: Date
@@ -42,6 +55,17 @@ final class RunRecorder {
     private(set) var unit: DistanceUnit = .miles
     private(set) var sport: Sport = .run
     private(set) var pauses: [PauseInterval] = []
+    /// Chosen at `start` from the user's setting; fixed for the whole run.
+    private(set) var autoPauseEnabled = false
+    /// True while the clock is stopped because the runner stopped (or, on a
+    /// run, slowed to a walk), as opposed to the Pause button. Only an
+    /// automatic pause resumes itself.
+    private(set) var isAutoPaused = false
+
+    /// Fired with true when auto-pause stops the clock and false when it
+    /// starts it again. The watch needs it to pause its workout session too;
+    /// the phone just observes `state`.
+    var onAutoPauseChange: (@MainActor (Bool) -> Void)?
 
     /// Fired each time the run crosses a half-unit boundary (0.5, 1, 1.5 …).
     /// The voice announcer decides which of those to say; the engine has no
@@ -53,6 +77,21 @@ final class RunRecorder {
     private var segmentStart: Date?
     private var lastAccepted: CLLocation?
     private var ticker: Timer?
+    /// First moment of the current slow stretch while recording, and of the
+    /// current fast stretch while auto-paused. Nil when the last fix broke it.
+    private var slowSince: Date?
+    private var fastSince: Date?
+    /// The previous usable fix, kept only to derive a speed when CoreLocation
+    /// reports none.
+    private var lastSpeedFix: CLLocation?
+    /// Wall-clock moments for the ticker's check, which has no fix to read a
+    /// timestamp from: when the slow stretch began, and when the last usable
+    /// fix arrived.
+    private var slowSeenAt: Date?
+    private var lastFixSeenAt: Date?
+    /// Whether the last usable fix said the runner was moving. A run through
+    /// a tunnel goes quiet while moving and must not pause.
+    private var lastFixWasMoving = false
     private let now: () -> Date
 
     init(now: @escaping () -> Date = Date.init) {
@@ -92,10 +131,12 @@ final class RunRecorder {
 
     // MARK: Lifecycle
 
-    func start(unit: DistanceUnit, sport: Sport = .run) {
+    func start(unit: DistanceUnit, sport: Sport = .run, autoPause: Bool = false) {
         guard state == .idle else { return }
         self.unit = unit
         self.sport = sport
+        autoPauseEnabled = autoPause
+        resetAutoPause()
         distanceMeters = 0
         elapsed = 0
         accumulated = 0
@@ -112,6 +153,7 @@ final class RunRecorder {
     }
 
     func pause() {
+        isAutoPaused = false
         guard state == .recording, let seg = segmentStart else { return }
         accumulated += now().timeIntervalSince(seg)
         segmentStart = nil
@@ -125,6 +167,7 @@ final class RunRecorder {
     }
 
     func resume() {
+        resetAutoPause()
         guard state == .paused else { return }
         let t = now()
         if let last = pauses.indices.last, pauses[last].end == nil {
@@ -141,7 +184,9 @@ final class RunRecorder {
     /// offer Resume; call `discard()` once the summary is saved or dropped.
     func finish() -> RunSummary? {
         guard isActive else { return nil }
-        if state == .recording { pause() }
+        // pause() also turns an automatic pause into a manual one, so the run
+        // cannot restart itself behind the save sheet.
+        pause()
         guard hasMovement, let startDate else { return nil }
         let end = now()
         return RunSummary(startDate: startDate,
@@ -178,6 +223,8 @@ final class RunRecorder {
         route = []
         splits = []
         pauses = []
+        autoPauseEnabled = false
+        resetAutoPause()
     }
 
     func refreshElapsed() {
@@ -187,9 +234,14 @@ final class RunRecorder {
     // MARK: Location
 
     func ingest(_ location: CLLocation) {
-        guard state == .recording, let seg = segmentStart else { return }
         guard location.horizontalAccuracy >= 0,
               location.horizontalAccuracy <= Self.maxHorizontalAccuracy else { return }
+        if isAutoPaused {
+            watchForResume(location)
+            return
+        }
+        guard state == .recording, let seg = segmentStart else { return }
+        if watchForPause(location) { return }
         // A cached fix from before this segment began would add ground we
         // never covered while recording.
         guard location.timestamp >= seg.addingTimeInterval(-1) else { return }
@@ -216,6 +268,117 @@ final class RunRecorder {
         route.append(RoutePoint(location, cumulativeMeters: distanceMeters))
         lastAccepted = location
         emitMilestones(step: step, seconds: seconds)
+    }
+
+    // MARK: Auto-pause
+
+    /// Runs stop on a walk; walks and rides only when standing still. The
+    /// resume speed sits above the pause speed so a pace hovering on the line
+    /// does not flap. Run: pause under 1.7 m/s (about 15:47 /mi), resume at
+    /// 1.85 m/s (about 14:30 /mi) — a brisk walk is 15-16 min/mi, the slowest
+    /// jog about 14. Too high a resume speed would leave a slow jogger paused
+    /// for good, which is worse than counting a fast walk.
+    static func autoPauseSpeeds(for sport: Sport) -> (pauseBelow: CLLocationSpeed, resumeAt: CLLocationSpeed) {
+        switch sport {
+        case .run, .strollerRun: return (1.7, 1.85)
+        case .walk: return (0.4, 0.7)
+        case .bike: return (1.0, 1.8)
+        }
+    }
+    /// How long the runner must stay slow before the clock stops, and fast
+    /// before it restarts. One fix is not enough either way: GPS speed jumps
+    /// at a crossing, a turn, a bad fix.
+    static let autoPauseAfter: TimeInterval = 5
+    static let autoResumeAfter: TimeInterval = 3
+    /// No fix at all for this long, and the last one did not show movement:
+    /// pause. A phone standing still can stop delivering fixes altogether.
+    static let autoPauseQuietAfter: TimeInterval = 10
+
+    private func resetAutoPause() {
+        isAutoPaused = false
+        slowSince = nil
+        fastSince = nil
+        lastSpeedFix = nil
+        slowSeenAt = nil
+        lastFixSeenAt = nil
+        lastFixWasMoving = false
+    }
+
+    /// CoreLocation's Doppler speed when it has one, else the straight line
+    /// from the previous usable fix. Nil when neither is available.
+    private func speed(of location: CLLocation) -> CLLocationSpeed? {
+        defer { lastSpeedFix = location }
+        if location.speed >= 0 { return location.speed }
+        guard let previous = lastSpeedFix else { return nil }
+        let seconds = location.timestamp.timeIntervalSince(previous.timestamp)
+        guard seconds > 0 else { return nil }
+        return location.distance(from: previous) / seconds
+    }
+
+    /// While recording: stops the clock once the runner has been slow for
+    /// `autoPauseAfter`. Returns true when it did, so the fix is not booked.
+    private func watchForPause(_ location: CLLocation) -> Bool {
+        guard autoPauseEnabled else { return false }
+        lastFixSeenAt = now()
+        guard let speed = speed(of: location) else {
+            lastFixWasMoving = false
+            return false
+        }
+        guard speed < Self.autoPauseSpeeds(for: sport).pauseBelow else {
+            lastFixWasMoving = true
+            slowSince = nil
+            slowSeenAt = nil
+            return false
+        }
+        lastFixWasMoving = false
+        let since = slowSince ?? location.timestamp
+        if slowSince == nil { slowSeenAt = now() }
+        slowSince = since
+        guard location.timestamp.timeIntervalSince(since) >= Self.autoPauseAfter else { return false }
+        autoPause()
+        return true
+    }
+
+    /// The ticker's half of the rule, for when the fixes stop coming: the
+    /// slow stretch has gone on long enough, or nothing has said "moving"
+    /// for `autoPauseQuietAfter`. Internal so tests can call it the way the
+    /// ticker does, without waiting on a timer.
+    func checkAutoPauseWithoutFixes() {
+        guard autoPauseEnabled, state == .recording, !lastFixWasMoving else { return }
+        let t = now()
+        if let slowSeenAt, t.timeIntervalSince(slowSeenAt) >= Self.autoPauseAfter {
+            autoPause()
+        } else if let quietSince = lastFixSeenAt ?? segmentStart,
+                  t.timeIntervalSince(quietSince) >= Self.autoPauseQuietAfter {
+            autoPause()
+        }
+    }
+
+    private func autoPause() {
+        pause()
+        isAutoPaused = true
+        slowSince = nil
+        slowSeenAt = nil
+        fastSince = nil
+        onAutoPauseChange?(true)
+    }
+
+    /// While auto-paused: restarts the clock once the runner has been back up
+    /// to speed for `autoResumeAfter`, anchored at this fix so the next step
+    /// counts.
+    private func watchForResume(_ location: CLLocation) {
+        guard let speed = speed(of: location) else { return }
+        guard speed >= Self.autoPauseSpeeds(for: sport).resumeAt else {
+            fastSince = nil
+            return
+        }
+        let since = fastSince ?? location.timestamp
+        fastSince = since
+        guard location.timestamp.timeIntervalSince(since) >= Self.autoResumeAfter else { return }
+        resume()
+        lastAccepted = location
+        route.append(RoutePoint(location, cumulativeMeters: distanceMeters))
+        onAutoPauseChange?(false)
     }
 
     /// One step can cross several boundaries (a long GPS gap); each gets its
@@ -266,7 +429,10 @@ final class RunRecorder {
     private func startTicker() {
         stopTicker()
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.refreshElapsed() }
+            Task { @MainActor [weak self] in
+                self?.refreshElapsed()
+                self?.checkAutoPauseWithoutFixes()
+            }
         }
         RunLoop.main.add(timer, forMode: .common)
         ticker = timer

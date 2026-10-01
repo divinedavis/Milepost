@@ -113,6 +113,31 @@ Sports (`Sport.swift`, `SportPicker`):
   SwiftData migrates existing stored runs without a mapping model. Do not
   make it non-optional without a default.
 
+Auto-pause (`RunRecorder` "Auto-pause", You > Settings, added 2026-10-01, user request):
+- **Off by default** (`AutoPauseSettings.enabledDefault`, pinned by
+  `testAutoPauseIsOffByDefault` and the UI test). Read once at `start`; a
+  change mid-run applies to the next one. Mirrored to the watch in the
+  application context like the voice settings.
+- Runs (and stroller runs) pause on a **walk**, walks and rides only when
+  standing still: `autoPauseSpeeds(for:)`. Run: under 1.7 m/s (~15:47/mi)
+  for 5 s pauses, 1.85 m/s (~14:30/mi) for 3 s resumes. The resume speed is
+  kept low on purpose: set it above a slow jogger's pace and their run stays
+  paused for good. Ground covered while auto-paused is not booked.
+- Speed is CoreLocation's Doppler speed, or derived from the previous usable
+  fix when it reports -1. Fixes past the 25 m accuracy gate decide nothing.
+- **Fixes can stop arriving when standing still** (the simulator sends one
+  and goes silent; phones can throttle). So the 0.5 s ticker also pauses
+  when the slow stretch has lasted 5 s with no new fix, or no fix has shown
+  movement for 10 s. It never pauses when the last fix was fast — a tunnel
+  or a bridge on a run goes quiet while moving.
+- Only an automatic pause resumes itself. `pause()` (the button, `finish()`)
+  clears `isAutoPaused`, so a run cannot restart behind the save sheet.
+- The watch's `phase` and `HKWorkoutSession` follow through
+  `onAutoPauseChange`; phase is set **before** `session.pause()` so the
+  session delegate does not mirror it back as a manual pause.
+- Banner says "Auto-paused" (phone recorder + watch). The Live Activity
+  shows the ordinary paused card.
+
 Voice cues (`VoiceCue.swift`, `VoiceAnnouncer.swift`, `Resources/VoiceCues/`, recorded voice added 2026-09-16):
 - The voice is ElevenLabs (Sarah, `eleven_flash_v2_5`), rendered ONCE by
   `scripts/make_voice_cues.py` into 236 short mp3 clips (1.4 MB) that ship

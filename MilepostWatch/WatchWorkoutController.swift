@@ -68,6 +68,20 @@ final class WatchWorkoutController: NSObject {
             self.recorder.ingest(fix)
             self.collectForRoute(fix)
         }
+        // The recorder stops and restarts its own clock; the session (heart
+        // rate, Health's pause events) has to follow it. Phase is set first so
+        // the session delegate sees nothing to mirror back onto the recorder,
+        // which would turn the automatic pause into a manual one.
+        self.recorder.onAutoPauseChange = { [weak self] paused in
+            guard let self else { return }
+            if paused, self.phase == .running {
+                self.phase = .paused
+                self.session?.pause()
+            } else if !paused, self.phase == .paused {
+                self.phase = .running
+                self.session?.resume()
+            }
+        }
     }
 
 #if DEBUG
@@ -151,7 +165,7 @@ final class WatchWorkoutController: NSObject {
     /// run must never be held up by Health, let alone lost to it.
     func start(sport: Sport, unit: DistanceUnit) {
         guard phase == .idle else { return }
-        recorder.start(unit: unit, sport: sport)
+        recorder.start(unit: unit, sport: sport, autoPause: AutoPauseSettings.isEnabled())
         location.startTracking()
         phase = .running
         errorText = nil
