@@ -12,9 +12,10 @@ preview, so the watch panels get the iPhone panels' navy field, wordmark and
 headline. Drawn at 4x and downscaled so the small text stays crisp.
 
 Panel 1 is not a watch panel: since 2026-10-05 (user request) the share card
-should look like the FIRST iPhone screenshot, so slot 1 is the top of
-marketing/asc-screenshots-navy/1.png (wordmark, headline, phone) cropped to
-the watch slot's 368:448 shape.
+should look like the FIRST iPhone screenshot, so slot 1 is the WHOLE of
+marketing/asc-screenshots-navy/1.png scaled to the slot's height and centred
+on the same navy (the owner rejected a top-half crop: whole phone, Pause and
+tab bar included).
 
     ~/.venvs/spendcap/bin/python scripts/make_watch_screenshots.py
 """
@@ -79,18 +80,20 @@ def composite(raw: Image.Image, headline: str, out: pathlib.Path) -> None:
     canvas.resize(SIZE, Image.LANCZOS).save(out, format="PNG", optimize=True)
 
 
-def iphone_crop(out: pathlib.Path) -> None:
-    """Top of the first iPhone panel at the watch slot's aspect, full width."""
+def iphone_whole(out: pathlib.Path) -> None:
+    """The whole first iPhone panel, fitted to the slot height on its own navy."""
     src = Image.open(IPHONE_FIRST).convert("RGB")
-    h = round(src.width * SIZE[1] / SIZE[0])
-    src.crop((0, 0, src.width, h)).resize(SIZE, Image.LANCZOS).save(out, format="PNG", optimize=True)
+    w = round(src.width * SIZE[1] / src.height)
+    canvas = Image.new("RGB", SIZE, src.getpixel((4, 4)))
+    canvas.paste(src.resize((w, SIZE[1]), Image.LANCZOS), ((SIZE[0] - w) // 2, 0))
+    canvas.save(out, format="PNG", optimize=True)
 
 
 def main() -> int:
     if OUT_DIR.exists():
         shutil.rmtree(OUT_DIR)
     OUT_DIR.mkdir(parents=True)
-    iphone_crop(OUT_DIR / "1.png")
+    iphone_whole(OUT_DIR / "1.png")
     print(f"  ✓ 1.png  ← {IPHONE_FIRST.name} (iPhone panel 1)")
     for i, (key, headline) in enumerate(PANELS, start=2):
         out = OUT_DIR / f"{i}.png"
