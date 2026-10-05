@@ -554,6 +554,11 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   raw captures in `marketing/asc-watch-screenshots/` on the navy field with
   the wordmark and a headline, into `marketing/asc-watch-screenshots-navy/`.
   Upload that directory, never the raw one. Panel 1 is the preview.
+  Since 2026-10-05 (user request) panel 1 is NOT a watch panel: it is the top
+  of the first iPhone screenshot cropped to 368x448, so the share card looks
+  like the listing's first screenshot. Watch panels are 2-4. Recompose after
+  any change to `asc-screenshots-navy/1.png`. App Review could object to an
+  iPhone picture in the watch slot (2.3.3); if they do, this is why.
 - Capturing them is awkward and `simctl io <watch sim> screenshot` is the
   stale-framebuffer trap, so record instead: start `recordVideo`, launch,
   wait, stop, and extract with `ffmpeg -vsync 0` (the file is variable rate,

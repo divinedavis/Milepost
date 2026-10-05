@@ -11,6 +11,11 @@ screenshot, not the iPhone one. A bare black watch screen read as a broken
 preview, so the watch panels get the iPhone panels' navy field, wordmark and
 headline. Drawn at 4x and downscaled so the small text stays crisp.
 
+Panel 1 is not a watch panel: since 2026-10-05 (user request) the share card
+should look like the FIRST iPhone screenshot, so slot 1 is the top of
+marketing/asc-screenshots-navy/1.png (wordmark, headline, phone) cropped to
+the watch slot's 368:448 shape.
+
     ~/.venvs/spendcap/bin/python scripts/make_watch_screenshots.py
 """
 from __future__ import annotations
@@ -25,12 +30,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from asc_make_screenshots import NAVY, WHITE, WORDMARK, font  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+IPHONE_FIRST = ROOT / "marketing" / "asc-screenshots-navy" / "1.png"
 RAW_DIR = ROOT / "marketing" / "asc-watch-screenshots"
 OUT_DIR = ROOT / "marketing" / "asc-watch-screenshots-navy"
 SIZE = (368, 448)
 SS = 4  # supersample
 
-# (raw capture, headline) — order is the App Store order; 1 is the preview.
+# (raw capture, headline) — App Store order, after the iPhone crop in slot 1.
 PANELS = [
     ("1-recording", "your run,\non your wrist."),
     ("3-summary",   "saved to\nyour phone."),
@@ -73,11 +79,20 @@ def composite(raw: Image.Image, headline: str, out: pathlib.Path) -> None:
     canvas.resize(SIZE, Image.LANCZOS).save(out, format="PNG", optimize=True)
 
 
+def iphone_crop(out: pathlib.Path) -> None:
+    """Top of the first iPhone panel at the watch slot's aspect, full width."""
+    src = Image.open(IPHONE_FIRST).convert("RGB")
+    h = round(src.width * SIZE[1] / SIZE[0])
+    src.crop((0, 0, src.width, h)).resize(SIZE, Image.LANCZOS).save(out, format="PNG", optimize=True)
+
+
 def main() -> int:
     if OUT_DIR.exists():
         shutil.rmtree(OUT_DIR)
     OUT_DIR.mkdir(parents=True)
-    for i, (key, headline) in enumerate(PANELS, start=1):
+    iphone_crop(OUT_DIR / "1.png")
+    print(f"  ✓ 1.png  ← {IPHONE_FIRST.name} (iPhone panel 1)")
+    for i, (key, headline) in enumerate(PANELS, start=2):
         out = OUT_DIR / f"{i}.png"
         composite(Image.open(RAW_DIR / f"{key}.png").convert("RGB"), headline, out)
         print(f"  ✓ {out.name}  ← {key}")
