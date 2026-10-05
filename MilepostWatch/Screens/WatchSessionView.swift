@@ -75,6 +75,9 @@ private struct WatchControlsPage: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+        // Inset from both edges: full-width buttons touched the bezel and the
+        // vertical page dots sat on top of Pause (seen on 40mm, 2026-10-05).
+        .padding(.horizontal, 16)
         .confirmationDialog("End this \(workout.recorder.sport.title.lowercased())?",
                             isPresented: $confirmEnd, titleVisibility: .visible) {
             Button("End", role: .destructive) {
@@ -114,16 +117,23 @@ private struct WatchMetricsPage: View {
                     .foregroundStyle(Theme.paused)
             }
 
-            metric(Format.distance(workout.recorder.distanceMeters, unit: unit), unit.abbreviation)
-            metric(sport.rateText(workout.recorder.currentSplitPace ?? workout.recorder.averagePace, unit: unit),
-                   sport.rateSuffix(unit: unit))
-            metric(Format.elevation(workout.recorder.elevationGainMeters, unit: unit),
-                   "\(unit.elevationAbbreviation) up")
-            if let bpm = workout.heartRate {
-                metric("\(Int(bpm.rounded()))", "bpm")
-            }
-            if let kcal = workout.activeKilocalories {
-                metric("\(Int(kcal.rounded()))", "kcal")
+            // One column fits three metrics under the clock with Pause still on
+            // screen. Heart rate and calories make five, which ran Pause off the
+            // bottom of a 44mm screen (seen 2026-10-05), so five go two-up.
+            let items = metrics
+            if items.count <= 3 {
+                ForEach(items, id: \.suffix) { metric($0.value, $0.suffix, size: 22) }
+            } else {
+                Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 1) {
+                    ForEach(Array(stride(from: 0, to: items.count, by: 2)), id: \.self) { i in
+                        GridRow {
+                            metric(items[i].value, items[i].suffix, size: 19)
+                            if i + 1 < items.count {
+                                metric(items[i + 1].value, items[i + 1].suffix, size: 19)
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(minLength: 6)
@@ -145,14 +155,30 @@ private struct WatchMetricsPage: View {
         .accessibilityIdentifier("watch.metrics")
     }
 
-    private func metric(_ value: String, _ suffix: String) -> some View {
+    private var metrics: [(value: String, suffix: String)] {
+        var out = [
+            (Format.distance(workout.recorder.distanceMeters, unit: unit), unit.abbreviation),
+            (sport.rateText(workout.recorder.currentSplitPace ?? workout.recorder.averagePace, unit: unit),
+             sport.rateSuffix(unit: unit)),
+            (Format.elevation(workout.recorder.elevationGainMeters, unit: unit),
+             "\(unit.elevationAbbreviation) up"),
+        ]
+        if let bpm = workout.heartRate { out.append(("\(Int(bpm.rounded()))", "bpm")) }
+        if let kcal = workout.activeKilocalories { out.append(("\(Int(kcal.rounded()))", "kcal")) }
+        return out
+    }
+
+    private func metric(_ value: String, _ suffix: String, size: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             Text(value)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .font(.system(size: size, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(suffix)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 }
