@@ -245,6 +245,10 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
   user per rolling 10 min via `search_quota`, migration 0008, audit L2; the
   61st raises "Too many searches…", shown under the search field). Every function
   revokes EXECUTE from public, anon AND authenticated before granting back.
+  Since 2026-10-07 (0009, audit L3) anon holds NO grant on any public table
+  and the postgres default privileges no longer hand anon new tables or
+  functions; `e2e_backend.py` fails if one reappears. Grant `authenticated`
+  explicitly in every migration.
 - Sign in with Apple only (email auth off). Nonce: hash to Apple, raw to
   GoTrue, and only when the token carries the claim. `APPLE_ID_AUTH` is on the
   App ID (`scripts/asc_enable_capability.py`); the entitlement is in project.yml.

@@ -99,6 +99,12 @@ def main():
                "from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'")
     anon_exec = sorted(r["proname"] for r in rows if r["anon"])
     check(anon_exec == [], f"no public function executable by anon ({anon_exec})")
+    rows = sql("select table_name, privilege_type from information_schema.role_table_grants "
+               "where table_schema = 'public' and grantee = 'anon'")
+    check(rows == [], f"anon holds no table grants in public ({rows})")
+    for table in ("profiles", "friendships", "blocks", "shared_activities", "shared_streets", "reports"):
+        r = requests.get(f"{URL}/rest/v1/{table}?select=*&limit=1", headers=ANON_H, timeout=30)
+        check(r.status_code in (401, 403), f"anon GET {table} refused ({r.status_code})")
     r = requests.post(f"{URL}/rest/v1/rpc/search_profiles", headers=ANON_H, json={"q": "e2e"}, timeout=30)
     check(r.status_code in (401, 403, 404), f"anon cannot search ({r.status_code})")
 
@@ -150,7 +156,7 @@ def main():
         r = b.rest("GET", f"shared_activities?select=id&user_id=eq.{a.id}")
         check(r.json() == [], "B (not a friend) cannot read A's activity")
         r = requests.get(f"{URL}/rest/v1/shared_activities?select=id", headers=ANON_H, timeout=30)
-        check(r.status_code == 200 and r.json() == [], "anon reads zero activities")
+        check(r.status_code in (401, 403), f"anon cannot read activities at all ({r.status_code})")
 
         print("== friend request")
         r = b.rest("POST", "friendships", json={"requester_id": b.id, "addressee_id": a.id, "status": "accepted"})
@@ -217,7 +223,7 @@ def main():
         r = c.rest("GET", f"shared_streets?select=cells&user_id=eq.{a.id}")
         check(r.json() == [], "or through the table")
         r = requests.get(f"{URL}/rest/v1/shared_streets?select=cells", headers=ANON_H, timeout=30)
-        check(r.status_code == 200 and r.json() == [], "anon reads zero streets")
+        check(r.status_code in (401, 403), f"anon cannot read streets at all ({r.status_code})")
         r = b.rest("DELETE", f"shared_streets?user_id=eq.{a.id}", headers={"Prefer": "return=representation"})
         check(r.status_code == 200 and r.json() == [], "B cannot delete A's streets")
 
