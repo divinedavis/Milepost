@@ -113,17 +113,64 @@ final class RouteHeatmapTests: XCTestCase {
         XCTAssertEqual(Set(owners), [.friends, .mine, .both])
     }
 
-    func testSharedStreetsTrimBothEndsAndSkipShortActivities() {
-        XCTAssertTrue(RouteHeatmap.streetCells(route: line(40.68, -73.97, meters: 350)).isEmpty,
-                      "under 400 m there is nothing left once both ends are trimmed")
-        let route = line(40.68, -73.97, meters: 1000)
+    func testSharedStreetsDropARadiusAroundBothEndsAndSkipShortActivities() {
+        XCTAssertTrue(RouteHeatmap.streetCells(route: line(40.68, -73.97, meters: 800)).isEmpty,
+                      "under ~830 m there is nothing left once both ends are cleared")
+        let route = line(40.68, -73.97, meters: 1500)
         let shared = RouteHeatmap.streetCells(route: route)
         XCTAssertFalse(shared.isEmpty)
         for c in shared {
             let p = RouteHeatmap.center(c)
-            XCTAssertGreaterThan(RouteHeatmap.distance(p, route.first!), RouteHeatmap.privacyTrimMeters - RouteHeatmap.cellMeters)
-            XCTAssertGreaterThan(RouteHeatmap.distance(p, route.last!), RouteHeatmap.privacyTrimMeters - RouteHeatmap.cellMeters)
+            XCTAssertGreaterThan(RouteHeatmap.distance(p, route.first!), RouteHeatmap.privacyRadiusMeters)
+            XCTAssertGreaterThan(RouteHeatmap.distance(p, route.last!), RouteHeatmap.privacyRadiusMeters)
         }
+    }
+
+    func testALoopPastTheFrontDoorDoesNotShareIt() {
+        // Out 1 km north, back, and on 300 m south of the start. Trimming
+        // 200 m ALONG the route used to share the street at the front door
+        // on the way back; a radius does not.
+        let out = line(40.68, -73.97, meters: 1000)
+        let south = stride(from: 8.0, through: 300, by: 8).map {
+            CLLocationCoordinate2D(latitude: 40.68 - $0 / 110_540, longitude: -73.97)
+        }
+        let route = out + out.reversed() + south
+        for c in RouteHeatmap.streetCells(route: route) {
+            XCTAssertGreaterThan(RouteHeatmap.distance(RouteHeatmap.center(c), route.first!),
+                                 RouteHeatmap.privacyRadiusMeters)
+        }
+    }
+
+    func testSharedStreetsAreSortedNotInRouteOrder() {
+        let north = RouteHeatmap.streetCells(route: line(40.68, -73.97, meters: 1500))
+        let south = RouteHeatmap.streetCells(route: line(40.68, -73.97, meters: 1500).reversed())
+        XCTAssertEqual(north, south, "the same street either way: no direction leaves the phone")
+        XCTAssertEqual(north.map(RouteHeatmap.pack), north.map(RouteHeatmap.pack).sorted())
+    }
+
+    func testFrequentEndpointsAreOnlyThePlacesRepeated() {
+        let home = CLLocationCoordinate2D(latitude: 40.68, longitude: -73.97)
+        let nearHome = CLLocationCoordinate2D(latitude: 40.6805, longitude: -73.9702)
+        let work = CLLocationCoordinate2D(latitude: 40.75, longitude: -73.99)
+        let park = CLLocationCoordinate2D(latitude: 40.66, longitude: -73.97)
+        let zones = RouteHeatmap.frequentEndpoints([(home, work), (nearHome, park)])
+        XCTAssertEqual(zones.count, 2, "home and near-home repeat; work and the park were visited once")
+        XCTAssertTrue(zones.allSatisfy { RouteHeatmap.distance($0, home) < RouteHeatmap.privacyRadiusMeters })
+    }
+
+    func testAFriendsSortedCellsStillDrawAsOneStreet() {
+        // An L-shaped walk, sent as a shuffled set.
+        let north = line(40.68, -73.97, meters: 600)
+        let lonStep = 8 / (111_320 * cos(40.68 * .pi / 180))
+        let corner = north.last!
+        let east = (1...60).map { CLLocationCoordinate2D(latitude: corner.latitude, longitude: corner.longitude + Double($0) * lonStep) }
+        let street = Array(Set(RouteHeatmap.orderedCells(north + east))).shuffled()
+        let chains = RouteHeatmap.chains(street)
+        XCTAssertEqual(chains.count, 1, "one street, one line: \(chains.map(\.count))")
+        XCTAssertEqual(Set(chains.flatMap { $0 }), Set(street))
+        let blue = RouteHeatmap.segments(routes: [], friendStreets: [street])
+        XCTAssertFalse(blue.isEmpty)
+        XCTAssertEqual(Set(blue.map(\.owner)), [.friends])
     }
 
     func testCellsSurviveTheTripToTheServer() {

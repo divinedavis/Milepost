@@ -193,14 +193,22 @@ Past-route heatmap (`RouteHeatmap.swift`, Record tab, added 2026-09-24, user req
 - Friends (added 2026-09-24, user request): **blue** = streets a friend
   shared, **green** = a street you and a friend both covered (shaded by
   everyone's passes together), drawn blue < orange < green. Friends' data is
-  `shared_streets` (migrations 0005/0006): ordered 15 m cells packed x<<32|y,
-  first and last 200 m trimmed on the phone (`RouteHeatmap.streetCells`), no
-  times. **Opt-in, OFF by default** (`social.shareStreets`, You > "Share
+  `shared_streets` (migrations 0005/0006/0007): a SORTED SET of 15 m cells
+  packed x<<32|y (no order = no direction), with every cell within a 400 m
+  RADIUS of the activity's start, end, and any frequent endpoint (a start/end
+  repeated across activities, `RouteHeatmap.frequentEndpoints`) dropped on
+  the phone (`RouteHeatmap.streetCells`), and `start_date` cut to midnight
+  UTC. Until 2026-10-07 it was 200 m trimmed ALONG the route, in route
+  order, exact time: a loop back past home shared the front door (audit
+  M1; 0007 cleaned the old rows). The map rebuilds lines from the set with
+  `RouteHeatmap.chains`. **Opt-in, OFF by default** (`social.shareStreets`, You > "Share
   streets with friends") — the stats-only promise stands for everyone who
   never turns it on. Rows FK to `shared_activities` and cascade, so
   unsharing / stats-sharing off / account delete remove them. Server caps:
   10,000 cells a row, 1,000 rows an account; the app sends its 500 newest,
-  tracked in `social.streetsUploaded` so a session start doesn't re-upload.
+  tracked in `social.streetsUploaded.v2` so a session start doesn't
+  re-upload (bump the suffix when the trim rule changes, so old rows are
+  replaced).
   `friend_streets(since_ts)` (invoker, RLS decides, 300 rows) feeds the map.
   Friend lines go through cell centres and are Douglas-Peucker smoothed or
   they zig-zag. The demo backend's Jamie walk must be dense: corners >200 m

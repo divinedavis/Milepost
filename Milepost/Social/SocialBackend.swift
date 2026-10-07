@@ -397,7 +397,8 @@ final class DemoSocialBackend: SocialBackend {
             }
         }
         walk.append(CLLocationCoordinate2D(latitude: 40.6890, longitude: -73.9760))
-        let cells = RouteHeatmap.orderedCells(walk).map(RouteHeatmap.pack)
+        // Sorted, as the server stores them: the map rebuilds the lines.
+        let cells = Set(RouteHeatmap.orderedCells(walk)).map(RouteHeatmap.pack).sorted()
         return [FriendStreets(userID: Self.jamie, activityID: UUID(), cells: cells)]
     }
 }

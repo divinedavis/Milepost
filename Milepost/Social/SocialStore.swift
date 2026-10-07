@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CoreLocation
 import Foundation
 import Observation
 
@@ -21,8 +22,10 @@ final class SocialStore {
     /// cells is a separate, explicit opt-in.
     static let streetsKey = "social.shareStreets"
     /// Activity ids whose streets are already on the server, so a session
-    /// start does not re-upload hundreds of them.
-    static let streetsUploadedKey = "social.streetsUploaded"
+    /// start does not re-upload hundreds of them. v2 (2026-10-07): the
+    /// privacy trim became a 400 m radius and cells became an unordered set,
+    /// so everything uploaded under the old rule is sent again (an upsert).
+    static let streetsUploadedKey = "social.streetsUploaded.v2"
     /// Only the most recent activities' streets are shared; the server caps
     /// an account at 1,000 rows.
     static let maxStreetActivities = 500
@@ -216,9 +219,18 @@ final class SocialStore {
             .sorted { $0.startDate > $1.startDate }
             .prefix(Self.maxStreetActivities)
             .filter { !uploaded.contains($0.id.uuidString) }
+        guard !recent.isEmpty else { return }
+        // Places this user keeps starting or ending at (home, work) are
+        // trimmed from every activity, not only from the ones that end there.
+        let ends = localActivities().compactMap { a -> (CLLocationCoordinate2D, CLLocationCoordinate2D)? in
+            let route = a.coordinates
+            guard let first = route.first, let last = route.last else { return nil }
+            return (first, last)
+        }
+        let zones = RouteHeatmap.frequentEndpoints(ends)
         for batch in stride(from: 0, to: recent.count, by: 25) {
             let slice = recent[batch..<min(batch + 25, recent.count)]
-            let rows = slice.compactMap { SharedStreetsPayload(activity: $0, userID: me) }
+            let rows = slice.compactMap { SharedStreetsPayload(activity: $0, userID: me, avoiding: zones) }
             do {
                 try await backend.upsertStreets(rows)
             } catch {

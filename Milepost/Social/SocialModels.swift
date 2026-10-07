@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 /// Where the caller stands with another person, as the server reports it.
@@ -134,9 +135,10 @@ struct SharedActivityPayload: Encodable, Equatable {
 }
 
 /// The street cells of one activity, shared only when the user turns on
-/// "Share streets with friends" (off by default). Not a route: 15 m cells in
-/// order, the first and last 200 m trimmed off, no times. Keys match
-/// `public.shared_streets`.
+/// "Share streets with friends" (off by default). Not a route: the set of
+/// 15 m cells it crossed, sorted (no order, so no direction), with nothing
+/// within 400 m of its start, its end or a place the user often starts or
+/// ends, and the date only to the day. Keys match `public.shared_streets`.
 struct SharedStreetsPayload: Encodable, Equatable {
     let user_id: UUID
     let activity_id: UUID
@@ -144,12 +146,12 @@ struct SharedStreetsPayload: Encodable, Equatable {
     let cells: [Int64]
 
     /// Nil when nothing is left to share after trimming.
-    init?(activity: Activity, userID: UUID) {
-        let cells = RouteHeatmap.streetCells(route: activity.coordinates)
+    init?(activity: Activity, userID: UUID, avoiding zones: [CLLocationCoordinate2D] = []) {
+        let cells = RouteHeatmap.streetCells(route: activity.coordinates, avoiding: zones)
         guard !cells.isEmpty else { return nil }
         user_id = userID
         activity_id = activity.id
-        start_date = SocialDates.format(activity.startDate)
+        start_date = SocialDates.format(SocialDates.day(activity.startDate))
         self.cells = cells.map(RouteHeatmap.pack)
     }
 }
@@ -193,5 +195,13 @@ enum SocialDates {
 
     static func format(_ d: Date) -> String {
         ISO8601DateFormatter().string(from: d)
+    }
+
+    /// Midnight UTC of the day `d` falls on: a shared street says which day,
+    /// never what time someone left the house.
+    static func day(_ d: Date) -> Date {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        return utc.startOfDay(for: d)
     }
 }

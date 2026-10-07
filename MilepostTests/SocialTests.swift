@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 @testable import Milepost
 
@@ -214,10 +215,36 @@ final class SocialTests: XCTestCase {
         XCTAssertEqual(Set(json.keys), ["user_id", "activity_id", "start_date", "cells"],
                        "no coordinates, times or speeds")
         let cells = payload.cells.map(RouteHeatmap.unpack)
-        let startCell = RouteHeatmap.cell(a.coordinates.first!)
-        let endCell = RouteHeatmap.cell(a.coordinates.last!)
-        XCTAssertFalse(cells.contains { abs($0.y - startCell.y) < 13 }, "nothing within 200 m of the start")
-        XCTAssertFalse(cells.contains { abs($0.y - endCell.y) < 13 }, "nothing within 200 m of the end")
+        XCTAssertFalse(cells.isEmpty)
+        for c in cells {
+            let p = RouteHeatmap.center(c)
+            XCTAssertGreaterThan(RouteHeatmap.distance(p, a.coordinates.first!), RouteHeatmap.privacyRadiusMeters,
+                                 "nothing within 400 m of the start")
+            XCTAssertGreaterThan(RouteHeatmap.distance(p, a.coordinates.last!), RouteHeatmap.privacyRadiusMeters,
+                                 "nothing within 400 m of the end")
+        }
+        XCTAssertEqual(payload.cells, payload.cells.sorted(), "sorted, so the upload carries no direction")
+        XCTAssertEqual(Set(payload.cells).count, payload.cells.count, "each cell once")
+    }
+
+    func testStreetsDateIsTheDayNotTheTime() throws {
+        let payload = try XCTUnwrap(SharedStreetsPayload(activity: walk(), userID: UUID()))
+        XCTAssertTrue(payload.start_date.hasSuffix("T00:00:00Z"), payload.start_date)
+        let date = try XCTUnwrap(SocialDates.parse(payload.start_date))
+        XCTAssertLessThanOrEqual(date, walk().startDate)
+        XCTAssertGreaterThan(date, walk().startDate.addingTimeInterval(-86_400))
+    }
+
+    func testStreetsAvoidAPlaceTheUserOftenStartsFrom() throws {
+        let a = walk()
+        // Home is 600 m up the walk: outside its own end trims, inside a zone.
+        let home = CLLocationCoordinate2D(latitude: 40.68 + 600 / 110_540, longitude: -73.97)
+        let payload = try XCTUnwrap(SharedStreetsPayload(activity: a, userID: UUID(), avoiding: []))
+        XCTAssertTrue(payload.cells.map(RouteHeatmap.unpack).contains {
+            RouteHeatmap.distance(RouteHeatmap.center($0), home) < RouteHeatmap.privacyRadiusMeters
+        }, "fixture check: without the zone the walk passes home")
+        let guarded = SharedStreetsPayload(activity: a, userID: UUID(), avoiding: [home])
+        XCTAssertNil(guarded, "a 1.2 km walk has nothing left 400 m from both ends and from home")
     }
 
     func testStreetsUploadWhenOnAndGoWhenOff() async {

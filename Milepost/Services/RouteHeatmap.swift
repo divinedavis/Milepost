@@ -218,7 +218,7 @@ enum RouteHeatmap {
         // centres. Where you covered it too your own line is already green.
         var mine = Set<Cell>()
         for route in routes { mine.formUnion(claimedCells(route)) }
-        for street in friendStreets where street.count > 1 {
+        for street in friendStreets.flatMap(chains) where street.count > 1 {
             var current: [CLLocationCoordinate2D] = []
             var currentKey: Key?
             func flush() {
@@ -355,27 +355,98 @@ enum RouteHeatmap {
 // MARK: Sharing streets with friends
 
 extension RouteHeatmap {
-    /// Nothing within this far of either end of an activity is shared: where
-    /// a run starts and ends is usually where someone lives.
-    static let privacyTrimMeters = 200.0
+    /// Nothing within this radius of where an activity starts or ends is
+    /// shared, nor within it of any place the user often starts or ends:
+    /// that is usually where someone lives. A radius, not a distance along
+    /// the route — a loop that leaves home and comes back past it 150 m
+    /// later must not draw the front door.
+    static let privacyRadiusMeters = 400.0
     /// The server refuses a row with more cells than this.
     static let maxSharedCells = 10_000
 
-    /// What a friend receives for one activity: the street cells in order,
-    /// with both ends trimmed. No times, no speeds, no exact fixes. Empty if
-    /// the activity is too short to have anything left after trimming.
-    static func streetCells(route: [CLLocationCoordinate2D]) -> [Cell] {
-        guard route.count > 1 else { return [] }
-        var along = [0.0]
-        for (a, b) in zip(route, route.dropFirst()) {
-            along.append(along.last! + distance(a, b))
+    /// What a friend receives for one activity: the set of street cells it
+    /// crossed, minus everything near its ends and near `zones`, sorted by
+    /// packed value so the upload carries no direction or order. No times,
+    /// no speeds, no exact fixes. Empty if nothing is left.
+    static func streetCells(route: [CLLocationCoordinate2D],
+                            avoiding zones: [CLLocationCoordinate2D] = []) -> [Cell] {
+        guard route.count > 1, let first = route.first, let last = route.last else { return [] }
+        let centres = [first, last] + zones
+        // A cell is kept only if its whole square is outside every radius.
+        let clearance = privacyRadiusMeters + cellMeters
+        let kept = Set(orderedCells(route)).filter { c in
+            let p = center(c)
+            return centres.allSatisfy { distance(p, $0) > clearance }
         }
-        let total = along.last!
-        guard total > privacyTrimMeters * 2 else { return [] }
-        let middle = zip(route, along)
-            .filter { $0.1 >= privacyTrimMeters && $0.1 <= total - privacyTrimMeters }
-            .map(\.0)
-        return Array(orderedCells(middle).prefix(maxSharedCells))
+        return Array(kept.sorted { pack($0) < pack($1) }.prefix(maxSharedCells))
+    }
+
+    /// Endpoints the user keeps coming back to: any start or end of one
+    /// activity within the privacy radius of a start or end of another.
+    /// Each activity's own ends are trimmed anyway; these catch home when a
+    /// run starts somewhere else and passes it.
+    static func frequentEndpoints(_ ends: [(CLLocationCoordinate2D, CLLocationCoordinate2D)]) -> [CLLocationCoordinate2D] {
+        var out: [CLLocationCoordinate2D] = []
+        for (i, a) in ends.enumerated() {
+            for p in [a.0, a.1] {
+                let repeated = ends.enumerated().contains { j, b in
+                    j != i && (distance(p, b.0) <= privacyRadiusMeters || distance(p, b.1) <= privacyRadiusMeters)
+                }
+                if repeated { out.append(p) }
+            }
+        }
+        return out
+    }
+
+    /// A friend's cells arrive as an unordered set; this turns them back into
+    /// drawable runs of neighbouring cells. Side neighbours always join; a
+    /// diagonal joins only when no side cell already links the two, so a
+    /// staircase is one line rather than a chain of little triangles.
+    static func chains(_ cells: [Cell]) -> [[Cell]] {
+        let all = Set(cells)
+        func neighbours(_ c: Cell) -> [Cell] {
+            var out: [Cell] = []
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let n = Cell(x: c.x + dx, y: c.y + dy)
+                if all.contains(n) { out.append(n) }
+            }
+            for (dx, dy) in [(1, 1), (1, -1), (-1, 1), (-1, -1)] {
+                let n = Cell(x: c.x + dx, y: c.y + dy)
+                guard all.contains(n),
+                      !all.contains(Cell(x: c.x + dx, y: c.y)),
+                      !all.contains(Cell(x: c.x, y: c.y + dy)) else { continue }
+                out.append(n)
+            }
+            return out
+        }
+        struct Edge: Hashable { let a: Cell, b: Cell }
+        func edge(_ a: Cell, _ b: Cell) -> Edge {
+            (a.x, a.y) < (b.x, b.y) ? Edge(a: a, b: b) : Edge(a: b, b: a)
+        }
+        var adjacency: [Cell: [Cell]] = [:]
+        for c in all { adjacency[c] = neighbours(c) }
+        var used = Set<Edge>()
+        // Ends of lines first, so a street comes out as one chain, then
+        // whatever loops are left. Sorted for a stable result.
+        let order = all.sorted {
+            let (da, db) = (adjacency[$0]!.count, adjacency[$1]!.count)
+            return da != db ? da < db : pack($0) < pack($1)
+        }
+        var out: [[Cell]] = []
+        for start in order {
+            while let next = adjacency[start]!.first(where: { !used.contains(edge(start, $0)) }) {
+                var chain = [start, next]
+                used.insert(edge(start, next))
+                var here = next
+                while let step = adjacency[here]!.first(where: { !used.contains(edge(here, $0)) }) {
+                    used.insert(edge(here, step))
+                    chain.append(step)
+                    here = step
+                }
+                out.append(chain)
+            }
+        }
+        return out
     }
 
     /// A cell as one bigint for the server: x in the high 32 bits, y in the low.
