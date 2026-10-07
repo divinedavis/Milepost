@@ -580,4 +580,4 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   deliberate two-step, not something to automate into the ship script.
 - `attach_build.py --build N` after every ship, or the version keeps the old build.
 - Privacy/support pages live in Personal-Website `milepost/{privacy,support}/`
-  and deploy by scp to 159.203.110.79:/var/www/divinedavis/ (no auto-deploy).
+  and deploy by scp to 104.236.120.144:/var/www/divinedavis/ (no auto-deploy).
