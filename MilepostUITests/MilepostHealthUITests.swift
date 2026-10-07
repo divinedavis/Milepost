@@ -39,9 +39,25 @@ final class MilepostHealthUITests: XCTestCase {
         }
     }
 
+    /// Brings the Apple Health switch into view whichever way the list is
+    /// scrolled. A blind `swipeUp()` overshot it: the You list keeps its
+    /// scroll position across tab switches, and settings added above (auto-
+    /// pause, Oura) moved it, so the row was off the top or the bottom
+    /// depending on the run ("No matches found for ... Switch", 2026-10-07,
+    /// failing on the pre-change commit too).
     private func openHealthSettings() {
         tap("tab.you")
-        app.swipeUp()
+        let row = app.switches["you.healthEnabled"]
+        let window = app.windows.firstMatch.frame
+        for _ in 0..<8 {
+            if row.exists, !row.frame.isEmpty, row.frame.minY > window.minY + 120,
+               row.frame.maxY < window.maxY - 220 { return }
+            if row.exists, row.frame.minY <= window.minY + 120 {
+                app.swipeDown(velocity: .slow)
+            } else {
+                app.swipeUp(velocity: .slow)
+            }
+        }
     }
 
     private func toggle(_ id: String) -> XCUIElement { app.switches[id] }
