@@ -245,7 +245,13 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
 - Sign in with Apple only (email auth off). Nonce: hash to Apple, raw to
   GoTrue, and only when the token carries the claim. `APPLE_ID_AUTH` is on the
   App ID (`scripts/asc_enable_capability.py`); the entitlement is in project.yml.
-- Sharing is on by default once signed in; `syncAll` upserts every local
+- Sharing is **OFF for a new account** since 2026-10-07 (audit L1,
+  `SocialStore.sharingDefault`; `createProfile` stores false). An account
+  that already existed and has no stored choice is grandfathered ON at its
+  first profile load (it was sharing under the old default; leaving it off
+  would show "Nothing is shared" over rows still on the server). The switch
+  lives in You > Friends only — no prompt on entry (owner rule). When on,
+  `syncAll` upserts every local
   activity at each session start (also the retry for offline saves). A local
   delete deletes the shared row, or queues it (`social.pendingDeletes`).
   Turning sharing off deletes everything shared.

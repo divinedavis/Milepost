@@ -165,6 +165,41 @@ final class SocialTests: XCTestCase {
         XCTAssertTrue(hits.isEmpty, "a blocked person does not come back in search")
     }
 
+    func testSharingIsOffForANewAccount() async throws {
+        XCTAssertFalse(SocialStore.sharingDefault, "signing in to see friends is not consent to share")
+        let (s, backend, defaults) = store()
+        try await s.createProfile(username: "new_runner", displayName: "New")
+        XCTAssertFalse(s.sharingEnabled)
+        XCTAssertEqual(defaults.object(forKey: SocialStore.shareKey) as? Bool, false)
+        // Recorded after the account was made (the init's own profile load
+        // races createProfile in this fake, so judge only what comes next).
+        let a = activity()
+        s.localActivities = { [a] }
+        await s.syncAll()
+        await s.share(a)
+        XCTAssertNil(backend.shared[a.id], "nothing leaves the phone until the switch is turned on")
+    }
+
+    func testAnAccountThatWasAlreadySharingKeepsSharing() async {
+        let (s, backend, defaults) = store()
+        let a = activity()
+        s.localActivities = { [a] }
+        await s.loadProfile()
+        XCTAssertEqual(defaults.object(forKey: SocialStore.shareKey) as? Bool, true,
+                       "an existing account with no stored choice was sharing under the old default")
+        XCTAssertNotNil(backend.shared[a.id])
+    }
+
+    func testAnExplicitOffSurvivesLoadingTheProfile() async {
+        let (s, backend, defaults) = store()
+        defaults.set(false, forKey: SocialStore.shareKey)
+        let a = activity()
+        s.localActivities = { [a] }
+        await s.loadProfile()
+        XCTAssertFalse(s.sharingEnabled)
+        XCTAssertNil(backend.shared[a.id])
+    }
+
     func testSharingUploadsDeletesAndStops() async throws {
         let (s, backend, defaults) = store()
         let a = activity()

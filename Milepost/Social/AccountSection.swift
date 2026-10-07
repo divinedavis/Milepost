@@ -4,7 +4,7 @@ import SwiftUI
 /// account deletion (App Store 5.1.1(v)).
 struct AccountSection: View {
     @Environment(SocialStore.self) private var social
-    @AppStorage(SocialStore.shareKey) private var share = true
+    @AppStorage(SocialStore.shareKey) private var share = SocialStore.sharingDefault
     @AppStorage(SocialStore.streetsKey) private var shareStreets = false
     @State private var showSetup = false
     @State private var confirmDelete = false
@@ -83,9 +83,9 @@ struct AccountSection: View {
     private var footer: String {
         switch social.phase {
         case .signedIn where social.profile != nil:
-            if !share { return "Nothing is shared. Friends still show up in the Block tab." }
+            if !share { return "Nothing is shared. Turn on Share activities to show friends your stats. Friends still show up in the Block tab." }
             return shareStreets
-                ? "Friends see each activity's sport, title, distance, pace and time, and the streets you covered as blue on their map. The first and last 200 m of every activity, times and exact GPS points never leave this phone."
+                ? "Friends see each activity's sport, title, distance, pace and time, and the streets you covered as blue on their map. Nothing within 400 m of where you start or finish, the order you ran them, times and exact GPS points never leave this phone."
                 : "Friends see each activity's sport, title, distance, pace and time. Routes and maps never leave this phone. Turn on Share streets to show friends the streets you covered, not where you start or finish."
         default:
             return "Sign in to add friends and see their activities in the Block tab and the streets they share on your map. Routes and maps never leave this phone unless you turn on Share streets."

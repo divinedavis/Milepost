@@ -13,9 +13,14 @@ final class SocialStore {
         case restoring, signedOut, signedIn
     }
 
-    /// On by default: signing in to add friends is the opt-in. Turning it off
-    /// deletes every row this account has shared.
+    /// OFF for a new account (security audit 2026-10-07, L1): signing in to
+    /// see friends is not consent to share. Turned on in You > Friends, never
+    /// by a prompt. Accounts made before that were sharing under the old
+    /// default and keep it (`profileReady`), or the switch would read off
+    /// while their rows stay on the server. Turning it off deletes every row
+    /// this account has shared.
     static let shareKey = "social.shareActivities"
+    static let sharingDefault = false
     /// Local deletes that could not reach the server yet.
     static let pendingDeletesKey = "social.pendingDeletes"
     /// OFF by default: friends were promised stats only, so sending street
@@ -57,7 +62,7 @@ final class SocialStore {
     private var listener: Task<Void, Never>?
 
     var canUseFriends: Bool { phase == .signedIn && profile != nil }
-    var sharingEnabled: Bool { defaults.object(forKey: Self.shareKey) as? Bool ?? true }
+    var sharingEnabled: Bool { defaults.object(forKey: Self.shareKey) as? Bool ?? Self.sharingDefault }
     var streetsEnabled: Bool { defaults.bool(forKey: Self.streetsKey) }
     var incoming: [FriendProfile] { connections.filter { $0.status == .incoming } }
     var outgoing: [FriendProfile] { connections.filter { $0.status == .outgoing } }
@@ -116,7 +121,13 @@ final class SocialStore {
             profile = try await backend.profile(id: id)
             profileError = nil
             profileLoaded = true
-            if profile != nil { await profileReady() }
+            if profile != nil {
+                // An account that already existed, seen by a build that has
+                // never stored a choice: it was sharing under the old
+                // default, so say so rather than strand its rows.
+                if defaults.object(forKey: Self.shareKey) == nil { defaults.set(true, forKey: Self.shareKey) }
+                await profileReady()
+            }
         } catch {
             // Offline is not "has no username": keep asking rather than
             // offering to create a second one.
@@ -139,6 +150,8 @@ final class SocialStore {
     func createProfile(username: String, displayName: String) async throws {
         guard let id = userID else { return }
         try await backend.createProfile(id: id, username: username, displayName: displayName)
+        // A brand-new account starts with nothing shared.
+        defaults.set(Self.sharingDefault, forKey: Self.shareKey)
         profile = try await backend.profile(id: id)
         profileLoaded = true
         if profile != nil { await profileReady() }
