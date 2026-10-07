@@ -7,6 +7,10 @@ struct RecordScreen: View {
     @Environment(RunRecorder.self) private var recorder
     @Environment(MirroredWorkoutMonitor.self) private var mirror
     @Environment(SocialStore.self) private var social
+    /// The three stats follow Dynamic Type (the accessibility audit flagged a
+    /// fixed 30 pt); equal-thirds columns + minimumScaleFactor keep them on
+    /// one line at the largest sizes.
+    @ScaledMetric(relativeTo: .title) private var statSize: CGFloat = 30
     @AppStorage(DistanceUnit.storageKey) private var unitRaw = DistanceUnit.miles.rawValue
     @AppStorage(Sport.storageKey) private var sportRaw = Sport.run.rawValue
     @AppStorage(HeatmapWindow.storageKey) private var heatRaw = HeatmapWindow.default.rawValue
@@ -209,7 +213,7 @@ struct RecordScreen: View {
     private func stat(_ value: String, _ label: String, id: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.stat(30))
+                .font(.stat(statSize))
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .accessibilityIdentifier(id)
@@ -287,7 +291,7 @@ struct RecordScreen: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Start")
             .accessibilityIdentifier("record.start")
-            Text("Start").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
+            Text("Start").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accentText)
         }
         .modifier(ControlColumn())
     }

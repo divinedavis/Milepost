@@ -111,6 +111,8 @@ ui_all() {
   run MilepostUITests/MilepostHeatmapUITests
   echo "== ui (friends) =="
   run MilepostUITests/MilepostFriendsUITests
+  echo "== ui (accessibility audit) =="
+  run MilepostUITests/AccessibilityAuditTests
   echo "== ui (live activity) =="
   run MilepostUITests/MilepostLiveActivityUITests
   echo "== ui (moving) =="

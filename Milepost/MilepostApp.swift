@@ -63,6 +63,9 @@ struct MilepostApp: App {
             container = try! ModelContainer(for: Activity.self,
                                             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
+        // MetricKit: launch/hang/memory summaries and crash diagnostics, logged
+        // on device only. ship.sh fails if this line goes.
+        MetricsReporter.shared.start()
 
         #if DEBUG
         // Past activities for the Record map's heatmap, so it can be driven

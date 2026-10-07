@@ -94,6 +94,8 @@ final class MilepostFriendsUITests: XCTestCase {
         openFriendsFeed()
         XCTAssertTrue(text("Lunch Loop").waitForExistence(timeout: 8), "a friend's activity is in the feed")
         XCTAssertTrue(text("Jamie").exists)
+        XCTAssertTrue(element("friends.rowName").exists, "feed rows carry the friend's name")
+        XCTAssertTrue(element("friends.rowTitle").exists, "and the activity title")
         XCTAssertFalse(text("Evening Walk").exists, "a pending request shows nothing")
 
         tap("block.friends")

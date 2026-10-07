@@ -21,6 +21,22 @@ Same per-change loop as the other iOS apps (Pothole Radar is the template):
 5. Commit with an explanatory body + `Co-Authored-By`, then push.
 6. `./scripts/ship.sh` for app-code changes once the ASC app record exists.
 
+Apple quality gates (2026-10-07, owner rule for every iOS app; `ship.sh`
+runs them before every TestFlight upload and refuses to continue on a fail):
+Swift Testing count (`MilepostTests/StreetPrivacySwiftTests`, read from the
+xcresult; zero = fail), `AccessibilityAuditTests` (tabs read at run time by
+`tab.` ids, Friends demo screens, light + dark, AXXXL usability),
+`scripts/check_test_coverage.py` (static: every Screens/Social file with ids
+is reached by a UI test; no stale ids; exemptions with reasons in the file),
+`PerformanceTests` + `scripts/perf_gate.py --record` (fail > 1.5x the median
+of the last 5 ships, `scripts/perf_baseline.json`), MetricKit wired
+(`Services/MetricsReporter.swift`, logs only — not on the privacy label), and
+`scripts/organizer_report.py` (report only). Audit fixes so far:
+`Theme.accentText` (#6B94FF) for small accent text (Start caption, selected
+tab) and `Theme.secondaryText` for idle tabs (both were ~4:1); Record stats
+scale with Dynamic Type via `@ScaledMetric`. "Partially unsupported" Dynamic
+Type is excused (one-line layouts); "unsupported" still fails.
+
 Gotchas:
 - `project.yml` is the source of truth; never hand-edit the pbxproj. Run
   `./scripts/generate.sh` after adding files — a build with a stale project

@@ -4,6 +4,11 @@ enum Theme {
     /// Navy blue (#3D6BE0). Brightened from a true navy, which is ~1.4:1 on
     /// the near-black background and disappears; this one is ~4:1.
     static let accent = Color(red: 0.24, green: 0.42, blue: 0.88)
+    /// The accent as TEXT (#6B94FF): small labels in `accent` (the Start
+    /// caption, the selected tab) came out ~4:1 on the near-black card, just
+    /// under WCAG AA's 4.5:1 in the accessibility audit (2026-10-07). Fills
+    /// and icons keep `accent`.
+    static let accentText = Color(red: 0.42, green: 0.58, blue: 1.0)
     static let paused = Color(red: 1.0, green: 0.76, blue: 0.0)
     /// The split in progress. Lighter than `accent` so a partial split still
     /// reads apart from the completed ones beside it.
