@@ -320,7 +320,7 @@ final class DemoSocialBackend: SocialBackend {
 
     func search(_ query: String) async throws -> [FriendProfile] {
         let q = query.lowercased()
-        guard q.count >= 2 else { return [] }
+        guard q.count >= 3 else { return [] }
         return people.filter { visible($0) && $0.username.hasPrefix(q) }
     }
 

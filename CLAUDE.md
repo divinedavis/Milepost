@@ -240,7 +240,10 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
 - All friendship writes are RPCs (`send_friend_request`, `respond_friend_request`,
   `remove_friend`, `block_user`); clients only SELECT `friendships`. Strangers'
   profiles are invisible to RLS — search goes through `search_profiles`
-  (definer, ≥2 chars, ≤20 rows, LIKE-escaped, block-aware). Every function
+  (definer, ≥3 chars since 2026-10-07 — usernames are 3+, so an exact
+  name always works — ≤20 rows, LIKE-escaped, block-aware, and 60 calls per
+  user per rolling 10 min via `search_quota`, migration 0008, audit L2; the
+  61st raises "Too many searches…", shown under the search field). Every function
   revokes EXECUTE from public, anon AND authenticated before granting back.
 - Sign in with Apple only (email auth off). Nonce: hash to Apple, raw to
   GoTrue, and only when the token carries the claim. `APPLE_ID_AUTH` is on the

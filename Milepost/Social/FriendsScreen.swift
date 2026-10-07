@@ -9,6 +9,9 @@ struct FriendsScreen: View {
     @State private var query = ""
     @State private var results: [FriendProfile] = []
     @State private var searched = false
+    /// The server's own words when a search fails (e.g. the 60-per-10-minute
+    /// limit), so a refusal never reads as "No one by that username".
+    @State private var searchError: String?
     @State private var reporting: FriendProfile?
     @State private var blocking: FriendProfile?
 
@@ -24,7 +27,10 @@ struct FriendsScreen: View {
                 ForEach(results) { person in
                     PersonRow(person: person) { searchControl(person) }
                 }
-                if searched && results.isEmpty && needle.count >= 2 {
+                if let searchError {
+                    Text(searchError).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("friends.searchError")
+                } else if searched && results.isEmpty && needle.count >= 3 {
                     Text("No one by that username.").foregroundStyle(.secondary)
                 }
             } header: {
@@ -156,16 +162,21 @@ struct FriendsScreen: View {
 
     private func runSearch() async {
         let q = needle
-        guard q.count >= 2 else {
+        // The server refuses prefixes under 3 characters (usernames are 3+).
+        guard q.count >= 3 else {
             results = []
             searched = false
+            searchError = nil
             return
         }
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
+        social.lastError = nil
         let found = await social.search(q)
         guard !Task.isCancelled else { return }
         results = found
+        searchError = social.lastError
+        social.lastError = nil
         searched = true
     }
 }

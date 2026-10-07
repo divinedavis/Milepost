@@ -125,6 +125,10 @@ def main():
         check(found.get(b.id) == "none" and a.id not in found, f"A finds B by prefix, not self ({r.status_code} {r.text[:120]})")
         r = a.rpc("search_profiles", q="e")
         check(r.status_code == 200 and r.json() == [], "one-character search returns nothing")
+        r = a.rpc("search_profiles", q="e2")
+        check(r.status_code == 200 and r.json() == [], "two-character search returns nothing (3 minimum)")
+        r = a.rpc("search_profiles", q=b.username)
+        check(r.status_code == 200 and [x["id"] for x in r.json()][:1] == [b.id], "an exact username is the first hit")
         r = a.rpc("search_profiles", q="e2e%")
         check(r.status_code == 200 and r.json() == [], "LIKE wildcards are escaped")
 
@@ -249,6 +253,21 @@ def main():
         check([x["id"] for x in r.json()] == [b.id], "A's blocked list has B")
         r = a.rest("DELETE", f"blocks?blocked_id=eq.{b.id}", headers={"Prefer": "return=representation"})
         check(r.status_code == 200 and len(r.json()) == 1, "A can unblock B")
+
+        print("== search throttle")
+        used = sql(f"select calls from public.search_quota where user_id = '{c.id}'")
+        left = 60 - (used[0]["calls"] if used else 0)
+        for _ in range(left):
+            r = c.rpc("search_profiles", q="zzz")
+            if r.status_code != 200:
+                break
+        check(r.status_code == 200, f"60 searches in 10 minutes are allowed ({r.status_code} {r.text[:80]})")
+        r = c.rpc("search_profiles", q="zzz")
+        check(r.status_code >= 400 and "Too many searches" in r.text, f"the 61st is refused ({r.status_code})")
+        r = b.rpc("search_profiles", q="zzz")
+        check(r.status_code == 200, "the limit is per user")
+        r = c.rest("GET", "search_quota?select=calls")
+        check(r.status_code in (401, 403) or r.json() == [], f"search_quota is invisible to clients ({r.status_code})")
 
         print("== delete account")
         r = a.rpc("delete_account")

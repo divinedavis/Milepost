@@ -161,8 +161,17 @@ final class SocialTests: XCTestCase {
         await s.block(DemoSocialBackend.jamie)
         XCTAssertFalse(s.feed.contains { $0.username == "jamie_runs" })
         XCTAssertEqual(s.blocked.map(\.username), ["jamie_runs"])
-        let hits = await s.search("ja")
+        let hits = await s.search("jam")
         XCTAssertTrue(hits.isEmpty, "a blocked person does not come back in search")
+    }
+
+    func testSearchNeedsThreeCharacters() async {
+        let (s, _, _) = store()
+        await s.loadProfile()
+        let two = await s.search("jo")
+        XCTAssertTrue(two.isEmpty, "the server refuses prefixes under 3; the app does not send them")
+        let three = await s.search("jor")
+        XCTAssertEqual(three.map(\.username), ["jordan_rides"])
     }
 
     func testSharingIsOffForANewAccount() async throws {
