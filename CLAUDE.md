@@ -535,6 +535,12 @@ Apple Watch (`MilepostWatch/`, added 2026-09-16):
   `asc_upload_screenshots.py --replace` uploads them to the 6.7" slot.
 - `make_asc_header.py` — Header/Search Results banner into `marketing/asc-header/`
   (upload is browser-only).
+- `make_creative_assets.py [OUT_DIR]` — the fall-2026 Asset Library set:
+  header 3840x1646, search 3840x2560, universal 5244x2950 (RGB, no alpha)
+  for the main page, plus a header per custom product page (`cpp-ride`,
+  `cpp-watch`). Wordmark and tagline stay in the centre 60% x 70% (Apple
+  crops edges); no prices, URLs, (c) or other platforms. Also writes a
+  `preview-product-page.png` per header that is for eyes only, not upload.
 - `asc_push_privacy_iris.py` — App Privacy = "Data Not Collected" through the
   private iris API; needs a fresh `fastlane spaceauth -u divinejdavis@gmail.com`
   cookie (2FA, so a person runs it; 401 = expired).
