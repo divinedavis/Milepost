@@ -277,8 +277,17 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
   `staticTexts["…"]` — match `label ==` with a predicate.
 - App Privacy is no longer "Data Not Collected" — `asc_push_privacy_iris.py`
   now declares the friends data (needs a fresh `fastlane spaceauth`, a human).
-- Reports land in `public.reports`; nothing alerts on them yet — check the
-  table before each release.
+- Reports land in `public.reports`. Since 2026-10-07 (audit L4) a daily
+  08:00 ET cron on 104.236.120.144 (`/etc/cron.d/milepost-report-digest` →
+  `/usr/local/bin/milepost-report-digest` = `scripts/report_digest.py`)
+  emails new ones to the owner through uptime-watch's SMTP; silent when
+  there are none, emails on a failed read. It logs in through the session
+  pooler as `milepost_report_digest`, which can read only the view
+  `ops.report_digest` (migration 0010; password only in
+  `/etc/milepost-report-digest.env`, 0600). State:
+  `/var/lib/milepost-report-digest/state.json`; log
+  `/var/log/milepost-report-digest.log`. `--dry-run`, `--test-email`.
+  Tests: `python3 scripts/test_report_digest.py`. Redeploy by scp.
 - Abuse ceilings live in the database (0003): 20,000 shared activities per
   account, 200 reports per reporter per day, 100 pending outgoing requests.
   Nothing else bounds what a valid session can insert.
