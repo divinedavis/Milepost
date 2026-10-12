@@ -154,7 +154,10 @@ xcodebuild \
     archive
 
 echo "==> exporting IPA"
-xcodebuild \
+# Apple's tools first (2026-10-12): Xcode's IPA step runs /usr/bin/rsync, which
+# starts the rsync on PATH as its receiving side. A Homebrew rsync 3.x there
+# rejects --extended-attributes and the export dies with just "Copy failed".
+PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH" xcodebuild \
     -exportArchive \
     -archivePath "$ARCHIVE" \
     -exportPath "$EXPORT_DIR" \
