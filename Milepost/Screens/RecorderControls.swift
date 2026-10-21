@@ -12,6 +12,7 @@ struct RecorderControls: View {
     let layout: Layout
 
     @State private var showNoMovement = false
+    @State private var showNoSignal = false
     @State private var pendingSummary: RunSummary?
 
     /// The map card and the full-screen recorder both host these controls,
@@ -40,6 +41,14 @@ struct RecorderControls: View {
         } message: {
             Text("This activity cannot be saved because we couldn't detect any change in your location.")
         }
+        // No accepted fix and none now: the runner did move, the phone never
+        // knew where. A runner standing on a good fix is "No Movement".
+        .alert("No GPS Signal Yet", isPresented: $showNoSignal) {
+            Button("Discard", role: .destructive) { discardRun() }
+            Button("Keep Trying", role: .cancel) { recorder.resume() }
+        } message: {
+            Text("Your phone hasn't found a GPS signal. Without cell service this can take a few minutes. Stand outside with a clear view of the sky and wait for \"GPS ready\".")
+        }
         .sheet(item: $pendingSummary) { summary in
             SaveActivitySheet(summary: summary) { saved in
                 pendingSummary = nil
@@ -65,6 +74,8 @@ struct RecorderControls: View {
     private func finishTapped() {
         if let summary = recorder.finish() {
             pendingSummary = summary
+        } else if recorder.route.isEmpty, location.gpsStatus == .searching {
+            showNoSignal = true
         } else {
             showNoMovement = true
         }

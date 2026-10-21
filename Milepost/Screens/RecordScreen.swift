@@ -77,6 +77,11 @@ struct RecordScreen: View {
                     .padding(.horizontal, 12)
                     .padding(.bottom, 10)
                 if !mirror.isMirroring {
+                    // Always before Start; mid-run only while the signal is missing.
+                    if location.isAuthorized && (!recorder.isActive || location.gpsStatus == .searching) {
+                        GPSStatusPill(status: location.gpsStatus)
+                            .padding(.bottom, 8)
+                    }
                     statsCard
                         .padding(.horizontal, 12)
                         .padding(.bottom, 10)
@@ -123,7 +128,10 @@ struct RecordScreen: View {
         } message: {
             Text("Milepost needs your location to measure a run. Allow it in Settings.")
         }
+        .onAppear { location.warmUp() }
+        .onDisappear { location.coolDown() }
         .onChange(of: location.authorization) { _, _ in
+            location.warmUp()
             // The user tapped Start before granting; finish what they asked.
             if pendingStart, location.isAuthorized {
                 pendingStart = false
@@ -329,6 +337,29 @@ struct RecordScreen: View {
         location.startTracking()
         recorder.start(unit: unit, sport: sport, autoPause: AutoPauseSettings.isEnabled())
         showLive = true
+    }
+}
+
+/// "Finding GPS" until a fix is good enough to record with. Without cell
+/// service that can take minutes, and a run started before it shows 0.00.
+struct GPSStatusPill: View {
+    let status: GPSStatus
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(status == .ready ? Color.green : Theme.paused)
+                .frame(width: 8, height: 8)
+            Text(status == .ready ? "GPS ready" : "Finding GPS…")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        // Opaque: over a light map a see-through card fails the contrast audit.
+        .background(Theme.card, in: Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("gps.status")
     }
 }
 

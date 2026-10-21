@@ -4,6 +4,7 @@ import SwiftUI
 /// Yellow header while paused, like the reference.
 struct LiveRecorderView: View {
     @Environment(RunRecorder.self) private var recorder
+    @Environment(LocationService.self) private var location
     @Environment(\.dismiss) private var dismiss
 
     private var isPaused: Bool { recorder.state == .paused }
@@ -11,6 +12,10 @@ struct LiveRecorderView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if location.gpsStatus == .searching, !isPaused {
+                GPSStatusPill(status: .searching)
+                    .padding(.top, 8)
+            }
             Spacer(minLength: 24)
             bigStat(recorder.sport.rateText(recorder.currentSplitPace, unit: recorder.unit),
                     recorder.sport.rateLabel(isPaused ? "Avg." : "Split avg.", unit: recorder.unit),

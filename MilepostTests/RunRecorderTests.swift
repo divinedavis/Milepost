@@ -458,4 +458,27 @@ final class RunRecorderTests: XCTestCase {
         tick(r, advancing: 11)
         XCTAssertTrue(r.isAutoPaused)
     }
+
+    // MARK: No signal
+
+    /// Without cell service the first fixes are coarse; until one is good
+    /// enough the screens must say "Finding GPS", not look ready.
+    func testGPSStatusNeedsAFixTheRecorderWouldKeep() {
+        XCTAssertEqual(GPSStatus.of(nil), .searching)
+        XCTAssertEqual(GPSStatus.of(fix(0, at: 0, accuracy: -1)), .searching)
+        XCTAssertEqual(GPSStatus.of(fix(0, at: 0, accuracy: 65)), .searching)
+        XCTAssertEqual(GPSStatus.of(fix(0, at: 0, accuracy: RunRecorder.maxHorizontalAccuracy)), .ready)
+        XCTAssertEqual(GPSStatus.of(fix(0, at: 0, accuracy: 5)), .ready)
+    }
+
+    /// Only coarse fixes during a run: nothing is recorded, and the empty
+    /// route is what tells Finish to explain "no GPS signal".
+    func testCoarseFixesOnlyLeaveTheRouteEmpty() {
+        let r = makeRecorder()
+        r.start(unit: .miles)
+        for i in 0..<20 { r.ingest(fix(Double(i) * 5, at: Double(i), accuracy: 65)) }
+        XCTAssertTrue(r.route.isEmpty)
+        XCTAssertEqual(r.distanceMeters, 0)
+        XCTAssertNil(r.finish())
+    }
 }

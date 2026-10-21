@@ -68,6 +68,22 @@ final class MilepostUITests: XCTestCase {
         XCTAssertFalse(app.buttons["record.expand"].exists, "nothing to expand before a run starts")
     }
 
+    /// The simulator sits on a precise pinned fix, so once location is
+    /// allowed the Record screen must say the GPS is ready.
+    func testGPSStatusShowsReadyWithAFix() {
+        startRun()
+        tap("live.pause")
+        tap("live.finish")
+        let alert = app.alerts["No Movement Detected"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 6), "a pinned fix is a signal, so this is not the no-GPS alert")
+        alert.buttons["Discard"].tap()
+        let gps = app.descendants(matching: .any)["gps.status"]
+        XCTAssertTrue(gps.waitForExistence(timeout: 8))
+        let ready = NSPredicate(format: "label CONTAINS 'GPS ready'")
+        expectation(for: ready, evaluatedWith: gps)
+        waitForExpectations(timeout: 10)
+    }
+
     /// Start opens the full-screen recorder with a running clock; Pause turns
     /// the header yellow and offers Resume + Finish; Finish with no movement
     /// shows the discard alert; Discard lands back on the map.
