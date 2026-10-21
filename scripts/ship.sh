@@ -122,6 +122,10 @@ else
     # bundle: its own @main, its own HealthKit and CoreLocation setup, its own
     # ways to die on launch. watchOS has no XCUITest, so a cold launch is the
     # gate there.
+    # One simulator at a time, shut down when its pass ends (owner rule for all apps,
+    # 2026-10-21: a Find A Crib ship was killed for low memory on this 16 GB Mac).
+    # Only by UDID: a bare name ("iPhone 17 Pro") can match another session's device.
+    [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]] && xcrun simctl shutdown "$DEVICE" 2>/dev/null || true
     echo "==> smoke-testing a watch simulator launch"
     ./scripts/smoke_test_watch.sh
 fi
