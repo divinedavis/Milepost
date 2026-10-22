@@ -60,7 +60,7 @@ FRIENDS ON THE BLOCK
 The Block tab has two sides: Mine, your own log, and Friends. Sign in with Apple, pick a username, and add friends by searching for theirs. Once they accept, you see each other's activities: sport, title, distance, pace and time. Friends are optional; without an account the app works exactly the same.
 
 YOUR ROUTES STAY ON YOUR PHONE
-Recording needs no account. Runs and their routes live in a database on your phone. If you sign in for friends, only each activity's stats are shared, and only with people you accept. Maps, GPS points and splits are never uploaded. Turn sharing off or delete your account from the You tab at any time. There are no ads and no analytics. Location is asked for when you press Start and used only while a run is recording.
+Recording needs no account. Runs and their routes live in a database on your phone. If you sign in for friends, only each activity's stats are shared, and only with people you accept. Maps, GPS points and splits are never uploaded. Turn sharing off or delete your account from the You tab at any time. There are no ads and no analytics. Location is asked for when you press Start. The Record screen uses it to show you on the map and get GPS ready, and only a run being recorded is saved.
 
 Milepost uses GPS, so it needs open sky; runs that start indoors show distance once you are outside and moving.
 """
@@ -81,7 +81,7 @@ APPLE HEALTH AND OURA RING (OPTIONAL)
 You tab > Apple Health > Save to Apple Health writes each saved activity to Health as a workout; the route is a separate switch, off by default. "Use with Oura Ring" in that section is a setup guide: Milepost never connects to the ring or to Oura's servers. The Oura app writes heart rate to Apple Health and reads workouts from it, and Milepost reads that heart rate back for the activity's time window and labels its source ("Heart rate from Oura"). No ring is needed to review the app; without one the guide still opens and heart rate simply does not appear.
 
 BACKGROUND LOCATION
-The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization and reads location solely between Start and Finish.
+The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization. While the Record screen is open in the foreground it reads location so GPS is ready before Start (a "Finding GPS" / "GPS ready" pill shows the state, which matters with no cell service); it records and reads location in the background only between Start and Finish. Finishing a run that never got a GPS fix shows "No GPS Signal Yet" instead of "No Movement Detected".
 
 CONTACT
 Any question at all: the email and phone number above.
@@ -120,7 +120,10 @@ AGE_RATING = {
 
 
 def resolve(asc: ASC, app_id: str) -> dict:
-    info = asc.get(f"/apps/{app_id}/appInfos")["data"][0]
+    # Once a version is live there are two appInfos; the live one refuses
+    # edits (409 INVALID_STATE), so take the one still being prepared.
+    infos = asc.get(f"/apps/{app_id}/appInfos")["data"]
+    info = next((i for i in infos if i["attributes"].get("state") != "READY_FOR_DISTRIBUTION"), infos[0])
     version = asc.editable_version(app_id)
     return {
         "info": info["id"],
