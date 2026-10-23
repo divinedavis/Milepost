@@ -2,27 +2,31 @@
   "PerformanceTests/testBlockScroll() :: Absolute Memory Physical (milepost)": {
     "history": [
       73222.52,
-      80514.216
+      80514.216,
+      65161.592
     ],
     "unit": "kB"
   },
   "PerformanceTests/testBlockScroll() :: Duration (Scroll_Deceleration)": {
     "history": [
       0.7004,
-      0.6999
+      0.6999,
+      0.7001
     ],
     "unit": "s"
   },
   "PerformanceTests/testBlockScroll() :: Memory Peak Physical (milepost)": {
     "history": [
       73386.36,
-      80694.44
+      80694.44,
+      65194.36
     ],
     "unit": "kB"
   },
   "PerformanceTests/testBlockScroll() :: Memory Physical (milepost)": {
     "history": [
       -16.384,
+      0,
       0
     ],
     "unit": "kB"
@@ -30,14 +34,16 @@
   "PerformanceTests/testLaunch() :: Duration (ApplicationFirstFramePresentationResponsive)": {
     "history": [
       3.8802,
-      1.1136
+      1.1136,
+      1.0403
     ],
     "unit": "s"
   },
   "PerformanceTests/testLaunchToRecord() :: Clock Monotonic Time": {
     "history": [
       6.6157,
-      4.113
+      4.113,
+      4.098
     ],
     "unit": "s"
   }
