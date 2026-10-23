@@ -499,10 +499,14 @@ Record options (`RecordOptions.swift`, added 2026-10-22, owner sent a Strava rec
   equivalent and are left out on purpose.
 - Since 2026-10-23 (owner, second Strava recording) the panel FOLLOWS THE
   THUMB: `dragReveal` tracks the finger (rubber band past open, stops at
-  shut), and on release `predictedEndTranslation` decides open/shut at half
-  the options' height. The options are always laid out (height measured with
-  `onGeometryChange`), clipped to the reveal, and accessibilityHidden +
-  untouchable until open — so tests still see them "not exist" when shut.
+  shut), and on release `predictedEndTranslation` decides (`settlesOpen`: a
+  third of the way opens, a third down closes). The options exist only while
+  open or under the finger (height via `onGeometryChange`, 380 until first
+  measured), so tests see them "not exist" when shut.
+- The drag is `.global`: the panel grows up under the finger, so in the
+  panel's own space a 220pt pull read as 113 and the panel lagged the thumb.
+  It is a `highPriorityGesture` so a pull starting on History/Start never
+  also presses the button (it did: History switched tabs mid-drag).
 
 Daily steps (`DailyMovementSection`, You tab, added 2026-10-22, user request):
 - You > Apple Health > "Daily steps", OFF by default, independent of saving:

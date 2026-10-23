@@ -276,7 +276,7 @@ struct RecordScreen: View {
                         historyChip
                     }
                     .padding(.horizontal, 24)
-                    options
+                    if showOptions || dragReveal != nil { options }
                 }
             }
         }
@@ -287,18 +287,23 @@ struct RecordScreen: View {
         // finger goes, down puts them away, and letting go settles on
         // whichever side the flick is heading.
         .contentShape(RoundedRectangle(cornerRadius: 30))
-        .gesture(DragGesture(minimumDistance: 6)
+        // High priority: once the finger has moved it is a drag, so a pull
+        // that starts on History or Start never fires the button as well.
+        // A tap that does not move still reaches the button. Measured on the
+        // screen, not the panel: the panel grows up under the finger, so in
+        // its own space a 220pt pull read as 113 and lagged the thumb.
+        .highPriorityGesture(DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { drag in
-                guard !recorder.isActive, optionsHeight > 0 else { return }
-                let base = showOptions ? optionsHeight : 0
-                dragReveal = Self.rubberBand(base - drag.translation.height, limit: optionsHeight)
+                guard !recorder.isActive else { return }
+                let base = showOptions ? fullOptionsHeight : 0
+                dragReveal = Self.rubberBand(base - drag.translation.height, limit: fullOptionsHeight)
             }
             .onEnded { drag in
                 guard dragReveal != nil else { return }
-                let base = showOptions ? optionsHeight : 0
+                let base = showOptions ? fullOptionsHeight : 0
                 let landing = base - drag.predictedEndTranslation.height
                 withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
-                    showOptions = landing > optionsHeight / 2
+                    showOptions = Self.settlesOpen(landing: landing, height: fullOptionsHeight, wasOpen: showOptions)
                     dragReveal = nil
                 }
             })
@@ -318,11 +323,14 @@ struct RecordScreen: View {
         .padding(.bottom, 10)
     }
 
-    /// Always laid out (so its height is known before the first drag) and
-    /// shown only as far as `reveal`; out of reach and out of VoiceOver's
-    /// way until it is open.
+    /// Measured the first time the options are on screen; until then, about
+    /// what six rows come to.
+    private var fullOptionsHeight: CGFloat { optionsHeight > 0 ? optionsHeight : 380 }
+
+    /// On screen only while open or under the finger, shown as far as
+    /// `reveal`; untouchable mid-drag and hidden from VoiceOver until open.
     private var options: some View {
-        let reveal = dragReveal ?? (showOptions ? optionsHeight : 0)
+        let reveal = dragReveal ?? (showOptions ? fullOptionsHeight : 0)
         return RecordOptions()
             .padding(.horizontal, 6)
             .padding(.top, 12)
@@ -333,6 +341,12 @@ struct RecordScreen: View {
             .opacity(min(1, reveal / 80))
             .allowsHitTesting(showOptions && dragReveal == nil)
             .accessibilityHidden(!showOptions)
+    }
+
+    /// A third of the way is enough either way: a third up opens it, a
+    /// third down closes it, so a thumb never has to cross the middle.
+    static func settlesOpen(landing: CGFloat, height: CGFloat, wasOpen: Bool) -> Bool {
+        wasOpen ? landing > height * 2 / 3 : landing > height / 3
     }
 
     /// Past the fully open height the panel still gives a little, a third
