@@ -26,6 +26,10 @@ struct RecordScreen: View {
     @State private var pendingStart = false
     /// The Record panel pulled up to show `RecordOptions` (Strava's sheet).
     @State private var showOptions = false
+    /// The options' full height, and how much of it shows while a finger is
+    /// on the panel: the panel follows the thumb, then settles open or shut.
+    @State private var optionsHeight: CGFloat = 0
+    @State private var dragReveal: CGFloat?
     /// Past routes, coloured by how often each street was covered.
     @State private var heat: [HeatSegment] = []
     /// Friends' shared street cells in the window, for blue and green.
@@ -265,30 +269,41 @@ struct RecordScreen: View {
                 // label wider than both the circle above it and "History" —
                 // grew the left column and shoved Start off centre. Thirds
                 // put Start on the screen's centre line whatever is chosen.
-                HStack(alignment: .center, spacing: 0) {
-                    sportChip
-                    startButton
-                    historyChip
-                }
-                .padding(.horizontal, 24)
-                if showOptions {
-                    RecordOptions()
-                        .padding(.horizontal, 6)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                VStack(spacing: 0) {
+                    HStack(alignment: .center, spacing: 0) {
+                        sportChip
+                        startButton
+                        historyChip
+                    }
+                    .padding(.horizontal, 24)
+                    options
                 }
             }
         }
         .padding(.top, recorder.isActive ? 18 : 8)
         .padding(.bottom, 18)
-        // Pull up for more, push down to put it away, anywhere on the panel.
+        // The panel follows the thumb anywhere on it (owner, 2026-10-23,
+        // from a Strava recording): up reveals the options as far as the
+        // finger goes, down puts them away, and letting go settles on
+        // whichever side the flick is heading.
         .contentShape(RoundedRectangle(cornerRadius: 30))
-        .gesture(DragGesture(minimumDistance: 14).onEnded { drag in
-            guard !recorder.isActive else { return }
-            if drag.translation.height < -30 { setOptions(true) }
-            if drag.translation.height > 30 { setOptions(false) }
-        })
+        .gesture(DragGesture(minimumDistance: 6)
+            .onChanged { drag in
+                guard !recorder.isActive, optionsHeight > 0 else { return }
+                let base = showOptions ? optionsHeight : 0
+                dragReveal = Self.rubberBand(base - drag.translation.height, limit: optionsHeight)
+            }
+            .onEnded { drag in
+                guard dragReveal != nil else { return }
+                let base = showOptions ? optionsHeight : 0
+                let landing = base - drag.predictedEndTranslation.height
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                    showOptions = landing > optionsHeight / 2
+                    dragReveal = nil
+                }
+            })
         .onChange(of: recorder.isActive) { _, active in
-            if active { showOptions = false }
+            if active { showOptions = false; dragReveal = nil }
         }
         .frame(maxWidth: .infinity)
         // A floating dark glass panel (2026-10-22) instead of an opaque
@@ -301,6 +316,31 @@ struct RecordScreen: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 10)
+    }
+
+    /// Always laid out (so its height is known before the first drag) and
+    /// shown only as far as `reveal`; out of reach and out of VoiceOver's
+    /// way until it is open.
+    private var options: some View {
+        let reveal = dragReveal ?? (showOptions ? optionsHeight : 0)
+        return RecordOptions()
+            .padding(.horizontal, 6)
+            .padding(.top, 12)
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { optionsHeight = $0 }
+            .frame(height: reveal, alignment: .top)
+            .clipped()
+            .opacity(min(1, reveal / 80))
+            .allowsHitTesting(showOptions && dragReveal == nil)
+            .accessibilityHidden(!showOptions)
+    }
+
+    /// Past the fully open height the panel still gives a little, a third
+    /// as fast, like a system sheet; below shut it stops.
+    static func rubberBand(_ reveal: CGFloat, limit: CGFloat) -> CGFloat {
+        if reveal <= 0 { return 0 }
+        if reveal <= limit { return reveal }
+        return limit + (reveal - limit) / 3
     }
 
     /// The handle on top of the panel. A button as well as a drag target, so

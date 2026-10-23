@@ -495,6 +495,12 @@ Record options (`RecordOptions.swift`, added 2026-10-22, owner sent a Strava rec
   before a run; starting one closes it. Same settings as Profile > Settings.
   Strava's live location, route alerts and sensors have no Milepost
   equivalent and are left out on purpose.
+- Since 2026-10-23 (owner, second Strava recording) the panel FOLLOWS THE
+  THUMB: `dragReveal` tracks the finger (rubber band past open, stops at
+  shut), and on release `predictedEndTranslation` decides open/shut at half
+  the options' height. The options are always laid out (height measured with
+  `onGeometryChange`), clipped to the reveal, and accessibilityHidden +
+  untouchable until open — so tests still see them "not exist" when shut.
 
 Daily steps (`DailyMovementSection`, You tab, added 2026-10-22, user request):
 - You > Apple Health > "Daily steps", OFF by default, independent of saving:
