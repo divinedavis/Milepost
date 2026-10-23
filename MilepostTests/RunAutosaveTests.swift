@@ -184,3 +184,28 @@ final class RunAutosaveTests: XCTestCase {
                        [HKQuantityType(.stepCount), HKQuantityType(.distanceWalkingRunning)])
     }
 }
+
+/// The Profile map draws hundreds of routes; each is thinned first.
+final class RouteLineTests: XCTestCase {
+    private func line(_ n: Int) -> [CLLocationCoordinate2D] {
+        (0..<n).map { CLLocationCoordinate2D(latitude: 40 + Double($0) * 1e-5, longitude: -73) }
+    }
+
+    func testShortRoutesAreUntouched() {
+        XCTAssertEqual(RouteLine.thin(line(10), to: 250).count, 10)
+    }
+
+    func testLongRoutesAreCappedAndKeepBothEnds() {
+        let points = line(3_601)
+        let thin = RouteLine.thin(points, to: 250)
+        XCTAssertLessThanOrEqual(thin.count, 251)
+        XCTAssertGreaterThan(thin.count, 200)
+        XCTAssertEqual(thin.first?.latitude, points.first?.latitude)
+        XCTAssertEqual(thin.last?.latitude, points.last?.latitude)
+    }
+
+    func testStrollerRunsAreRunsOnTheMap() {
+        XCTAssertEqual(Sport.strollerRun.mapGroup, .run)
+        XCTAssertEqual(Sport.walk.mapGroup, .walk)
+    }
+}

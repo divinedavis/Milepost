@@ -121,10 +121,11 @@ final class MilepostFriendsUITests: XCTestCase {
     func testAccountSectionOnYou() {
         launch(demo: true)
         tap("tab.you")
-        // The Account section sits below the fold, and how far below moves
-        // whenever a setting is added above it (Apple Health did). Offscreen
-        // List cells are not in the accessibility tree, so scroll until it is
-        // there rather than guessing a number of swipes.
+        // Profile shows the account's name and handle in its header card.
+        XCTAssertTrue(element("you.name").waitForExistence(timeout: 8))
+        // The account lives behind Profile > Friends & account since 2026-10-22.
+        scrollToElement("you.rowAccount")
+        tap("you.rowAccount")
         scrollToElement("you.username")
         XCTAssertTrue(element("you.username").waitForExistence(timeout: 6))
         XCTAssertTrue(element("you.username").label.contains("@you_demo"), element("you.username").label)

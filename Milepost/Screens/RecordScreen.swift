@@ -90,9 +90,13 @@ struct RecordScreen: View {
                         GPSStatusPill(status: location.gpsStatus)
                             .padding(.bottom, 8)
                     }
-                    statsCard
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 10)
+                    // Only during a workout (owner, 2026-10-22): before Start
+                    // it was a card of zeros covering the map.
+                    if recorder.isActive {
+                        statsCard
+                            .padding(.horizontal, 12)
+                            .padding(.bottom, 10)
+                    }
                     bottomBar
                 }
             }

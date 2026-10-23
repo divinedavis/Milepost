@@ -140,6 +140,45 @@ final class SocialTests: XCTestCase {
         XCTAssertEqual(s.phase, .signedIn, "a signed-in cold start must not pass through signed-out")
     }
 
+    /// The in-app request banner (2026-10-22): announced once, not at every
+    /// minute's check, and not after the Friends screen has shown it.
+    func testANewRequestIsAnnouncedOnce() async {
+        let (s, _, _) = store()
+        await s.loadProfile()
+        await s.checkForRequests()
+        XCTAssertEqual(s.requestBanner?.username, "sam_walks")
+        s.requestBanner = nil
+        await s.checkForRequests()
+        XCTAssertNil(s.requestBanner, "the same request must not be announced twice")
+        XCTAssertEqual(s.incomingSummary, "1 friend request")
+    }
+
+    func testSeeingRequestsOnTheFriendsScreenSilencesTheBanner() async {
+        let (s, _, _) = store()
+        await s.loadProfile()
+        s.markRequestsSeen()
+        await s.checkForRequests()
+        XCTAssertNil(s.requestBanner)
+    }
+
+    func testAnAnsweredRequestIsForgottenSoTheListStaysBounded() async {
+        let (s, _, defaults) = store()
+        await s.loadProfile()
+        await s.checkForRequests()
+        XCTAssertEqual(defaults.stringArray(forKey: SocialStore.announcedRequestsKey), [DemoSocialBackend.sam.uuidString])
+        await s.respond(to: DemoSocialBackend.sam, accept: true)
+        await s.checkForRequests()
+        XCTAssertEqual(defaults.stringArray(forKey: SocialStore.announcedRequestsKey), [])
+        XCTAssertEqual(s.incomingSummary, "0 friend requests")
+    }
+
+    func testSignedOutNeverChecks() async {
+        let (s, _, _) = store()
+        await s.signOut()
+        await s.checkForRequests()
+        XCTAssertNil(s.requestBanner)
+    }
+
     func testFriendFlows() async {
         let (s, _, _) = store()
         await s.loadProfile()

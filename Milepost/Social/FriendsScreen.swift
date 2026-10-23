@@ -102,7 +102,10 @@ struct FriendsScreen: View {
         }
         .navigationTitle("Friends")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await social.loadConnections() }
+        .task {
+            await social.loadConnections()
+            social.markRequestsSeen()
+        }
         .task(id: needle) { await runSearch() }
         .refreshable { await social.loadConnections() }
         .confirmationDialog("Report \(reporting?.handle ?? "")?", isPresented: present($reporting), titleVisibility: .visible, presenting: reporting) { person in

@@ -23,6 +23,12 @@ final class SocialStore {
     static let sharingDefault = false
     /// Local deletes that could not reach the server yet.
     static let pendingDeletesKey = "social.pendingDeletes"
+    /// Incoming requests already announced with the in-app banner, so one
+    /// request is announced once, not at every check.
+    static let announcedRequestsKey = "social.announcedRequests"
+    /// How often an open app checks for new friend requests. One small
+    /// SELECT per signed-in user per minute, only while the app is open.
+    static let requestCheckInterval: TimeInterval = 60
     /// OFF by default: friends were promised stats only, so sending street
     /// cells is a separate, explicit opt-in.
     static let streetsKey = "social.shareStreets"
@@ -46,6 +52,11 @@ final class SocialStore {
     private(set) var connections: [FriendProfile] = []
     private(set) var blocked: [FriendProfile] = []
     var lastError: String?
+    /// A friend request that arrived since the last check, for the in-app
+    /// banner. The banner clears it.
+    var requestBanner: FriendProfile?
+    /// Set by the banner's View button; Profile pushes the Friends screen.
+    var openRequests = false
     /// A one-line confirmation or failure the current screen shows in an alert.
     var notice: String?
     /// Apple sends the name exactly once; kept for the username sheet.
@@ -67,6 +78,10 @@ final class SocialStore {
     var incoming: [FriendProfile] { connections.filter { $0.status == .incoming } }
     var outgoing: [FriendProfile] { connections.filter { $0.status == .outgoing } }
     var friends: [FriendProfile] { connections.filter { $0.status == .friend } }
+    /// "1 friend request" / "3 friend requests", for badges' VoiceOver text.
+    var incomingSummary: String {
+        incoming.count == 1 ? "1 friend request" : "\(incoming.count) friend requests"
+    }
 
     init(backend: SocialBackend, defaults: UserDefaults = .standard) {
         self.backend = backend
@@ -345,6 +360,27 @@ final class SocialStore {
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    /// Reloads connections and raises the banner for the newest incoming
+    /// request not announced before. Requests the user has already seen on
+    /// the Friends screen count as announced too.
+    func checkForRequests() async {
+        guard canUseFriends else { return }
+        await loadConnections()
+        var announced = Set(defaults.stringArray(forKey: Self.announcedRequestsKey) ?? [])
+        let fresh = incoming.filter { !announced.contains($0.id.uuidString) }
+        if let newest = fresh.last { requestBanner = newest }
+        announced.formUnion(fresh.map(\.id.uuidString))
+        // Only pending ones are worth remembering; keeps the list bounded.
+        let pending = Set(incoming.map(\.id.uuidString))
+        defaults.set(Array(announced.intersection(pending)), forKey: Self.announcedRequestsKey)
+    }
+
+    /// The Friends screen is open: everything waiting is seen.
+    func markRequestsSeen() {
+        defaults.set(incoming.map(\.id.uuidString), forKey: Self.announcedRequestsKey)
+        if let banner = requestBanner, incoming.contains(where: { $0.id == banner.id }) { requestBanner = nil }
     }
 
     func search(_ query: String) async -> [FriendProfile] {

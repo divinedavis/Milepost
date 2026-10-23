@@ -197,7 +197,7 @@ final class MilepostRouteUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["celebrate.title"].waitForNonExistence(timeout: 4), "the splash did not close")
 
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
-        XCTAssertEqual(app.staticTexts["record.distance"].label, "0.00", "map card resets after save")
+        XCTAssertFalse(app.staticTexts["record.distance"].exists, "the stats card leaves once the workout is saved")
 
         tap("tab.block")
         let row = app.staticTexts["block.rowTitle"].firstMatch
@@ -218,7 +218,7 @@ final class MilepostRouteUITests: XCTestCase {
         if let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty {
             app.navigationBars.buttons.element(boundBy: 0).tap()
             tap("tab.you")
-            XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 6))
+            XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 6))
             sleep(1)
             snap("you-totals")
             tap("tab.block")

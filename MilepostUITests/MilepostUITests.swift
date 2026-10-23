@@ -32,6 +32,17 @@ final class MilepostUITests: XCTestCase {
         try? data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
     }
 
+
+    /// Profile keeps settings behind rows since 2026-10-22: open the tab,
+    /// bring the row on screen, and push its screen.
+    private func openProfileRow(_ id: String) {
+        app.buttons["tab.you"].tap()
+        let row = app.buttons[id]
+        XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 8), "Profile never opened")
+        for _ in 0..<8 where !(row.exists && row.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(row.isHittable, "\(id) never came on screen")
+        row.tap()
+    }
     private func tap(_ id: String, timeout: TimeInterval = 6) {
         let el = app.buttons[id]
         XCTAssertTrue(el.waitForExistence(timeout: timeout), "\(id) never appeared")
@@ -57,14 +68,18 @@ final class MilepostUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No activities yet"].waitForExistence(timeout: 6))
 
         tap("tab.you")
-        XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.staticTexts["Units"].exists)
+        XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["you.tileActivities"].exists)
+        XCTAssertTrue(app.buttons["you.tileFriends"].exists)
+        openProfileRow("you.rowSettings")
+        XCTAssertTrue(app.staticTexts["Units"].waitForExistence(timeout: 6))
 
         tap("tab.record")
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 6))
-        XCTAssertEqual(app.staticTexts["record.time"].label, "00:00")
-        XCTAssertEqual(app.staticTexts["record.distance"].label, "0.00")
-        XCTAssertEqual(app.staticTexts["record.pace"].label, "-:--")
+        // No stats card until a workout starts (owner, 2026-10-22).
+        XCTAssertFalse(app.staticTexts["record.time"].exists, "a card of zeros before Start")
+        XCTAssertFalse(app.staticTexts["record.distance"].exists)
+        XCTAssertFalse(app.staticTexts["record.pace"].exists)
         XCTAssertFalse(app.buttons["record.expand"].exists, "nothing to expand before a run starts")
     }
 
@@ -116,7 +131,7 @@ final class MilepostUITests: XCTestCase {
         alert.buttons["Discard"].tap()
 
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
-        XCTAssertEqual(app.staticTexts["record.time"].label, "00:00")
+        XCTAssertFalse(app.staticTexts["record.time"].exists, "the stats card leaves with the workout")
     }
 
     /// Resume from the alert keeps the run going; collapsing shows the same
@@ -149,7 +164,7 @@ final class MilepostUITests: XCTestCase {
     }
 
     func testUnitsSettingChangesLabels() {
-        tap("tab.you")
+        openProfileRow("you.rowSettings")
         let picker = app.buttons["you.units"].exists ? app.buttons["you.units"] : app.otherElements["you.units"]
         XCTAssertTrue(picker.waitForExistence(timeout: 6))
         picker.tap()
@@ -157,25 +172,41 @@ final class MilepostUITests: XCTestCase {
         XCTAssertTrue(km.waitForExistence(timeout: 4))
         km.tap()
 
+        // The Record tab shows no stats until a workout starts, so read
+        // the unit off the live recorder, then throw the run away.
         tap("tab.record")
+        startRun()
         XCTAssertTrue(app.staticTexts["Distance (km)"].waitForExistence(timeout: 6))
+        discardRun()
 
         // Put it back for the other tests (AppStorage persists across launches).
-        tap("tab.you")
+        openProfileRow("you.rowSettings")
+        XCTAssertTrue(picker.waitForExistence(timeout: 6))
         picker.tap()
         let mi = app.buttons["Miles"]
         XCTAssertTrue(mi.waitForExistence(timeout: 4))
         mi.tap()
         tap("tab.record")
+        startRun()
         XCTAssertTrue(app.staticTexts["Distance (mi)"].waitForExistence(timeout: 6))
+        discardRun()
+    }
+
+    /// Pause, Finish, Discard: the pinned simulator never moves.
+    private func discardRun() {
+        tap("live.pause")
+        tap("live.finish")
+        let alert = app.alerts["No Movement Detected"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 6))
+        alert.buttons["Discard"].tap()
+        XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
     }
 
     /// Apple Health starts off, and so does the route. Tapping the first
     /// toggle raises Apple's own permission sheet, which the runner cannot
     /// dismiss, so this checks the state around it instead of driving it.
     func testAppleHealthAndRouteBothStartOff() {
-        tap("tab.you")
-        app.swipeUp()
+        openProfileRow("you.rowHealth")
         let health = app.switches["you.healthEnabled"]
         XCTAssertTrue(health.waitForExistence(timeout: 6))
         XCTAssertEqual(health.value as? String, "0", "saving to Health must be opt-in")
@@ -187,8 +218,7 @@ final class MilepostUITests: XCTestCase {
         app.terminate()
         app.launchArguments += ["-uitest-health-on"]
         app.launch()
-        tap("tab.you")
-        app.swipeUp()
+        openProfileRow("you.rowHealth")
         let route = app.switches["you.healthRoute"]
         XCTAssertTrue(route.waitForExistence(timeout: 6))
         // Allowing Health is not the same as agreeing to hand over a map of
@@ -207,8 +237,7 @@ final class MilepostUITests: XCTestCase {
     /// Off by default; on, a run started standing still stops its own clock
     /// and says so in the banner.
     func testAutoPauseStartsOffAndPausesARunStandingStill() {
-        tap("tab.you")
-        app.swipeUp()
+        openProfileRow("you.rowSettings")
         let toggle = app.switches["you.autoPause"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 6))
         XCTAssertEqual(toggle.value as? String, "0")
@@ -243,8 +272,7 @@ final class MilepostUITests: XCTestCase {
     }
 
     func testVoiceCuesSettingEnablesPreviewAndPersists() {
-        tap("tab.you")
-        app.swipeUp()
+        openProfileRow("you.rowSettings")
         let toggle = app.switches["you.voiceEnabled"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 6))
         XCTAssertEqual(toggle.value as? String, "1")
@@ -269,8 +297,7 @@ final class MilepostUITests: XCTestCase {
         XCTAssertFalse(picker.isEnabled)
 
         tap("tab.record")
-        tap("tab.you")
-        app.swipeUp()
+        openProfileRow("you.rowSettings")
         XCTAssertTrue(toggle.waitForExistence(timeout: 6))
         XCTAssertEqual(toggle.value as? String, "0")
         XCTAssertTrue(picker.label.contains("Every 2 miles"), picker.label)

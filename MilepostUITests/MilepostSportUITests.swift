@@ -85,7 +85,9 @@ final class MilepostSportUITests: XCTestCase {
     func testStrollerRunKeepsPaceAndTheChoiceSticks() {
         choose("strollerRun")
         XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Stroller Run")
-        XCTAssertTrue(app.staticTexts["Avg. pace (/mi)"].waitForExistence(timeout: 6))
+        // Pace vs speed per sport is pinned in SportTests; the Record tab
+        // shows no stats until a workout starts (2026-10-22).
+        XCTAssertFalse(app.staticTexts["record.pace"].exists)
         snap("stroller-run-selected")
         tap("tab.you")
         tap("tab.record")
@@ -96,9 +98,7 @@ final class MilepostSportUITests: XCTestCase {
     /// bike speeds, so the label and the placeholder both have to change.
     func testARideIsMeasuredInSpeedNotPace() {
         choose("bike")
-        XCTAssertTrue(app.staticTexts["Avg. speed (mph)"].waitForExistence(timeout: 6),
-                      "the map card still offers pace for a ride")
-        XCTAssertEqual(app.staticTexts["record.pace"].label, "-.-")
+        XCTAssertFalse(app.staticTexts["record.pace"].exists, "no stats card before Start")
 
         tap("record.start")
         allowLocation()
@@ -108,6 +108,12 @@ final class MilepostSportUITests: XCTestCase {
         XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["Split avg. speed (mph)"].waitForExistence(timeout: 6),
                       "the recorder still offers pace for a ride")
+        // Collapsed, the map card is back for the workout, in speed.
+        tap("live.collapse")
+        XCTAssertTrue(app.staticTexts["Avg. speed (mph)"].waitForExistence(timeout: 6),
+                      "the map card still offers pace for a ride")
+        XCTAssertEqual(app.staticTexts["record.pace"].label, "-.-")
+        tap("record.expand")
         snap("live-ride")
 
         // Finish with no movement: the sheet and alert speak of a ride.
@@ -122,10 +128,10 @@ final class MilepostSportUITests: XCTestCase {
     /// A walk keeps pace, and the sport sticks across the tab bar.
     func testAWalkKeepsPaceAndTheChoiceSticks() {
         choose("walk")
-        XCTAssertTrue(app.staticTexts["Avg. pace (/mi)"].waitForExistence(timeout: 6))
+        XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Walk")
 
         tap("tab.you")
-        XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 6))
         tap("tab.record")
         XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Walk")
     }

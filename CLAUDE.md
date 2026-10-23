@@ -394,6 +394,38 @@ user report: a walker's app died halfway and the walk was gone — a run lived o
   watch has no checkpoint yet (its HKWorkoutSession could be recovered with
   `recoverActiveWorkoutSession`).
 
+Profile tab (`YouScreen.swift`, `RoutesMapView`, `SettingsScreen`, added 2026-10-22, owner sent
+an Airbnb Profile recording):
+- The You tab is titled **Profile**; `Tab.you`, `tab.you` and the `you.*` ids
+  are unchanged so tests and `-open-tab you` still work. Layout: header card
+  (initials avatar, name + @handle, Activities / Miles / Weeks-on-Milepost),
+  "Your map" card, Activities + Friends tiles, Daily steps, This week, then
+  rows: Settings, Apple Health, Friends & account (each its own pushed
+  screen — `ProfileRoute`), Get help, Privacy (links).
+- **UI tests reach settings through rows now** (`openProfileRow` /
+  `openHealthSettings`): a pushed screen is reset when the tab is left, so
+  re-open the row after switching tabs.
+- "Your map" (`you.map`) opens `RoutesMapView`: every saved route as a line,
+  coloured by sport (stroller runs count as runs), filter chips
+  `routes.filter.{all,run,walk,bike}`, `routes.count` carries the count
+  (polylines are not in the accessibility tree). Routes are thinned to 250
+  points (`RouteLine.thin`). Local only; nothing new leaves the phone.
+
+Friend request notification (in-app only, added 2026-10-22, owner request):
+- Milepost has no push. While the app is in the foreground and signed in,
+  `RootView` calls `SocialStore.checkForRequests()` now and every 60 s
+  (`requestCheckInterval`, one SELECT). A request not seen before raises
+  `FriendRequestBanner` (`request.banner`, View → Friends screen, auto-hides
+  after 6 s); `social.announcedRequests` keeps it to once, pruned to
+  pending ids. The Friends screen marks everything seen.
+- Badges: red dot on the Profile tab (value "1 friend request"), on the
+  bell (`you.notifications`) and "N new" on the Friends tile.
+- Under `-uitest` the check is OFF (the demo backend always has Sam's
+  request and the banner would cover other tests); `-uitest-request-banner`
+  turns it on.
+- A real push when the app is closed would need APNs + a server trigger on
+  `friendships` — not built.
+
 Daily steps (`DailyMovementSection`, You tab, added 2026-10-22, user request):
 - You > Apple Health > "Daily steps", OFF by default, independent of saving:
   it asks Health for READ only (`dailyReadTypes`: steps + walking/running

@@ -56,15 +56,19 @@ final class MilepostRecoveryUITests: XCTestCase {
         app.launch()
         app.buttons["tab.you"].tap()
 
-        let today = app.otherElements["you.dailyToday"].exists
-            ? app.otherElements["you.dailyToday"]
-            : app.descendants(matching: .any)["you.dailyToday"]
+        XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 8))
+        let today = app.descendants(matching: .any)["you.dailyToday"]
+        // Below the header, map and tiles since Profile took its card layout.
+        for _ in 0..<6 where !today.exists { app.swipeUp(velocity: .slow) }
         XCTAssertTrue(today.waitForExistence(timeout: 8), "the Daily steps card never appeared")
         XCTAssertTrue(today.label.contains("6,412"), today.label)
         XCTAssertTrue(today.label.contains("steps today"), today.label)
         XCTAssertGreaterThanOrEqual(app.descendants(matching: .any).matching(identifier: "you.dailyDay").count, 3)
 
-        // The switch that controls it is in Apple Health, and it is on.
+        // The switch that controls it is in Profile > Apple Health, and it is on.
+        let row = app.buttons["you.rowHealth"]
+        for _ in 0..<6 where !(row.exists && row.isHittable) { app.swipeUp(velocity: .slow) }
+        row.tap()
         let toggle = app.switches["you.healthDaily"]
         for _ in 0..<6 where !(toggle.exists && toggle.isHittable) { app.swipeUp(velocity: .slow) }
         XCTAssertTrue(toggle.exists, "Daily steps switch missing from Apple Health")
