@@ -63,7 +63,12 @@ final class MilepostRecoveryUITests: XCTestCase {
         XCTAssertTrue(today.waitForExistence(timeout: 8), "the Daily steps card never appeared")
         XCTAssertTrue(today.label.contains("6,412"), today.label)
         XCTAssertTrue(today.label.contains("steps today"), today.label)
-        XCTAssertGreaterThanOrEqual(app.descendants(matching: .any).matching(identifier: "you.dailyDay").count, 3)
+        // The week's rows sit under today's, near the floating tab bar;
+        // offscreen List rows are not in the tree, so bring them up first.
+        let day = app.descendants(matching: .any).matching(identifier: "you.dailyDay").firstMatch
+        for _ in 0..<4 where !(day.exists && day.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(day.exists, "no day rows under today")
+        XCTAssertTrue(day.label.contains("·") || day.label.contains("--"), day.label)
 
         // The switch that controls it is in Profile > Apple Health, and it is on.
         let row = app.buttons["you.rowHealth"]

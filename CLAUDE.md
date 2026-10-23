@@ -12,8 +12,11 @@ Same per-change loop as the other iOS apps (Pothole Radar is the template):
 
 1. `./scripts/run_tests.sh` — unit + UI. Decide whether the change needs a new
    XCUITest and say so in the commit body ("XCUITest: added X" / "N/A because").
-   The suite is five passes: unit, static UI, sport, Live Activity, and two
-   moving ones (a run at 3.5 m/s and a ride at 8 m/s).
+   The suite is passes: unit, static UI, sport, Live Activity, the
+   Profile/recovery/holiday/record-options classes (added to `ui_all`
+   2026-10-22 — they had only been run by hand), and two moving ones (a run
+   at 3.5 m/s and a ride at 8 m/s). A new UI test class must be added to
+   `ui_all` in run_tests.sh or the ship never runs it.
 2. `./scripts/smoke_test.sh` — a green suite does not prove a cold launch.
 3. Secrets scan of the staged diff. `scripts/asc-config.env` and `*.p8` are
    gitignored; nothing else here is secret.
@@ -387,8 +390,11 @@ user report: a walker's app died halfway and the walk was gone — a run lived o
   (`wroteThisSession`) — at launch the file on disk is the last run's.
   `endRun` clears it at once; writes and deletes share one serial queue so a
   slow write can never resurrect a finished run.
-- UI tests use a temp file wiped at launch (many tests start a run and
-  terminate, which must not seed the next test). `-uitest-seed-checkpoint`
+- UI tests use their own file (`uitest-run-in-progress.json`, next to the
+  real one — NOT tmp: iOS emptied tmp between launches and the kill-and-
+  relaunch test failed only in the full ship run), wiped at launch unless
+  `-uitest-keep-autosave` (many tests start a run and terminate, which must
+  not seed the next test). `-uitest-seed-checkpoint`
   (DEBUG) plants `HeatmapPreviewData.interruptedWalk()`.
 - Not resumable: a recovered run is saved, not continued. Phone only — the
   watch has no checkpoint yet (its HKWorkoutSession could be recovered with

@@ -78,8 +78,11 @@ struct MilepostApp: App {
         // killed by iOS) is saved before anything can start a new one.
         // UI tests get their own file, wiped here: many of them start a run
         // and terminate the app, which must not seed the next test's store.
+        // Next to the real one, not in tmp: iOS may empty tmp between two
+        // launches, which made the kill-and-relaunch test fail only in the
+        // full ship run (2026-10-22).
         let autosaveURL = isUITest
-            ? FileManager.default.temporaryDirectory.appendingPathComponent("uitest-run-in-progress.json")
+            ? RunAutosave.defaultURL.deletingLastPathComponent().appendingPathComponent("uitest-run-in-progress.json")
             : RunAutosave.defaultURL
         // `-uitest-keep-autosave` is the relaunch after a test killed the app
         // mid-run: the file is the thing under test.
