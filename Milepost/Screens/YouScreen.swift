@@ -220,7 +220,9 @@ struct YouScreen: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.red, in: Capsule())
+                        // A deeper red than .red: white on system red is ~3.5:1
+                        // at this size and failed the contrast audit.
+                        .background(Color(red: 0.80, green: 0.0, blue: 0.08), in: Capsule())
                         .padding(10)
                 }
             }

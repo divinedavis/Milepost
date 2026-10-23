@@ -7,6 +7,7 @@ struct SettingsScreen: View {
     @AppStorage(VoiceCueInterval.storageKey) private var voiceRaw = VoiceCueInterval.half.rawValue
     @AppStorage(VoiceCueInterval.enabledKey) private var voiceEnabled = true
     @AppStorage(AutoPauseSettings.enabledKey) private var autoPause = AutoPauseSettings.enabledDefault
+    @AppStorage(HolidayIcon.settingKey) private var holidayIcons = HolidayIcon.enabledDefault
     @Environment(VoiceAnnouncer.self) private var announcer
     @Environment(RunRecorder.self) private var recorder
     @Environment(PhoneWatchSync.self) private var watchSync
@@ -31,6 +32,15 @@ struct SettingsScreen: View {
                 }
                 .accessibilityIdentifier("you.autoPause")
                 .onChange(of: autoPause) { _, _ in watchSync.pushSettings() }
+            }
+
+            Section {
+                Toggle(isOn: $holidayIcons) {
+                    Text("Holiday app icons")
+                    Text("Your Home Screen icon wears the colors of holidays like Thanksgiving and Juneteenth, then switches back.")
+                }
+                .accessibilityIdentifier("you.holidayIcons")
+                .onChange(of: holidayIcons) { _, _ in HolidayIcon.apply() }
             }
 
             Section {

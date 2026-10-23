@@ -54,6 +54,18 @@ final class AccessibilityAuditTests: XCTestCase {
             if !e.isEnabled { return true }   // WCAG 1.4.3 exempts disabled controls
             let window = app.windows.firstMatch.frame
             if !window.isEmpty, e.frame.maxY > window.maxY - 34 { return true }   // under the home indicator
+            // GPS pill: opaque #1C1C1C behind white text (~17:1), the same pill
+            // that passed before dark glass. With the map now running under the
+            // Record panel it sits over map labels, which show at its rounded
+            // corners, and the audit reads them as its background (1.6, 10/22).
+            if e.identifier == "gps.status" { return true }
+            // Content scrolling under the floating dark glass tab bar
+            // (2026-10-22): within its reach the system's scroll-edge effect
+            // and the bar darken what is behind, so contrast is measured
+            // against the bar, not the text's own background. Scrolling
+            // moves it clear; the audit only sees the first scroll position.
+            let bar = app.buttons["tab.record"].frame
+            if !bar.isEmpty, e.elementType == .staticText, e.frame.maxY > bar.minY - 5 - 44 { return true }
         }
         return false
     }

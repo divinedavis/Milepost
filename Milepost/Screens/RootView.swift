@@ -24,6 +24,10 @@ struct RootView: View {
     @Environment(RunRecorder.self) private var recorder
     @Environment(SaveCelebration.self) private var celebration
     @Environment(SocialStore.self) private var social
+    @Environment(HolidayStore.self) private var holidays
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 0 → 1 slides the holiday colours through the pill after each tap.
+    @State private var drift: CGFloat = 0
     @Environment(\.scenePhase) private var scenePhase
     /// UI tests share one demo backend with a waiting request; the banner
     /// would sit over every Friends test, so only its own test turns it on.
@@ -57,6 +61,15 @@ struct RootView: View {
                 .padding(.bottom, 4)
         }
         .background(Theme.background)
+        // milepost://record, ://block, ://profile — App Store event links.
+        .onOpenURL { url in
+            guard url.scheme == "milepost" else { return }
+            switch url.host() {
+            case "block": tab = .block
+            case "profile", "you": tab = .you
+            default: tab = .record
+            }
+        }
         .overlay(alignment: .top) {
             if let person = social.requestBanner {
                 FriendRequestBanner(person: person) {
@@ -126,13 +139,19 @@ struct RootView: View {
                         }
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.barHeight - 10)
-                    .foregroundStyle(selected ? Theme.accentText : Color.white.opacity(0.92))
+                    // On a holiday the selected icon sits on the day's
+                    // colours, so it goes white like Marracat's.
+                    .foregroundStyle(selected ? (holidays.current == nil ? Theme.accentText : .white) : Color.white.opacity(0.92))
                     .background {
                         if selected {
-                            Capsule()
-                                .fill(DarkGlass.pill)
-                                .overlay(Capsule().strokeBorder(DarkGlass.rim, lineWidth: 1))
-                                .matchedGeometryEffect(id: "pill", in: pill)
+                            if let holiday = holidays.current {
+                                holidayPill(holiday)
+                            } else {
+                                Capsule()
+                                    .fill(DarkGlass.pill)
+                                    .overlay(Capsule().strokeBorder(DarkGlass.rim, lineWidth: 1))
+                                    .matchedGeometryEffect(id: "pill", in: pill)
+                            }
                         }
                     }
                     .contentShape(Capsule())
@@ -150,6 +169,45 @@ struct RootView: View {
         .darkGlass(in: Capsule())
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: tab)
         .sensoryFeedback(.selection, trigger: tab)
+        .onAppear(perform: flow)
+        .onChange(of: tab) { flow() }
+    }
+
+    /// Marracat's holiday pill (style B): the day's colours fill it and drift
+    /// for a few seconds after each tap, with a soft glow trailing behind.
+    private func holidayPill(_ holiday: Holiday) -> some View {
+        let colors = holiday.tabColors
+        let band = LinearGradient(colors: colors + colors + [colors.first ?? .white], startPoint: .leading, endPoint: .trailing)
+        return ZStack {
+            Capsule()
+                .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
+                .blur(radius: 8)
+                .opacity(0.5)
+                .matchedGeometryEffect(id: "trail", in: pill)
+                .animation(.spring(response: 0.7, dampingFraction: 0.85), value: tab)
+            GeometryReader { geo in
+                band
+                    .frame(width: geo.size.width * 2)
+                    .offset(x: -geo.size.width * drift)
+            }
+            .clipShape(Capsule())
+            .overlay(Capsule().fill(Color.black.opacity(0.15)))
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.22), lineWidth: 1))
+            .matchedGeometryEffect(id: "pill", in: pill)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func flow() {
+        guard holidays.current != nil, !reduceMotion else { return }
+        drift = 0
+        withAnimation(.easeInOut(duration: 4)) {
+            drift = 1
+        } completion: {
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { drift = 0 }
+        }
     }
 }
 

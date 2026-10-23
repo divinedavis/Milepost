@@ -8,6 +8,7 @@ struct RecordScreen: View {
     @Environment(MirroredWorkoutMonitor.self) private var mirror
     @Environment(SocialStore.self) private var social
     @Environment(RunRecovery.self) private var recovery
+    @Environment(HolidayStore.self) private var holidays
     /// The three stats follow Dynamic Type (the accessibility audit flagged a
     /// fixed 30 pt); equal-thirds columns + minimumScaleFactor keep them on
     /// one line at the largest sizes.
@@ -23,6 +24,8 @@ struct RecordScreen: View {
     @State private var showSportPicker = false
     @State private var showDenied = false
     @State private var pendingStart = false
+    /// The Record panel pulled up to show `RecordOptions` (Strava's sheet).
+    @State private var showOptions = false
     /// Past routes, coloured by how often each street was covered.
     @State private var heat: [HeatSegment] = []
     /// Friends' shared street cells in the window, for blue and green.
@@ -252,6 +255,7 @@ struct RecordScreen: View {
 
     private var bottomBar: some View {
         VStack(spacing: 12) {
+            if !recorder.isActive { grabber }
             if recorder.isActive {
                 RecorderControls(layout: .map)
                     .padding(.horizontal, 20)
@@ -267,15 +271,57 @@ struct RecordScreen: View {
                     historyChip
                 }
                 .padding(.horizontal, 24)
+                if showOptions {
+                    RecordOptions()
+                        .padding(.horizontal, 6)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
         }
-        .padding(.vertical, 18)
+        .padding(.top, recorder.isActive ? 18 : 8)
+        .padding(.bottom, 18)
+        // Pull up for more, push down to put it away, anywhere on the panel.
+        .contentShape(RoundedRectangle(cornerRadius: 30))
+        .gesture(DragGesture(minimumDistance: 14).onEnded { drag in
+            guard !recorder.isActive else { return }
+            if drag.translation.height < -30 { setOptions(true) }
+            if drag.translation.height > 30 { setOptions(false) }
+        })
+        .onChange(of: recorder.isActive) { _, active in
+            if active { showOptions = false }
+        }
         .frame(maxWidth: .infinity)
         // A floating dark glass panel (2026-10-22) instead of an opaque
         // sheet, so the map and its past routes fill the screen.
         .darkGlass(in: RoundedRectangle(cornerRadius: 30))
+        .overlay {
+            if let holiday = holidays.current, !recorder.isActive {
+                HolidayRim(holiday: holiday, cornerRadius: 30)
+            }
+        }
         .padding(.horizontal, 12)
         .padding(.bottom, 10)
+    }
+
+    /// The handle on top of the panel. A button as well as a drag target, so
+    /// VoiceOver and a plain tap can open it too.
+    private var grabber: some View {
+        Button { setOptions(!showOptions) } label: {
+            Capsule()
+                .fill(Color.white.opacity(0.35))
+                .frame(width: 40, height: 5)
+                .frame(maxWidth: .infinity, minHeight: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(showOptions ? "Hide options" : "More options")
+        .accessibilityValue(showOptions ? "Expanded" : "Collapsed")
+        .accessibilityIdentifier("record.moreOptions")
+    }
+
+    private func setOptions(_ show: Bool) {
+        guard show != showOptions else { return }
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) { showOptions = show }
     }
 
     private var sportChip: some View {
@@ -303,13 +349,24 @@ struct RecordScreen: View {
     private var startButton: some View {
         VStack(spacing: 8) {
             Button(action: startTapped) {
-                Circle()
-                    .fill(Theme.accent)
-                    .frame(width: 88, height: 88)
-                    .overlay(Image(systemName: "play.fill").font(.system(size: 34)).foregroundStyle(.white))
+                Group {
+                    if let holiday = holidays.current {
+                        // The day's colours, darkened a touch so the white
+                        // play mark keeps its contrast on light ones.
+                        Circle()
+                            .fill(AngularGradient(colors: holiday.tabColors + [holiday.tabColors.first ?? .white], center: .center))
+                            .overlay(Circle().fill(Color.black.opacity(0.18)))
+                            .shadow(color: holiday.glow.opacity(0.6), radius: 14)
+                    } else {
+                        Circle().fill(Theme.accent)
+                    }
+                }
+                .frame(width: 88, height: 88)
+                .overlay(Image(systemName: "play.fill").font(.system(size: 34)).foregroundStyle(.white))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Start")
+            .accessibilityValue(holidays.current.map { "\($0.name) theme" } ?? "")
             .accessibilityIdentifier("record.start")
         }
         .modifier(ControlColumn())
@@ -366,9 +423,11 @@ struct GPSStatusPill: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        // Dark glass is 85% tint over a blur, dark enough for the contrast
-        // audit over a light map (a plain see-through card failed it).
-        .darkGlass(in: Capsule(), shadow: false)
+        // Opaque and without the glass rim: see-through glass over a light
+        // map failed the contrast audit (1.6 ship, 2026-10-22), and so did the
+        // opaque glass colour with its light rim (the audit read the rim as
+        // the background). This exact pill passed before dark glass.
+        .background(Theme.card, in: Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("gps.status")
     }
@@ -443,5 +502,27 @@ private struct ControlColumn: ViewModifier {
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .frame(maxWidth: .infinity)
+    }
+}
+
+/// A ring of the day's colours turning slowly round the Record panel, with a
+/// soft glow (Marracat's search-bar rim). Still with Reduce Motion on.
+private struct HolidayRim: View {
+    let holiday: Holiday
+    let cornerRadius: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var angle: Double = 0
+
+    var body: some View {
+        let colors = holiday.tabColors + [holiday.tabColors.first ?? .white]
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .strokeBorder(AngularGradient(colors: colors, center: .center, angle: .degrees(angle)), lineWidth: 2)
+            .shadow(color: holiday.glow.opacity(0.55), radius: 12)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) { angle = 360 }
+            }
     }
 }

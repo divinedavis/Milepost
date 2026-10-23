@@ -15,6 +15,7 @@ struct MilepostApp: App {
     @State private var mirror = MirroredWorkoutMonitor()
     @State private var celebration = SaveCelebration()
     @State private var recovery = RunRecovery()
+    @State private var holiday = HolidayStore()
     /// Held for the life of the process: its timer writes the run in progress.
     @State private var autosave: RunAutosave
     /// A run rescued from the last process, still to be shared / written to
@@ -155,6 +156,7 @@ struct MilepostApp: App {
                 .environment(mirror)
                 .environment(celebration)
                 .environment(recovery)
+                .environment(holiday)
                 .environment(\.runAutosave, autosave)
                 .preferredColorScheme(.dark)
                 // The wordmark plays on an idle main thread; the app is laid
@@ -162,7 +164,8 @@ struct MilepostApp: App {
                 // ready screen.
                 .overlay {
                     if splash {
-                        LaunchSplashView(onReveal: { appMounted = true },
+                        LaunchSplashView(holiday: holiday.current,
+                                         onReveal: { appMounted = true },
                                          onFinished: { splash = false })
                             .zIndex(2)
                     }
@@ -171,6 +174,9 @@ struct MilepostApp: App {
                 // write the run now rather than up to `interval` from now.
                 .onChange(of: scenePhase) { _, phase in
                     if phase != .active { autosave.tick() }
+                    // A theme can start overnight while the app sits in the
+                    // background; the icon can only change while active.
+                    if phase == .active { holiday.refresh() }
                 }
                 .task {
                     // A rescued run is shared and written to Health exactly

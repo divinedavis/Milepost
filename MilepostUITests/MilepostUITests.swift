@@ -36,13 +36,26 @@ final class MilepostUITests: XCTestCase {
     /// Profile keeps settings behind rows since 2026-10-22: open the tab,
     /// bring the row on screen, and push its screen.
     private func openProfileRow(_ id: String) {
-        app.buttons["tab.you"].tap()
+        switchTab("tab.you")
         let row = app.buttons[id]
         XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 8), "Profile never opened")
         for _ in 0..<8 where !(row.exists && row.isHittable) { app.swipeUp(velocity: .slow) }
         XCTAssertTrue(row.isHittable, "\(id) never came on screen")
         row.tap()
     }
+    /// Taps a tab and confirms it took: from a pushed Settings screen a plain
+    /// tap on the floating bar was reported done and switched nothing
+    /// (2026-10-22, the same iOS 26 quirk as the Mine/Friends segment).
+    private func switchTab(_ id: String) {
+        let button = app.buttons[id]
+        XCTAssertTrue(button.waitForExistence(timeout: 6), "\(id) never appeared")
+        for _ in 0..<3 where !button.isSelected {
+            button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: button)], timeout: 2)
+        }
+        XCTAssertTrue(button.isSelected, "\(id) did not switch")
+    }
+
     private func tap(_ id: String, timeout: TimeInterval = 6) {
         let el = app.buttons[id]
         XCTAssertTrue(el.waitForExistence(timeout: timeout), "\(id) never appeared")

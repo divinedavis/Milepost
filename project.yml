@@ -65,6 +65,12 @@ targets:
         # The Dynamic Island / lock-screen run card. Without this key
         # Activity.request throws and the run simply has no card.
         NSSupportsLiveActivities: true
+        # milepost://record (and milepost://profile, milepost://block):
+        # what App Store in-app events open. App Review refuses an event
+        # whose link the app doesn't route.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.divinedavis.milepost
+            CFBundleURLSchemes: [milepost]
         # Health. Both keys are required the moment the app links HealthKit:
         # the share string is shown when Milepost asks to write workouts, the
         # read string when it asks for heart rate and body mass. A missing
@@ -87,6 +93,9 @@ targets:
         # Without this the AccentColor.colorset is dead weight and every .tint
         # falls back to system blue.
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Holiday icons (AppIcon-<id>, scripts/holiday_icons.py --xcassets)
+        # ship as alternates for setAlternateIconName.
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
     entitlements:
       path: Milepost/Milepost.entitlements
       properties:

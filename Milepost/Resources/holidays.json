@@ -1,0 +1,1317 @@
+{
+ "_about": "Milepost holiday themes (draft 2026-10-22, from Marracat holidays.json minus shopping days, plus running days). One source for the app theme, holiday icons, and App Store in-app events. Weekdays: 1 = Monday ... 7 = Sunday; nth -1 = last.",
+ "holidays": [
+  {
+   "id": "halloween",
+   "name": "Halloween",
+   "kind": "Holiday",
+   "rule": "October 31",
+   "date": {
+    "month": 10,
+    "day": 31
+   },
+   "theme": {
+    "from": -6,
+    "to": 0
+   },
+   "line": "HAPPY HALLOWEEN",
+   "disc": "#0A0A0A",
+   "ring": [
+    "#F26B1D"
+   ],
+   "mark": "moon.stars.fill",
+   "rule_colors": [
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A",
+    "#F26B1D",
+    "#0A0A0A"
+   ],
+   "icon": "AppIcon-halloween",
+   "icon_bands": [
+    [
+     "#F26B1D",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#F26B1D",
+     1
+    ]
+   ],
+   "tab": [
+    "#F26B1D",
+    "#B84A0E"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Halloween Fun Run",
+    "short": "Run in costume, light up your streets",
+    "long": "Lace up for a spooky-season run or a trick-or-treat walk. Your route lights up orange and black on the map.",
+    "from": -10,
+    "to": 0,
+    "link": "milepost://record"
+   },
+   "icon_text": "#F26B1D"
+  },
+  {
+   "id": "nyc-marathon",
+   "name": "NYC Marathon",
+   "kind": "Running day",
+   "rule": "First Sunday in November",
+   "date": {
+    "month": 11,
+    "weekday": 7,
+    "nth": 1
+   },
+   "theme": {
+    "from": -6,
+    "to": 0
+   },
+   "line": "MARATHON SUNDAY",
+   "icon": "AppIcon-nyc-marathon",
+   "icon_bands": [
+    [
+     "#F26B1D",
+     1
+    ],
+    [
+     "#1D4ED8",
+     2
+    ],
+    [
+     "#F26B1D",
+     1
+    ]
+   ],
+   "tab": [
+    "#1D4ED8",
+    "#F26B1D"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Marathon Sunday",
+    "short": "Cheer, then run your own miles",
+    "long": "Watch 50,000 runners cross five boroughs, then get out for your own run.",
+    "from": -10,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "veterans",
+   "name": "Veterans Day",
+   "kind": "Federal holiday",
+   "rule": "November 11",
+   "date": {
+    "month": 11,
+    "day": 11
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "VETERANS DAY",
+   "disc": "#00205B",
+   "ring": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "mark": "star.fill",
+   "rule_colors": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "icon": "AppIcon-veterans",
+   "icon_bands": [
+    [
+     "#00205B",
+     1
+    ],
+    [
+     "#FFFFFF",
+     0.5
+    ],
+    [
+     "#BF0A30",
+     2
+    ],
+    [
+     "#FFFFFF",
+     0.5
+    ],
+    [
+     "#00205B",
+     1
+    ]
+   ],
+   "tab": [
+    "#BF0A30",
+    "#00205B"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Veterans Day Miles",
+    "short": "Run or walk in honor of those who served",
+    "long": "Log a run or walk to honor veterans. Every mile shows up in red and blue on your map.",
+    "from": -3,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "thanksgiving",
+   "name": "Thanksgiving",
+   "kind": "Federal holiday",
+   "rule": "Fourth Thursday in November",
+   "date": {
+    "month": 11,
+    "weekday": 4,
+    "nth": 4
+   },
+   "theme": {
+    "from": -6,
+    "to": 0
+   },
+   "line": "THANKSGIVING",
+   "disc": "#8A3B12",
+   "ring": [],
+   "mark": "leaf.fill",
+   "rule_colors": [
+    "#E8B000",
+    "#8A3B12",
+    "#C8781E",
+    "#E8B000",
+    "#8A3B12",
+    "#C8781E"
+   ],
+   "icon": "AppIcon-thanksgiving",
+   "icon_bands": [
+    [
+     "#E8B000",
+     1
+    ],
+    [
+     "#8A3B12",
+     2
+    ],
+    [
+     "#C8781E",
+     1
+    ]
+   ],
+   "tab": [
+    "#E8B000",
+    "#8A3B12",
+    "#C8781E"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Turkey Trot",
+    "short": "Earn your Thanksgiving dinner",
+    "long": "Join the country's biggest running day: record your Turkey Trot 5K, or a family walk after dinner.",
+    "from": -10,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "christmas",
+   "name": "Christmas",
+   "kind": "Federal holiday",
+   "rule": "December 25",
+   "date": {
+    "month": 12,
+    "day": 25
+   },
+   "theme": {
+    "from": -6,
+    "to": 0
+   },
+   "line": "HAPPY HOLIDAYS",
+   "disc": "#0F5132",
+   "ring": [
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132"
+   ],
+   "mark": "gift.fill",
+   "rule_colors": [
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132",
+    "#B3001B",
+    "#0F5132"
+   ],
+   "icon": "AppIcon-christmas",
+   "icon_bands": [
+    [
+     "#B3001B",
+     1
+    ],
+    [
+     "#0F5132",
+     2
+    ],
+    [
+     "#B3001B",
+     1
+    ]
+   ],
+   "tab": [
+    "#0F5132",
+    "#B3001B"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Holiday Lights Run",
+    "short": "See the lights on foot",
+    "long": "Run or walk your neighborhood's holiday lights. Your route draws in red and green.",
+    "from": -10,
+    "to": 0,
+    "link": "milepost://record"
+   },
+   "icon_pattern": {
+    "stripes": [
+     "#B3001B",
+     "#FFFFFF"
+    ],
+    "middle": "#0F5132"
+   }
+  },
+  {
+   "id": "kwanzaa",
+   "name": "Kwanzaa",
+   "kind": "Cultural holiday",
+   "rule": "December 26 \u2013 January 1",
+   "date": {
+    "month": 12,
+    "day": 26
+   },
+   "theme": {
+    "from": 0,
+    "to": 4
+   },
+   "line": "KWANZAA",
+   "disc": "#0A0A0A",
+   "ring": [],
+   "mark": "kinara",
+   "rule_colors": [
+    "#C8102E",
+    "#0A0A0A",
+    "#007A3D",
+    "#C8102E",
+    "#0A0A0A",
+    "#007A3D"
+   ],
+   "icon": "AppIcon-kwanzaa",
+   "icon_bands": [
+    [
+     "#C8102E",
+     1
+    ],
+    [
+     "#0A0A0A",
+     1
+    ],
+    [
+     "#007A3D",
+     1
+    ]
+   ],
+   "tab": [
+    "#C8102E",
+    "#3A3A3A",
+    "#007A3D"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Kwanzaa Walks",
+    "short": "Seven days, seven walks",
+    "long": "Walk together for each day of Kwanzaa, from Umoja to Imani.",
+    "from": -7,
+    "to": 6,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "watch-night",
+   "name": "Watch Night / Freedom's Eve",
+   "kind": "Observance",
+   "rule": "December 31",
+   "date": {
+    "month": 12,
+    "day": 31
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "FREEDOM'S EVE",
+   "disc": "#141B3C",
+   "ring": [],
+   "mark": "flame.fill",
+   "rule_colors": [
+    "#2A3570",
+    "#141B3C",
+    "#E8B000",
+    "#2A3570",
+    "#141B3C",
+    "#E8B000"
+   ],
+   "icon": "AppIcon-watch-night",
+   "icon_bands": [
+    [
+     "#2A3570",
+     1
+    ],
+    [
+     "#141B3C",
+     2
+    ],
+    [
+     "#E8B000",
+     1
+    ]
+   ],
+   "tab": [
+    "#2A3570",
+    "#141B3C",
+    "#E8B000"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Watch Night Run",
+    "short": "Close the year on your feet",
+    "long": "Get one more run in before midnight and see every street you covered this year.",
+    "from": -5,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "new-year",
+   "name": "New Year's Day",
+   "kind": "Federal holiday",
+   "rule": "January 1",
+   "date": {
+    "month": 1,
+    "day": 1
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "HAPPY NEW YEAR",
+   "disc": "#0A0A0A",
+   "ring": [],
+   "mark": "sparkle",
+   "rule_colors": [
+    "#C9A227",
+    "#0A0A0A",
+    "#C9A227",
+    "#0A0A0A",
+    "#C9A227",
+    "#0A0A0A",
+    "#C9A227",
+    "#0A0A0A"
+   ],
+   "icon": "AppIcon-new-year",
+   "icon_bands": [
+    [
+     "#C9A227",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#C9A227",
+     1
+    ]
+   ],
+   "tab": [
+    "#C9A227",
+    "#3A3A3A"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "New Year's Day Run",
+    "short": "Start the year with a mile",
+    "long": "Make your first activity of the year a run or a walk. Your 2027 map starts here.",
+    "from": -3,
+    "to": 10,
+    "link": "milepost://record"
+   },
+   "effect": "fireworks"
+  },
+  {
+   "id": "mlk",
+   "name": "Martin Luther King Jr. Day",
+   "kind": "Federal holiday",
+   "rule": "Third Monday in January",
+   "date": {
+    "month": 1,
+    "weekday": 1,
+    "nth": 3
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "MLK DAY",
+   "disc": "#0A0A0A",
+   "ring": [],
+   "mark": "bird.fill",
+   "rule_colors": [
+    "#2B2B2B",
+    "#0A0A0A",
+    "#2B2B2B",
+    "#0A0A0A",
+    "#2B2B2B",
+    "#0A0A0A",
+    "#2B2B2B",
+    "#0A0A0A"
+   ],
+   "icon": "AppIcon-mlk",
+   "icon_bands": [
+    [
+     "#2B2B2B",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#2B2B2B",
+     1
+    ]
+   ],
+   "tab": [
+    "#FFFFFF",
+    "#9A9A9A",
+    "#5A5A5A"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "MLK Day of Service Walk",
+    "short": "Walk for your community",
+    "long": "Honor Dr. King with a walk or run through your neighborhood on the national day of service.",
+    "from": -4,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "bhm",
+   "name": "Black History Month",
+   "kind": "Observance",
+   "rule": "February",
+   "date": {
+    "month": 2,
+    "day": 1
+   },
+   "theme": {
+    "from": 0,
+    "to": 27
+   },
+   "line": "BLACK HISTORY MONTH",
+   "disc": "#0A0A0A",
+   "ring": [
+    "#C8102E",
+    "#0A0A0A",
+    "#007A3D",
+    "#E8B000"
+   ],
+   "mark": null,
+   "rule_colors": [
+    "#C8102E",
+    "#0A0A0A",
+    "#007A3D",
+    "#E8B000",
+    "#C8102E",
+    "#0A0A0A",
+    "#007A3D",
+    "#E8B000"
+   ],
+   "icon": "AppIcon-bhm",
+   "icon_bands": [
+    [
+     "#C8102E",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#007A3D",
+     1
+    ],
+    [
+     "#E8B000",
+     1
+    ]
+   ],
+   "tab": [
+    "#C8102E",
+    "#3A3A3A",
+    "#007A3D",
+    "#E8B000"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Black History Month Miles",
+    "short": "28 days of running and walking",
+    "long": "Log miles all February and celebrate Black runners, walkers and history-makers.",
+    "from": 0,
+    "to": 27,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "presidents",
+   "name": "Washington's Birthday (Presidents' Day)",
+   "kind": "Federal holiday",
+   "rule": "Third Monday in February",
+   "date": {
+    "month": 2,
+    "weekday": 1,
+    "nth": 3
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "PRESIDENTS' DAY",
+   "disc": "#00205B",
+   "ring": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "mark": "star.fill",
+   "rule_colors": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "icon": "AppIcon-presidents",
+   "icon_bands": [
+    [
+     "#BF0A30",
+     1
+    ],
+    [
+     "#00205B",
+     2
+    ],
+    [
+     "#BF0A30",
+     1
+    ]
+   ],
+   "tab": [
+    "#BF0A30",
+    "#00205B"
+   ],
+   "note": "Falls inside Black History Month, which keeps the splash and icon; the deals event still runs.",
+   "event": {
+    "badge": "Special Event",
+    "name": "Presidents' Day Long Run",
+    "short": "A long weekend, a long run",
+    "long": "Use the long weekend for your longest run of the winter.",
+    "from": -3,
+    "to": 0,
+    "link": "milepost://record"
+   },
+   "icon_pattern": {
+    "stripes": [
+     "#BF0A30",
+     "#FFFFFF"
+    ],
+    "middle": "#00205B",
+    "angle": 180
+   }
+  },
+  {
+   "id": "emancipation",
+   "name": "Emancipation Day (DC)",
+   "kind": "Observance",
+   "rule": "April 16",
+   "date": {
+    "month": 4,
+    "day": 16
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "EMANCIPATION DAY",
+   "disc": "#0A0A0A",
+   "ring": [
+    "#C9A227"
+   ],
+   "mark": null,
+   "rule_colors": [
+    "#C8102E",
+    "#0A0A0A",
+    "#C9A227",
+    "#C8102E",
+    "#0A0A0A",
+    "#C9A227"
+   ],
+   "icon": "AppIcon-emancipation",
+   "icon_bands": [
+    [
+     "#C8102E",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#C9A227",
+     1
+    ]
+   ],
+   "tab": [
+    "#C8102E",
+    "#3A3A3A",
+    "#C9A227"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Emancipation Day Walk",
+    "short": "Walk in remembrance",
+    "long": "Mark DC Emancipation Day with a walk or run.",
+    "from": -4,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "malcolm-x",
+   "name": "Malcolm X Day",
+   "kind": "Observance",
+   "rule": "May 19",
+   "date": {
+    "month": 5,
+    "day": 19
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "MALCOLM X DAY",
+   "disc": "#0A0A0A",
+   "ring": [
+    "#C8102E"
+   ],
+   "mark": null,
+   "rule_colors": [
+    "#C8102E",
+    "#0A0A0A",
+    "#C8102E",
+    "#0A0A0A",
+    "#C8102E",
+    "#0A0A0A",
+    "#C8102E",
+    "#0A0A0A"
+   ],
+   "icon": "AppIcon-malcolm-x",
+   "icon_bands": [
+    [
+     "#C8102E",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#C8102E",
+     1
+    ]
+   ],
+   "tab": [
+    "#C8102E",
+    "#3A3A3A"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Malcolm X Day Run",
+    "short": "Run with purpose",
+    "long": "Honor Malcolm X's birthday with a run or walk.",
+    "from": -4,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "ald",
+   "name": "African Liberation Day",
+   "kind": "Observance",
+   "rule": "May 25",
+   "date": {
+    "month": 5,
+    "day": 25
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "AFRICA DAY",
+   "disc": "#0A0A0A",
+   "ring": [
+    "#C8102E",
+    "#0A0A0A",
+    "#007A3D",
+    "#E8B000"
+   ],
+   "mark": null,
+   "rule_colors": [
+    "#007A3D",
+    "#0A0A0A",
+    "#E8B000",
+    "#C8102E",
+    "#007A3D",
+    "#0A0A0A",
+    "#E8B000",
+    "#C8102E"
+   ],
+   "icon": "AppIcon-ald",
+   "icon_bands": [
+    [
+     "#007A3D",
+     1
+    ],
+    [
+     "#0A0A0A",
+     2
+    ],
+    [
+     "#E8B000",
+     1
+    ],
+    [
+     "#C8102E",
+     1
+    ]
+   ],
+   "tab": [
+    "#007A3D",
+    "#3A3A3A",
+    "#E8B000",
+    "#C8102E"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "African Liberation Day Run",
+    "short": "Run in the colors of liberation",
+    "long": "Celebrate African Liberation Day with a run or walk; your map wears its colors.",
+    "from": -6,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "memorial",
+   "name": "Memorial Day",
+   "kind": "Federal holiday",
+   "rule": "Last Monday in May",
+   "date": {
+    "month": 5,
+    "weekday": 1,
+    "nth": -1
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "MEMORIAL DAY",
+   "disc": "#00205B",
+   "ring": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "mark": "star.fill",
+   "rule_colors": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "icon": "AppIcon-memorial",
+   "icon_bands": [
+    [
+     "#BF0A30",
+     0.4
+    ],
+    [
+     "#FFFFFF",
+     0.8
+    ],
+    [
+     "#00205B",
+     2
+    ],
+    [
+     "#FFFFFF",
+     0.8
+    ],
+    [
+     "#BF0A30",
+     0.4
+    ]
+   ],
+   "tab": [
+    "#BF0A30",
+    "#00205B"
+   ],
+   "note": "A day of remembrance: the splash stays quiet (navy, one star); the deals event covers the weekend before.",
+   "event": {
+    "badge": "Special Event",
+    "name": "Memorial Day Miles",
+    "short": "Remember on the move",
+    "long": "Honor the fallen with a run or walk on Memorial Day weekend.",
+    "from": -4,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "global-running-day",
+   "name": "Global Running Day",
+   "kind": "Running day",
+   "rule": "First Wednesday in June",
+   "date": {
+    "month": 6,
+    "weekday": 3,
+    "nth": 1
+   },
+   "theme": {
+    "from": -2,
+    "to": 0
+   },
+   "line": "HAPPY GLOBAL RUNNING DAY",
+   "icon": "AppIcon-global-running-day",
+   "icon_bands": [
+    [
+     "#3D6BE0",
+     1
+    ],
+    [
+     "#22D3EE",
+     2
+    ],
+    [
+     "#3D6BE0",
+     1
+    ]
+   ],
+   "tab": [
+    "#3D6BE0",
+    "#22D3EE"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Global Running Day",
+    "short": "Everyone runs today",
+    "long": "Join runners worldwide: any distance counts, from one mile to a marathon.",
+    "from": -10,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "juneteenth",
+   "name": "Juneteenth",
+   "kind": "Federal holiday",
+   "rule": "June 19",
+   "date": {
+    "month": 6,
+    "day": 19
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "JUNETEENTH",
+   "disc": "#3C3B6E",
+   "ring": [],
+   "mark": "sun.max.fill",
+   "rule_colors": [
+    "#3C3B6E",
+    "#B22234",
+    "#3C3B6E",
+    "#B22234",
+    "#3C3B6E",
+    "#B22234",
+    "#3C3B6E",
+    "#B22234"
+   ],
+   "icon": "AppIcon-juneteenth",
+   "icon_bands": [
+    [
+     "#3C3B6E",
+     1
+    ],
+    [
+     "#B22234",
+     2
+    ],
+    [
+     "#3C3B6E",
+     1
+    ]
+   ],
+   "tab": [
+    "#3C3B6E",
+    "#B22234"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Juneteenth Freedom Run",
+    "short": "Run or walk for freedom",
+    "long": "Celebrate Juneteenth with a freedom run or a community walk.",
+    "from": -7,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "july4",
+   "name": "Independence Day",
+   "kind": "Federal holiday",
+   "rule": "July 4",
+   "date": {
+    "month": 7,
+    "day": 4
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "FOURTH OF JULY",
+   "disc": "#00205B",
+   "ring": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "mark": "sparkle",
+   "rule_colors": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "icon": "AppIcon-july4",
+   "icon_bands": [
+    [
+     "#BF0A30",
+     1
+    ],
+    [
+     "#FFFFFF",
+     0.5
+    ],
+    [
+     "#00205B",
+     2
+    ],
+    [
+     "#FFFFFF",
+     0.5
+    ],
+    [
+     "#BF0A30",
+     1
+    ]
+   ],
+   "tab": [
+    "#BF0A30",
+    "#00205B"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Fourth of July 5K",
+    "short": "Run before the fireworks",
+    "long": "Get a 5K in before the cookout and the fireworks.",
+    "from": -6,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "labor",
+   "name": "Labor Day",
+   "kind": "Federal holiday",
+   "rule": "First Monday in September",
+   "date": {
+    "month": 9,
+    "weekday": 1,
+    "nth": 1
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "LABOR DAY",
+   "disc": "#00205B",
+   "ring": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "mark": null,
+   "rule_colors": [
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B",
+    "#BF0A30",
+    "#00205B"
+   ],
+   "icon": "AppIcon-labor",
+   "icon_bands": [
+    [
+     "#BF0A30",
+     1
+    ],
+    [
+     "#00205B",
+     2
+    ],
+    [
+     "#BF0A30",
+     1
+    ]
+   ],
+   "tab": [
+    "#BF0A30",
+    "#00205B"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Labor Day Run",
+    "short": "One more summer run",
+    "long": "Close out summer with a long weekend run or walk.",
+    "from": -4,
+    "to": 0,
+    "link": "milepost://record"
+   },
+   "icon_pattern": {
+    "stripes": [
+     "#BF0A30",
+     "#FFFFFF"
+    ],
+    "middle": "#00205B",
+    "angle": 135
+   }
+  },
+  {
+   "id": "indigenous",
+   "name": "Indigenous Peoples' Day",
+   "kind": "Federal holiday (Columbus Day)",
+   "rule": "Second Monday in October",
+   "date": {
+    "month": 10,
+    "weekday": 1,
+    "nth": 2
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "INDIGENOUS PEOPLES' DAY",
+   "disc": "#0E7C7B",
+   "ring": [],
+   "mark": null,
+   "rule_colors": [
+    "#B5532F",
+    "#0E7C7B",
+    "#E8B000",
+    "#B5532F",
+    "#0E7C7B",
+    "#E8B000"
+   ],
+   "icon": "AppIcon-indigenous",
+   "icon_bands": [
+    [
+     "#B5532F",
+     1
+    ],
+    [
+     "#0E7C7B",
+     2
+    ],
+    [
+     "#E8B000",
+     1
+    ]
+   ],
+   "tab": [
+    "#B5532F",
+    "#0E7C7B",
+    "#E8B000"
+   ],
+   "note": "The federal calendar calls it Columbus Day. No brand in today's catalog says it is Indigenous-owned, so the event is a long-weekend sale and promises no Indigenous makers; adding some would let it feature them.",
+   "event": {
+    "badge": "Special Event",
+    "name": "Indigenous Peoples' Day Run",
+    "short": "Run the land, honor its peoples",
+    "long": "Mark Indigenous Peoples' Day with a run or walk.",
+    "from": -3,
+    "to": 0,
+    "link": "milepost://record"
+   }
+  }
+ ]
+}

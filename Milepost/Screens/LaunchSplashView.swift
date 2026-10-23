@@ -15,6 +15,9 @@ import UIKit
 /// there is no per-letter state and a dropped frame cannot desynchronise the
 /// letters. Reduce Motion skips the choreography and just fades.
 struct LaunchSplashView: View {
+    /// On a holiday a line naming the day fades in under the wordmark, in
+    /// its colours (2026-10-22, like Marracat's splash).
+    var holiday: Holiday? = nil
     /// Called once when the letters have all landed and the wordmark is
     /// holding. The owner mounts the app underneath at this point, not
     /// before: laying out the Record tab's map blocks the main thread for
@@ -57,10 +60,24 @@ struct LaunchSplashView: View {
                 }
             }
         }
+        .overlay {
+            if let holiday {
+                Text(holiday.line)
+                    .font(.system(size: 15, weight: .heavy))
+                    .tracking(2.2)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(LinearGradient(colors: holiday.tabColors.count > 1 ? holiday.tabColors : [holiday.glow, .white],
+                                                    startPoint: .leading, endPoint: .trailing))
+                    .padding(.horizontal, 32)
+                    .offset(y: 72)
+                    .opacity(min(1, max(0, (clock - Splash.revealAt * 0.85) / 0.35)))
+                    .accessibilityHidden(true)
+            }
+        }
         .background(Theme.launchBackground)
         .ignoresSafeArea()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Milepost")
+        .accessibilityLabel(holiday.map { "Milepost, \($0.name)" } ?? "Milepost")
         .accessibilityIdentifier("splash")
     }
 
@@ -245,5 +262,5 @@ private extension CGAffineTransform {
 }
 
 #Preview {
-    LaunchSplashView(onReveal: {}, onFinished: {})
+    LaunchSplashView(holiday: nil, onReveal: {}, onFinished: {})
 }

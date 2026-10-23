@@ -426,6 +426,46 @@ Friend request notification (in-app only, added 2026-10-22, owner request):
 - A real push when the app is closed would need APNs + a server trigger on
   `friendships` — not built.
 
+Holiday themes (`Services/HolidayTheme.swift`, `Resources/holidays.json`, added 2026-10-22, owner:
+"holiday themes like we do with marracat ... keep the running days"):
+- **One source:** holidays.json = Marracat's list minus its shopping days
+  (Black Friday, Cyber Monday, Gift Guide) plus Global Running Day (first
+  Wed of June) and NYC Marathon Sunday (first Sun of Nov) — 20 days. Dates,
+  theme spans, splash line, tab colours, icon bands, App Store event copy
+  (run/walk wording). Weekdays are ISO (1 = Monday); nth -1 = last.
+  Thanksgiving's theme is the week before (Marracat's Gift Guide had it).
+- The engine is Marracat's, ported: the shortest overlapping theme wins
+  (Halloween beats Marathon Sunday's week on Oct 26-31). `-HOLIDAY <id>`
+  forces one (`none` = everyday); plain `-uitest` always sees the everyday app.
+  `HolidayStore` (environment) refreshes when the scene becomes active.
+- What changes: splash line under the wordmark in the day's colours (VoiceOver
+  "Milepost, <name>"), Start button filled with the colours (its value
+  "<name> theme" — what the UI test reads), a turning rim + glow on the Record
+  panel, the tab pill filled and drifting (Marracat's style B, white icon).
+- **Holiday app icons: ON by default**, Profile > Settings > "Holiday app
+  icons" (`you.holidayIcons`) turns them off. AppIcon-<id> alternates from
+  `scripts/holiday_icons.py --xcassets` (white runner-M with a shadow on the
+  day's bands); `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES`.
+  iOS shows its own "You have changed the icon" alert on each switch.
+- **App Store:** `scripts/asc_growth/mp_holidays_auto.py`, launchd daily 06:20
+  (`install_holidays_auto.sh`, copies scripts out of the repo — re-run after
+  editing them or holidays.json; log ~/Library/Logs/milepost-holidays.log).
+  Creates each event ~24 days ahead with art from `holiday_event_art.py`
+  (card/details/header PNGs, cached in ~/Library/Caches/milepost-holidays),
+  submits drafts + headers when no submission is open, swaps the product page
+  header during a theme and back to `milepost-2026-10/default/header-3840x1646.png`.
+  Events link to `milepost://record` (CFBundleURLTypes, `RootView.onOpenURL`;
+  also ://block, ://profile) and WAIT until 1.6 is live (`LINKS_FROM`).
+- Previews: divinedavis.com/previews/#Milepost%20holidays.
+
+Record options (`RecordOptions.swift`, added 2026-10-22, owner sent a Strava recording):
+- Pull the Record panel up (or tap its handle, `record.moreOptions`, value
+  Expanded/Collapsed) for auto-pause, voice announcements, past routes, units,
+  Apple Health and Settings (`record.option.*`); push down to close. Only
+  before a run; starting one closes it. Same settings as Profile > Settings.
+  Strava's live location, route alerts and sensors have no Milepost
+  equivalent and are left out on purpose.
+
 Daily steps (`DailyMovementSection`, You tab, added 2026-10-22, user request):
 - You > Apple Health > "Daily steps", OFF by default, independent of saving:
   it asks Health for READ only (`dailyReadTypes`: steps + walking/running
