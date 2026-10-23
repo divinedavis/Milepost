@@ -69,16 +69,21 @@ REVIEW_NOTES = """WHAT THE APP DOES
 Milepost records a run, walk or bike ride with GPS: elapsed time, distance, split pace, mile/km splits, and the route drawn on an Apple map. Runs are saved to a local database on the device. Recording needs no account and there is no in-app purchase.
 
 FRIENDS (OPTIONAL, SIGN IN WITH APPLE)
-Block tab > Friends > Continue with Apple, then pick any username. Tap the person-plus button, search "milepost_demo" and tap Add: that demo account accepts requests automatically and has sample activities, so its runs appear in Block > Friends right away. Friends see only an activity's sport, title, distance, pace and time - never the route. Swipe a friend's activity (or long-press) to Report or Block. You tab > Friends: sharing toggle, Sign out, and Delete account (deletes the account and everything shared, immediately).
+Profile tab > Friends & account > Continue with Apple (or Block tab > Friends), then pick any username. Tap the person-plus button, search "milepost_demo" and tap Add: that demo account accepts requests automatically and has sample activities, so its runs appear in Block > Friends right away. Friends see only an activity's sport, title, distance, pace and time - never the route. Swipe a friend's activity (or long-press) to Report or Block. Profile tab > Friends & account: sharing toggle, Sign out, and Delete account (deletes the account and everything shared, immediately). A new incoming request shows an in-app banner and a dot on the Profile tab (no push notifications).
 
 HOW TO TEST
 1. Record tab: press Start. iOS asks for location access ("While Using the App"). The full-screen recorder opens with a running clock.
 2. Move, or in the Simulator use Features > Location > Freeway Drive / City Run. Distance and split pace update live and the route draws on the map.
 3. Press Pause, then Finish. Name the run and tap Save. (Finishing with under 10 metres of movement shows a "No Movement Detected" alert instead of a save sheet - that is intentional.)
-4. Block tab: the saved run with its route map, tiles and splits. You tab: weekly/all-time totals, the miles/km switch, and Voice cues (spoken split announcements, off by default).
+4. Block tab: the saved run with its route map, tiles and splits. Profile tab: totals, "Your map" (every saved route as lines), and rows for Settings (units, auto-pause, voice cues, holiday app icons), Apple Health, and Friends & account.
+5. Before Start, drag the panel under the Start button up (or tap its handle) for quick options: auto-pause, voice, past routes, units, Apple Health, Settings.
+6. If the app is closed mid-activity (battery, crash), the next launch saves what was recorded up to that moment and says so on the Record screen.
 
 APPLE HEALTH AND OURA RING (OPTIONAL)
-You tab > Apple Health > Save to Apple Health writes each saved activity to Health as a workout; the route is a separate switch, off by default. "Use with Oura Ring" in that section is a setup guide: Milepost never connects to the ring or to Oura's servers. The Oura app writes heart rate to Apple Health and reads workouts from it, and Milepost reads that heart rate back for the activity's time window and labels its source ("Heart rate from Oura"). No ring is needed to review the app; without one the guide still opens and heart rate simply does not appear.
+Profile tab > Apple Health > Save to Apple Health writes each saved activity to Health as a workout; the route is a separate switch, off by default. "Use with Oura Ring" in that section is a setup guide: Milepost never connects to the ring or to Oura's servers. The Oura app writes heart rate to Apple Health and reads workouts from it, and Milepost reads that heart rate back for the activity's time window and labels its source ("Heart rate from Oura"). No ring is needed to review the app; without one the guide still opens and heart rate simply does not appear. "Daily steps" in the same section (off by default) READS steps and walking distance per day from Health to show on the Profile tab; it never writes.
+
+HOLIDAY THEMES AND IN-APP EVENTS
+Around holidays (Halloween, Thanksgiving, Juneteenth, July 4th, Global Running Day and others) the app wears the day's colours and, by default, switches to a holiday app icon (iOS shows its standard "You have changed the icon" alert). Profile > Settings > Holiday app icons turns that off. In-app events open milepost://record, the Record screen.
 
 BACKGROUND LOCATION
 The app declares the location background mode so a run keeps recording with the screen locked. It requests only "When In Use" authorization. While the Record screen is open in the foreground it reads location so GPS is ready before Start (a "Finding GPS" / "GPS ready" pill shows the state, which matters with no cell service); it records and reads location in the background only between Start and Finish. Finishing a run that never got a GPS fix shows "No GPS Signal Yet" instead of "No Movement Detected".
@@ -86,6 +91,14 @@ The app declares the location background mode so a run keeps recording with the 
 CONTACT
 Any question at all: the email and phone number above.
 """
+
+# "What's New" for the version being prepared (1.6, 2026-10-22).
+WHATS_NEW = """- A walk or run is saved even if your phone dies or the app closes halfway.
+- New Profile: your stats, a map of every street you've walked, run and ridden, and your friends in one place.
+- Daily steps and walking distance from your iPhone and Apple Watch (turn on in Apple Health).
+- Friend requests now show up as a banner in the app.
+- A cleaner Record screen: dark glass controls, the map edge to edge, and quick options when you pull up the panel.
+- Holiday themes and holiday app icons, plus Global Running Day and NYC Marathon Sunday."""
 
 # A run tracker. "Health or wellness topics" in Apple's questionnaire means
 # self-care/lifestyle recommendations (calorie tracking, dieting advice,
@@ -212,6 +225,12 @@ def apply(asc: ASC, cfg: dict) -> None:
         "attributes": {"description": DESCRIPTION, "keywords": KEYWORDS,
                        "promotionalText": PROMO, "supportUrl": SUPPORT}}})
     print("    description, keywords, promo, support URL")
+    # "What's New" only exists once a version has shipped before (1.0 had none).
+    if ids["version_string"] != "1.0":
+        asc.patch(f"/appStoreVersionLocalizations/{ids['version_loc']}", {"data": {
+            "type": "appStoreVersionLocalizations", "id": ids["version_loc"],
+            "attributes": {"whatsNew": WHATS_NEW}}})
+        print("    what's new")
 
     asc.patch(f"/appStoreVersions/{ids['version']}", {"data": {
         "type": "appStoreVersions", "id": ids["version"],
