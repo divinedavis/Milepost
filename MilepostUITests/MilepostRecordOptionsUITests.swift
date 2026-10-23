@@ -32,6 +32,32 @@ final class MilepostRecordOptionsUITests: XCTestCase {
         XCTAssertEqual(handle.value as? String, "Collapsed")
     }
 
+    /// The panel follows the thumb and settles on the side it was let go:
+    /// a short, slow pull falls back shut, a long one stays open, and a long
+    /// slow push down closes it.
+    func testThePanelSettlesWhereTheThumbLeavesIt() {
+        let start = app.buttons["record.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        let grip = start.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).withOffset(CGVector(dx: 120, dy: 0))
+        let autoPause = app.switches["record.option.autoPause"]
+
+        grip.press(forDuration: 0.05, thenDragTo: grip.withOffset(CGVector(dx: 0, dy: -40)),
+                   withVelocity: .slow, thenHoldForDuration: 0.4)
+        XCTAssertFalse(autoPause.waitForExistence(timeout: 2), "a short pull should fall back shut")
+
+        grip.press(forDuration: 0.05, thenDragTo: grip.withOffset(CGVector(dx: 0, dy: -300)),
+                   withVelocity: .slow, thenHoldForDuration: 0.4)
+        XCTAssertTrue(autoPause.waitForExistence(timeout: 4), "a long pull should stay open")
+        XCTAssertEqual(app.buttons["record.moreOptions"].value as? String, "Expanded")
+
+        // The panel grew, so the Start button moved up with it.
+        let top = start.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).withOffset(CGVector(dx: 120, dy: 0))
+        top.press(forDuration: 0.05, thenDragTo: top.withOffset(CGVector(dx: 0, dy: 300)),
+                  withVelocity: .slow, thenHoldForDuration: 0.4)
+        XCTAssertFalse(autoPause.waitForExistence(timeout: 2), "a long push down should close it")
+        XCTAssertEqual(app.buttons["record.moreOptions"].value as? String, "Collapsed")
+    }
+
     /// An option set here is the same setting as in Profile > Settings.
     func testAutoPauseFromThePanelIsTheSameSetting() {
         let handle = app.buttons["record.moreOptions"]

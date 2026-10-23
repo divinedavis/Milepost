@@ -23,6 +23,8 @@ Same per-change loop as the other iOS apps (Pothole Radar is the template):
 4. OWASP LLM note in the commit: always N/A, there is no LLM surface.
 5. Commit with an explanatory body + `Co-Authored-By`, then push.
 6. `./scripts/ship.sh` for app-code changes once the ASC app record exists.
+   **TestFlight only** (owner, 2026-10-23): do NOT submit to App Review until
+   the owner has tried the build on his phone and says to submit.
 
 Apple quality gates (2026-10-07, owner rule for every iOS app; `ship.sh`
 runs them before every TestFlight upload and refuses to continue on a fail):
@@ -495,6 +497,12 @@ Record options (`RecordOptions.swift`, added 2026-10-22, owner sent a Strava rec
   before a run; starting one closes it. Same settings as Profile > Settings.
   Strava's live location, route alerts and sensors have no Milepost
   equivalent and are left out on purpose.
+- Since 2026-10-23 (owner, second Strava recording) the panel FOLLOWS THE
+  THUMB: `dragReveal` tracks the finger (rubber band past open, stops at
+  shut), and on release `predictedEndTranslation` decides open/shut at half
+  the options' height. The options are always laid out (height measured with
+  `onGeometryChange`), clipped to the reveal, and accessibilityHidden +
+  untouchable until open — so tests still see them "not exist" when shut.
 
 Daily steps (`DailyMovementSection`, You tab, added 2026-10-22, user request):
 - You > Apple Health > "Daily steps", OFF by default, independent of saving:
