@@ -1,5 +1,5 @@
 {
- "_about": "Milepost holiday themes (draft 2026-10-22, from Marracat holidays.json minus shopping days, plus running days). One source for the app theme, holiday icons, and App Store in-app events. Weekdays: 1 = Monday ... 7 = Sunday; nth -1 = last.",
+ "_about": "Milepost holiday themes: Marracat's 21 days with Marracat's exact dates and theme/event windows (owner 2026-10-22: \"use the same days as we have for marracat\"), run/walk copy, plus Global Running Day and NYC Marathon Sunday. One source for the app theme, holiday icons, and App Store in-app events. Weekdays: 1 = Monday ... 7 = Sunday; nth -1 = last.",
  "holidays": [
   {
    "id": "halloween",
@@ -208,7 +208,7 @@
     "nth": 4
    },
    "theme": {
-    "from": -6,
+    "from": 0,
     "to": 0
    },
    "line": "THANKSGIVING",
@@ -250,6 +250,151 @@
     "long": "Join the country's biggest running day: record your Turkey Trot 5K, or a family walk after dinner.",
     "from": -10,
     "to": 0,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "black-friday",
+   "name": "Black Friday",
+   "kind": "Shopping day",
+   "rule": "Day after Thanksgiving",
+   "date": {
+    "month": 11,
+    "weekday": 4,
+    "nth": 4,
+    "offset": 1
+   },
+   "theme": {
+    "from": 0,
+    "to": 2
+   },
+   "line": "BLACK FRIDAY",
+   "disc": "#0A0A0A",
+   "ring": [],
+   "mark": "tag.fill",
+   "rule_colors": [
+    "#0A0A0A"
+   ],
+   "icon": "AppIcon-black-friday",
+   "icon_bands": [
+    [
+     "#0A0A0A",
+     1
+    ]
+   ],
+   "tab": [
+    "#F2F2F2",
+    "#8C8C8C",
+    "#F2F2F2",
+    "#5A5A5A"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Black Friday Run",
+    "short": "Skip the lines, hit the streets",
+    "long": "Run or walk off Thanksgiving dinner on Black Friday. Your route lights up on the map.",
+    "from": -7,
+    "to": 2,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "cyber-monday",
+   "name": "Cyber Monday",
+   "kind": "Shopping day",
+   "rule": "Monday after Thanksgiving",
+   "date": {
+    "month": 11,
+    "weekday": 4,
+    "nth": 4,
+    "offset": 4
+   },
+   "theme": {
+    "from": 0,
+    "to": 0
+   },
+   "line": "CYBER MONDAY",
+   "disc": "#1D4ED8",
+   "ring": [],
+   "mark": "tag.fill",
+   "rule_colors": [
+    "#1D4ED8"
+   ],
+   "icon": "AppIcon-cyber-monday",
+   "icon_bands": [
+    [
+     "#1D4ED8",
+     1
+    ]
+   ],
+   "tab": [
+    "#1D4ED8",
+    "#60A5FA",
+    "#22D3EE"
+   ],
+   "event": {
+    "badge": "Special Event",
+    "name": "Cyber Monday Miles",
+    "short": "Log off and lace up",
+    "long": "Step away from the screen for a run or a walk. Every mile shows up on your map.",
+    "from": -2,
+    "to": 1,
+    "link": "milepost://record"
+   }
+  },
+  {
+   "id": "gift-guide",
+   "name": "Holiday Gift Guide",
+   "kind": "Season (Thanksgiving theme)",
+   "rule": "Nov 20 \u2013 Dec 20",
+   "date": {
+    "month": 11,
+    "day": 20
+   },
+   "theme": {
+    "from": 0,
+    "to": 28
+   },
+   "line": "GIFT GUIDE",
+   "disc": "#8A3B12",
+   "ring": [],
+   "mark": "leaf.fill",
+   "rule_colors": [
+    "#E8B000",
+    "#8A3B12",
+    "#C8781E",
+    "#E8B000",
+    "#8A3B12",
+    "#C8781E"
+   ],
+   "icon": "AppIcon-gift-guide",
+   "icon_bands": [
+    [
+     "#E8B000",
+     1
+    ],
+    [
+     "#8A3B12",
+     2
+    ],
+    [
+     "#C8781E",
+     1
+    ]
+   ],
+   "tab": [
+    "#E8B000",
+    "#8A3B12",
+    "#C8781E"
+   ],
+   "note": "Thanksgiving's colours carry the whole gift season. Thanksgiving, Black Friday, Cyber Monday and Christmas take over on their own days.",
+   "event": {
+    "badge": "Special Event",
+    "name": "Holiday Season Miles",
+    "short": "Keep moving all season",
+    "long": "Keep running and walking from Thanksgiving to the holidays; every mile stays on your map.",
+    "from": 0,
+    "to": 30,
     "link": "milepost://record"
    }
   },

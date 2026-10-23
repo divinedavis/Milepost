@@ -20,11 +20,12 @@ final class HolidayTests: XCTestCase {
 
     func testTheBundledListLoadsWithTheRunningDays() {
         let ids = HolidayCalendar.holidays.map(\.id)
-        XCTAssertEqual(ids.count, 20)
+        XCTAssertEqual(ids.count, 23, "Marracat's 21 days plus the two running days")
         XCTAssertEqual(Set(ids).count, ids.count, "ids must be unique")
         XCTAssertTrue(ids.contains("global-running-day"))
         XCTAssertTrue(ids.contains("nyc-marathon"))
-        XCTAssertFalse(ids.contains("black-friday"), "shopping days are Marracat's, not Milepost's")
+        XCTAssertTrue(ids.contains("black-friday"), "same days as Marracat (owner, 2026-10-22)")
+        XCTAssertTrue(ids.contains("gift-guide"))
         for h in HolidayCalendar.holidays {
             XCTAssertEqual(h.icon, "AppIcon-\(h.id)")
             XCTAssertFalse(h.tab.isEmpty, h.id)
@@ -50,13 +51,26 @@ final class HolidayTests: XCTestCase {
         }
     }
 
-    func testTheThemeRunsInTheDaysBefore() throws {
+    /// Marracat's windows: the holiday season (Nov 20 - Dec 18) around the
+    /// single days, each single day winning on its own date.
+    func testThanksgivingWeekMatchesMarracat() throws {
         let list = HolidayCalendar.holidays
-        XCTAssertEqual(HolidayCalendar.current(on: date(2026, 11, 24), calendar: calendar, in: list)?.id, "thanksgiving")
+        XCTAssertEqual(HolidayCalendar.current(on: date(2026, 11, 24), calendar: calendar, in: list)?.id, "gift-guide")
         XCTAssertEqual(HolidayCalendar.current(on: date(2026, 11, 26, hour: 23), calendar: calendar, in: list)?.id, "thanksgiving")
-        XCTAssertNil(HolidayCalendar.current(on: date(2026, 11, 27), calendar: calendar, in: list),
-                     "Black Friday is not a Milepost theme")
+        XCTAssertEqual(HolidayCalendar.current(on: date(2026, 11, 27), calendar: calendar, in: list)?.id, "black-friday")
+        XCTAssertEqual(HolidayCalendar.current(on: date(2026, 11, 30), calendar: calendar, in: list)?.id, "cyber-monday")
         XCTAssertNil(HolidayCalendar.current(on: date(2026, 8, 12), calendar: calendar, in: list), "an ordinary day")
+    }
+
+    /// Every Marracat day has Marracat's dates and windows.
+    func testDaysAndWindowsMatchMarracat() throws {
+        let cases: [(String, Int, Int, Int)] = [
+            ("black-friday", 2026, 11, 27), ("cyber-monday", 2026, 11, 30), ("gift-guide", 2026, 11, 20),
+        ]
+        for (id, y, m, d) in cases {
+            XCTAssertEqual(try holiday(id).day(in: y, calendar: calendar),
+                           calendar.date(from: DateComponents(year: y, month: m, day: d)), id)
+        }
     }
 
     func testMarathonSundayFollowsHalloween() {

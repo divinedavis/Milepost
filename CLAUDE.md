@@ -434,12 +434,13 @@ Friend request notification (in-app only, added 2026-10-22, owner request):
 
 Holiday themes (`Services/HolidayTheme.swift`, `Resources/holidays.json`, added 2026-10-22, owner:
 "holiday themes like we do with marracat ... keep the running days"):
-- **One source:** holidays.json = Marracat's list minus its shopping days
-  (Black Friday, Cyber Monday, Gift Guide) plus Global Running Day (first
-  Wed of June) and NYC Marathon Sunday (first Sun of Nov) — 20 days. Dates,
-  theme spans, splash line, tab colours, icon bands, App Store event copy
-  (run/walk wording). Weekdays are ISO (1 = Monday); nth -1 = last.
-  Thanksgiving's theme is the week before (Marracat's Gift Guide had it).
+- **One source:** holidays.json = ALL of Marracat's 21 days with Marracat's
+  exact dates and theme/event windows (owner, 2026-10-22: "use the same days
+  as we have for marracat" — incl. Black Friday, Cyber Monday and the Holiday
+  Gift Guide season Nov 20-Dec 18), plus Global Running Day (first Wed of
+  June) and NYC Marathon Sunday (first Sun of Nov) — 23 days. Milepost's own
+  run/walk event copy. Weekdays are ISO (1 = Monday); nth -1 = last. When
+  Marracat changes a date or window, change it here too.
 - The engine is Marracat's, ported: the shortest overlapping theme wins
   (Halloween beats Marathon Sunday's week on Oct 26-31). `-HOLIDAY <id>`
   forces one (`none` = everyday); plain `-uitest` always sees the everyday app.
