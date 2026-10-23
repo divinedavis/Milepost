@@ -116,6 +116,8 @@ struct RootView: View {
     }
 
     static let barHeight: CGFloat = 62
+    /// The bar, its 4pt off the bottom, and 12pt of air above it.
+    static let barClearance: CGFloat = barHeight + 4 + 12
 
     /// Hand-rolled: iOS 26's floating TabView bar reports a successful tap in
     /// XCUITest without switching, and this one is three buttons anyway.
@@ -252,5 +254,15 @@ struct FriendRequestBanner: View {
         .shadow(color: .black.opacity(0.4), radius: 12, y: 4)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("request.banner")
+    }
+}
+
+extension View {
+    /// Every scroll view in a tab's stack (pushed screens too) ends above the
+    /// floating bar. The bar's `safeAreaInset` reaches the Record screen but
+    /// not a List or ScrollView inside a NavigationStack: on 1.6 build 34 the
+    /// bar covered Profile's Privacy row and a run's splits.
+    func clearsTabBar() -> some View {
+        contentMargins(.bottom, RootView.barClearance, for: .scrollContent)
     }
 }

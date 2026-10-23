@@ -113,11 +113,12 @@ ui_all() {
   run MilepostUITests/MilepostFriendsUITests
   echo "== ui (accessibility audit) =="
   run MilepostUITests/AccessibilityAuditTests
-  echo "== ui (profile, recovery, holidays, record options) =="
+  echo "== ui (profile, recovery, holidays, record options, tab bar) =="
   run MilepostUITests/MilepostProfileUITests
   run MilepostUITests/MilepostRecoveryUITests
   run MilepostUITests/MilepostHolidayUITests
   run MilepostUITests/MilepostRecordOptionsUITests
+  run MilepostUITests/MilepostTabBarUITests
   echo "== ui (live activity) =="
   run MilepostUITests/MilepostLiveActivityUITests
   echo "== ui (moving) =="

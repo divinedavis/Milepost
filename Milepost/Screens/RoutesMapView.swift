@@ -53,6 +53,8 @@ struct RoutesMapView: View {
                         }
                     }
                 }
+                // Presented from Profile, which leaves room for the tab bar.
+                .contentMargins(.bottom, 0, for: .scrollContent)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)

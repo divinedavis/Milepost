@@ -81,6 +81,7 @@ struct YouScreen: View {
                 RoutesMapView(activities: activities)
             }
         }
+        .clearsTabBar()
     }
 
     // MARK: Header

@@ -65,6 +65,12 @@ Gotchas:
 - Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
   `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+- The floating bar's `safeAreaInset` does NOT reach a List/ScrollView inside
+  a NavigationStack (1.6 build 34: the bar covered Profile's Privacy row and a
+  run's splits). Both tab stacks carry `.clearsTabBar()` (bottom
+  `contentMargins`, `RootView.barClearance`), which reaches pushed screens.
+  `MilepostTabBarUITests` scrolls each screen to rest and fails if the last
+  text ends under the bar. A new tab stack needs the modifier too.
 - **The two moving suites are flaky in a full run**, both in the same way: a
   save that works everywhere else does not show up in Block, and the test
   passes alone and passes when its own class is run in sequence.

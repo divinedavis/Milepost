@@ -59,6 +59,7 @@ struct BlockScreen: View {
                 FriendsScreen()
             }
         }
+        .clearsTabBar()
     }
 
     @ViewBuilder
