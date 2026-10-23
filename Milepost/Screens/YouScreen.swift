@@ -344,8 +344,12 @@ private struct ProfileMapPreview: View {
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .padding(12)
-                    .background(Theme.card.opacity(0.9), in: RoundedRectangle(cornerRadius: 12))
+                    // Opaque: over the map a see-through card failed the
+                    // contrast audit. The card's button already says what
+                    // this is, so VoiceOver skips it.
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
                     .padding()
+                    .accessibilityHidden(true)
             }
         }
         // Keyed on the ids so a new activity redraws, but not every render.
