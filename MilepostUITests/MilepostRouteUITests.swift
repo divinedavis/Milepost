@@ -46,8 +46,10 @@ final class MilepostRouteUITests: XCTestCase {
         XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
         let distance = app.staticTexts["live.distance"]
         wait(for: [expectation(for: NSPredicate(format: "label != '0.00'"), evaluatedWith: distance)], timeout: 45)
-        // Past one autosave interval with ground covered, so a tick has written it.
-        sleep(12)
+        // Two autosave intervals with ground covered, so a tick has surely
+        // written it. One (sleep 12) passed alone and failed once in the full
+        // ship run, where the simulator is slower (2026-10-22).
+        sleep(22)
 
         app.terminate()
         app.launchArguments = ["-uitest", "-uitest-keep-autosave"]
