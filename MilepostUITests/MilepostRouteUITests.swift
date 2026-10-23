@@ -35,6 +35,32 @@ final class MilepostRouteUITests: XCTestCase {
         el.tap()
     }
 
+    /// The York, PA report (2026-10-22): the app dies mid-walk. The run must
+    /// come back saved on the next launch, from the real timer's autosave.
+    func testAWalkCutOffByTheAppDyingIsSavedOnNextLaunch() {
+        tap("record.start")
+        allowLocation()
+        if !app.buttons["live.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
+            tap("record.start")
+        }
+        XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
+        let distance = app.staticTexts["live.distance"]
+        wait(for: [expectation(for: NSPredicate(format: "label != '0.00'"), evaluatedWith: distance)], timeout: 45)
+        // Past one autosave interval with ground covered, so a tick has written it.
+        sleep(12)
+
+        app.terminate()
+        app.launchArguments = ["-uitest", "-uitest-keep-autosave"]
+        app.launch()
+
+        XCTAssertTrue(app.otherElements["record.recovered"].waitForExistence(timeout: 10),
+                      "the cut-off run was not recovered")
+        tap("record.recoveredView")
+        let rows = app.staticTexts.matching(identifier: "block.rowTitle")
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 6))
+        XCTAssertEqual(rows.count, 1)
+    }
+
     /// A real run saved with Apple Health switched on, all the way to the
     /// detail screen's Health entry.
     ///

@@ -7,6 +7,7 @@ struct YouScreen: View {
     @AppStorage(VoiceCueInterval.storageKey) private var voiceRaw = VoiceCueInterval.half.rawValue
     @AppStorage(VoiceCueInterval.enabledKey) private var voiceEnabled = true
     @AppStorage(AutoPauseSettings.enabledKey) private var autoPause = AutoPauseSettings.enabledDefault
+    @AppStorage(HealthSettings.dailyKey) private var dailySteps = HealthSettings.dailyDefault
     @Environment(VoiceAnnouncer.self) private var announcer
     @Environment(RunRecorder.self) private var recorder
     @Environment(PhoneWatchSync.self) private var watchSync
@@ -20,6 +21,10 @@ struct YouScreen: View {
             List {
                 let week = ActivityStats.thisWeek(activities)
                 let all = ActivityStats.totals(activities)
+
+                if dailySteps, HealthKitService.isSupported {
+                    DailyMovementSection(unit: unit)
+                }
 
                 Section("This week") { totals(week) }
                 Section("All time") { totals(all) }

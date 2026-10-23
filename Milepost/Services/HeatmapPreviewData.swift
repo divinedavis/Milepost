@@ -33,6 +33,22 @@ enum HeatmapPreviewData {
         try? context.save()
     }
 
+    /// What a walk the app died halfway through leaves on disk: half a loop
+    /// of Prospect Heights, started 40 minutes ago, last written 25 minutes
+    /// ago. For `-uitest-seed-checkpoint`.
+    static func interruptedWalk(now: Date = .now) -> RunCheckpoint {
+        let start = now.addingTimeInterval(-40 * 60)
+        let route = densify([(40.6835, -73.9680), (40.6880, -73.9690), (40.6885, -73.9645)], start: start)
+        let meters = zip(route, route.dropFirst()).reduce(0.0) {
+            $0 + RouteHeatmap.distance($1.0.coordinate, $1.1.coordinate)
+        }
+        return RunCheckpoint(sport: .walk, splitMeters: DistanceUnit.miles.meters, startDate: start,
+                             savedAt: now.addingTimeInterval(-25 * 60), movingSeconds: 15 * 60,
+                             distanceMeters: meters, route: route,
+                             splits: [Split(index: 1, distanceMeters: meters, seconds: 15 * 60)],
+                             pauses: [])
+    }
+
     /// A fix every ~8 m along the corners, like a 1 Hz walk.
     private static func densify(_ corners: [(Double, Double)], start: Date) -> [RoutePoint] {
         var out: [RoutePoint] = []

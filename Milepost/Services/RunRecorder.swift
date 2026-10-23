@@ -29,6 +29,49 @@ struct RunSummary: Equatable {
     var pauses: [PauseInterval] = []
 }
 
+/// A run in progress, written to disk every few seconds so a phone that dies
+/// or an app that is killed mid-run does not lose it. Everything is the
+/// recorder's own booked numbers, so a recovered run reads exactly as it did
+/// on screen at the moment of the last write.
+struct RunCheckpoint: Codable, Equatable {
+    /// Bumped if the layout changes; a checkpoint from another version is
+    /// dropped rather than misread.
+    static let currentVersion = 1
+
+    var version = RunCheckpoint.currentVersion
+    var sport: Sport
+    var splitMeters: Double
+    var startDate: Date
+    /// When this checkpoint was taken. A recovered run ends here: it is the
+    /// last moment the app is known to have been recording.
+    var savedAt: Date
+    var movingSeconds: TimeInterval
+    var distanceMeters: Double
+    var route: [RoutePoint]
+    var splits: [Split]
+    var pauses: [PauseInterval]
+
+    var hasMovement: Bool { distanceMeters >= RunRecorder.minimumMovementMeters }
+
+    /// The run as Finish would have handed it over, ended at the last write.
+    /// Nil when it never moved, the same rule as `RunRecorder.finish()`.
+    var summary: RunSummary? {
+        guard hasMovement else { return nil }
+        let end = max(startDate, savedAt)
+        let closed = pauses.map { $0.end == nil ? PauseInterval(start: $0.start, end: max($0.start, end)) : $0 }
+                           .filter { $0.duration > 0 }
+        return RunSummary(startDate: startDate,
+                          endDate: end,
+                          movingSeconds: movingSeconds,
+                          distanceMeters: distanceMeters,
+                          splitMeters: splitMeters,
+                          route: route,
+                          splits: splits,
+                          sport: sport,
+                          pauses: closed)
+    }
+}
+
 /// The recording engine. Pure state + arithmetic: it is fed CLLocations by
 /// whoever owns the location manager and told the time by an injectable
 /// clock, so every rule below is unit-testable without GPS.
@@ -225,6 +268,21 @@ final class RunRecorder {
         pauses = []
         autoPauseEnabled = false
         resetAutoPause()
+    }
+
+    /// What a dead phone would otherwise lose; nil while idle.
+    func checkpoint() -> RunCheckpoint? {
+        guard isActive, let startDate else { return nil }
+        refreshElapsed()
+        return RunCheckpoint(sport: sport,
+                             splitMeters: splitMeters,
+                             startDate: startDate,
+                             savedAt: now(),
+                             movingSeconds: elapsed,
+                             distanceMeters: distanceMeters,
+                             route: route,
+                             splits: splits,
+                             pauses: pauses)
     }
 
     func refreshElapsed() {

@@ -14,6 +14,13 @@ struct MilepostApp: App {
     @State private var watchSync: PhoneWatchSync
     @State private var mirror = MirroredWorkoutMonitor()
     @State private var celebration = SaveCelebration()
+    @State private var recovery = RunRecovery()
+    /// Held for the life of the process: its timer writes the run in progress.
+    @State private var autosave: RunAutosave
+    /// A run rescued from the last process, still to be shared / written to
+    /// Health once the app is up (both are async).
+    @State private var recoveredActivity: Activity?
+    @Environment(\.scenePhase) private var scenePhase
     /// Cold launches only: both are set once per process, so coming back from
     /// the background never replays the splash. The app itself mounts only
     /// when the splash says so (see `LaunchSplashView.onReveal`).
@@ -33,6 +40,9 @@ struct MilepostApp: App {
         // raises Apple's permission sheet, which the runner cannot dismiss.
         if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-health-on") {
             UserDefaults.standard.set(true, forKey: HealthSettings.enabledKey)
+        }
+        if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-daily-demo") {
+            UserDefaults.standard.set(true, forKey: HealthSettings.dailyKey)
         }
         let location = LocationService()
         let recorder = RunRecorder()
@@ -63,6 +73,31 @@ struct MilepostApp: App {
             container = try! ModelContainer(for: Activity.self,
                                             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
+        // A run the last process was recording when it died (battery, crash,
+        // killed by iOS) is saved before anything can start a new one.
+        // UI tests get their own file, wiped here: many of them start a run
+        // and terminate the app, which must not seed the next test's store.
+        let autosaveURL = isUITest
+            ? FileManager.default.temporaryDirectory.appendingPathComponent("uitest-run-in-progress.json")
+            : RunAutosave.defaultURL
+        // `-uitest-keep-autosave` is the relaunch after a test killed the app
+        // mid-run: the file is the thing under test.
+        if isUITest, !ProcessInfo.processInfo.arguments.contains("-uitest-keep-autosave") {
+            try? FileManager.default.removeItem(at: autosaveURL)
+        }
+        let autosave = RunAutosave(recorder: recorder, fileURL: autosaveURL)
+        #if DEBUG
+        if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-seed-checkpoint") {
+            autosave.write(HeatmapPreviewData.interruptedWalk())
+            autosave.flush()
+        }
+        #endif
+        let recovery = RunRecovery()
+        _recoveredActivity = State(initialValue: recovery.recover(from: autosave, into: container.mainContext))
+        _recovery = State(initialValue: recovery)
+        autosave.start()
+        _autosave = State(initialValue: autosave)
+
         // MetricKit: launch/hang/memory summaries and crash diagnostics, logged
         // on device only. ship.sh fails if this line goes.
         MetricsReporter.shared.start()
@@ -119,6 +154,8 @@ struct MilepostApp: App {
                 .environment(watchSync)
                 .environment(mirror)
                 .environment(celebration)
+                .environment(recovery)
+                .environment(\.runAutosave, autosave)
                 .preferredColorScheme(.dark)
                 // The wordmark plays on an idle main thread; the app is laid
                 // out (map included) under the hold, so the fade lands on a
@@ -130,7 +167,22 @@ struct MilepostApp: App {
                             .zIndex(2)
                     }
                 }
+                // The app can be killed at any point once it is off screen;
+                // write the run now rather than up to `interval` from now.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase != .active { autosave.tick() }
+                }
                 .task {
+                    // A rescued run is shared and written to Health exactly
+                    // as a normal save would have done.
+                    if let activity = recoveredActivity {
+                        recoveredActivity = nil
+                        Task { await social.share(activity) }
+                        if UserDefaults.standard.bool(forKey: HealthSettings.enabledKey) {
+                            await HealthSync.write(activity, using: health, context: container.mainContext,
+                                                   includeRoute: UserDefaults.standard.bool(forKey: HealthSettings.routeKey))
+                        }
+                    }
                     watchSync.activate()
                     // The watch calls startMirroringToCompanionDevice when a
                     // workout begins; without this handler installed the phone

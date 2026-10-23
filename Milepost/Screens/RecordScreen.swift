@@ -7,6 +7,7 @@ struct RecordScreen: View {
     @Environment(RunRecorder.self) private var recorder
     @Environment(MirroredWorkoutMonitor.self) private var mirror
     @Environment(SocialStore.self) private var social
+    @Environment(RunRecovery.self) private var recovery
     /// The three stats follow Dynamic Type (the accessibility audit flagged a
     /// fixed 30 pt); equal-thirds columns + minimumScaleFactor keep them on
     /// one line at the largest sizes.
@@ -76,6 +77,13 @@ struct RecordScreen: View {
                 MirroredWorkoutBanner()
                     .padding(.horizontal, 12)
                     .padding(.bottom, 10)
+                if let recovered = recovery.recovered, !recorder.isActive {
+                    RecoveredRunBanner(recovered: recovered, unit: unit,
+                                       onView: { recovery.recovered = nil; tab = .block },
+                                       onDismiss: { recovery.recovered = nil })
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 10)
+                }
                 if !mirror.isMirroring {
                     // Always before Start; mid-run only while the signal is missing.
                     if location.isAuthorized && (!recorder.isActive || location.gpsStatus == .searching) {
@@ -360,6 +368,52 @@ struct GPSStatusPill: View {
         .background(Theme.card, in: Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("gps.status")
+    }
+}
+
+/// Shown once after a launch that rescued the previous process's run: the
+/// app died mid-activity and the last autosave became a saved activity. A
+/// card, not an alert — nothing is asked, it only says what happened.
+struct RecoveredRunBanner: View {
+    let recovered: RunRecovery.Recovered
+    let unit: DistanceUnit
+    let onView: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "arrow.counterclockwise.circle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Theme.accentText)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("We saved your \(recovered.sport.title.lowercased())")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("Milepost closed before you finished. \(Format.distance(recovered.distanceMeters, unit: unit)) \(unit.abbreviation) were kept, up to the moment it stopped.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("View in Block", action: onView)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.accentText)
+                    .padding(.top, 2)
+                    .accessibilityIdentifier("record.recoveredView")
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("record.recovered")
+            Spacer(minLength: 0)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(6)
+            }
+            .accessibilityLabel("Dismiss")
+            .accessibilityIdentifier("record.recoveredDismiss")
+        }
+        .padding(14)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

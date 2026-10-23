@@ -9,6 +9,7 @@ struct RecorderControls: View {
 
     @Environment(LocationService.self) private var location
     @Environment(RunRecorder.self) private var recorder
+    @Environment(\.runAutosave) private var autosave
     let layout: Layout
 
     @State private var showNoMovement = false
@@ -87,6 +88,7 @@ struct RecorderControls: View {
 
     private func endRun() {
         recorder.discard()
+        autosave?.clear()
         location.stopTracking()
     }
 }

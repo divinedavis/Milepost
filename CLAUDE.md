@@ -371,6 +371,41 @@ Live Activity (`MilepostWidget/`, `RunActivityController`):
 - Splits are stored in the unit the run was recorded with (`splitMeters`);
   the detail view labels them from that, not from the current setting.
 
+Autosave + recovery (`RunAutosave.swift`, `RunCheckpoint` in `RunRecorder.swift`, added 2026-10-22,
+user report: a walker's app died halfway and the walk was gone — a run lived only in memory):
+- Every 10 s while recording, and whenever the scene leaves `.active`, the
+  recorder's `RunCheckpoint` (its own booked distance, moving time, route,
+  splits, pauses) is written to Application Support `run-in-progress.json`,
+  file protection until-first-unlock (the screen is locked mid-run). At most
+  10 s of a run is lost.
+- The next launch (`MilepostApp.init`, before anything can start a run)
+  turns a leftover checkpoint into a saved `Activity`, ended at the last
+  write, then shares it / writes it to Health exactly like a save. No
+  prompt: `RecoveredRunBanner` on Record (`record.recovered`) says so once.
+  A checkpoint that never moved is dropped, same rule as Finish.
+- An idle tick deletes the file only if THIS process wrote it
+  (`wroteThisSession`) — at launch the file on disk is the last run's.
+  `endRun` clears it at once; writes and deletes share one serial queue so a
+  slow write can never resurrect a finished run.
+- UI tests use a temp file wiped at launch (many tests start a run and
+  terminate, which must not seed the next test). `-uitest-seed-checkpoint`
+  (DEBUG) plants `HeatmapPreviewData.interruptedWalk()`.
+- Not resumable: a recovered run is saved, not continued. Phone only — the
+  watch has no checkpoint yet (its HKWorkoutSession could be recovered with
+  `recoverActiveWorkoutSession`).
+
+Daily steps (`DailyMovementSection`, You tab, added 2026-10-22, user request):
+- You > Apple Health > "Daily steps", OFF by default, independent of saving:
+  it asks Health for READ only (`dailyReadTypes`: steps + walking/running
+  distance), never write. The card sits above "This week".
+- `HKStatisticsCollectionQuery` per calendar day, cumulative sum: Health
+  merges iPhone and Watch samples so a step both counted is counted once.
+  Summing raw samples would double it.
+- Health never says a read was denied; an all-empty week shows the
+  Settings path in the footer. Reloads when the app comes back to the front.
+- Stays on the phone: not on `Activity`, not in `SharedActivityPayload`.
+  `-uitest-daily-demo` (DEBUG) turns it on with canned numbers.
+
 Apple Health (`Milepost/Services/HealthKit*`, `HealthSync`, `HealthSection`, added 2026-09-16):
 - **Both switches start off.** `HealthSettings.enabledDefault` and `.routeDefault`
   are false, and `HealthTests.testHealthAndRouteWritingAreBothOffByDefault` pins

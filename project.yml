@@ -70,7 +70,7 @@ targets:
         # read string when it asks for heart rate and body mass. A missing
         # string is a launch-time crash, not a warning.
         NSHealthUpdateUsageDescription: Milepost adds your saved runs, walks and rides to Apple Health as workouts, so they count toward your rings and other fitness apps can read them. Your route is only included if you switch it on.
-        NSHealthShareUsageDescription: Milepost reads heart rate and other metrics your Apple Watch recorded during an activity, and your weight, so it can estimate calories more accurately.
+        NSHealthShareUsageDescription: Milepost reads heart rate and other metrics your Apple Watch recorded during an activity, your weight so it can estimate calories more accurately, and your daily steps and walking distance from your iPhone and Apple Watch if you turn on Daily steps.
         # Supabase project for friends. The anon key is public by design (it
         # ships in the bundle); RLS does the gating. From Secrets.xcconfig.
         SUPABASE_HOST: $(SUPABASE_HOST)

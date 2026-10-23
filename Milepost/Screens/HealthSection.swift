@@ -12,6 +12,7 @@ struct HealthSection: View {
     @AppStorage(HealthSettings.enabledKey) private var enabled = HealthSettings.enabledDefault
     @AppStorage(HealthSettings.routeKey) private var includeRoute = HealthSettings.routeDefault
     @AppStorage(HealthSettings.metricsKey) private var readMetrics = HealthSettings.metricsDefault
+    @AppStorage(HealthSettings.dailyKey) private var dailySteps = HealthSettings.dailyDefault
 
     @State private var isAsking = false
 
@@ -37,6 +38,18 @@ struct HealthSection: View {
 
                     Toggle("Show heart rate and Watch data", isOn: $readMetrics)
                         .accessibilityIdentifier("you.healthMetrics")
+                }
+
+                // Independent of saving: someone who only wants their step
+                // count should not have to hand Milepost write access.
+                Toggle(isOn: $dailySteps) {
+                    Text("Daily steps")
+                    Text("Steps and distance walked each day, from your iPhone and Apple Watch.")
+                }
+                .accessibilityIdentifier("you.healthDaily")
+                .onChange(of: dailySteps) { _, on in
+                    guard on else { return }
+                    Task { await health.requestDailyMovementAccess() }
                 }
 
                 NavigationLink {

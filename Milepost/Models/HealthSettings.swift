@@ -11,8 +11,13 @@ enum HealthSettings {
     static let enabledKey = "health.saveWorkouts"
     static let routeKey = "health.includeRoute"
     static let metricsKey = "health.readMetrics"
+    /// Daily steps and walking distance from Health (iPhone + Apple Watch),
+    /// on the You tab. Off until the user asks: it is a read permission of
+    /// its own and the sheet only appears on that tap.
+    static let dailyKey = "health.dailySteps"
 
     static let enabledDefault = false
     static let routeDefault = false
     static let metricsDefault = true
+    static let dailyDefault = false
 }

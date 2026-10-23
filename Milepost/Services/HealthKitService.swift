@@ -34,6 +34,30 @@ struct HealthMetrics: Equatable {
     }
 }
 
+/// One calendar day of walking as Health counts it: the iPhone's motion
+/// chip and an Apple Watch both write steps, and Health merges them so a
+/// step counted by both is counted once. Nil means Health had nothing (or
+/// read access was refused — Health will not say which).
+struct DailyMovement: Equatable, Identifiable {
+    var day: Date
+    var steps: Double?
+    var distanceMeters: Double?
+
+    var id: Date { day }
+
+    /// Newest first, one entry per day from `days - 1` days ago to today,
+    /// filling days Health had nothing for with nils so the list never has
+    /// holes.
+    static func days(_ days: Int, endingOn now: Date, calendar: Calendar = .current,
+                     steps: [Date: Double], distance: [Date: Double]) -> [DailyMovement] {
+        let today = calendar.startOfDay(for: now)
+        return (0..<max(0, days)).compactMap { offset in
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { return nil }
+            return DailyMovement(day: day, steps: steps[day], distanceMeters: distance[day])
+        }
+    }
+}
+
 /// Everything Milepost does with Apple Health: writing a finished activity in
 /// as a real workout, and reading back the things a wrist can measure and a
 /// phone in a pocket cannot.
@@ -91,6 +115,7 @@ final class HealthKitService {
             HKQuantityType(.heartRate),
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.stepCount),
+            HKQuantityType(.distanceWalkingRunning),
             HKQuantityType(.bodyMass),
             HKQuantityType(.runningPower),
             HKQuantityType(.runningStrideLength),
@@ -128,6 +153,24 @@ final class HealthKitService {
             lastError = error.localizedDescription
         }
         return canWriteWorkouts
+    }
+
+    /// Just the two the daily steps card reads. Asked on their own, so
+    /// turning on daily steps never asks to write workouts.
+    static var dailyReadTypes: Set<HKObjectType> {
+        [HKQuantityType(.stepCount), HKQuantityType(.distanceWalkingRunning)]
+    }
+
+    func requestDailyMovementAccess() async {
+        guard Self.isSupported else {
+            lastError = HealthError.unavailable.errorDescription
+            return
+        }
+        do {
+            try await store.requestAuthorization(toShare: [], read: Self.dailyReadTypes)
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     // MARK: Writing
@@ -352,7 +395,41 @@ final class HealthKitService {
         return metrics
     }
 
+    /// Steps and walking + running distance per day for the last `days`
+    /// days, newest first. A statistics collection query, so Health merges the
+    /// phone's and the watch's samples instead of adding them up.
+    func dailyMovement(days: Int, now: Date = .now) async -> [DailyMovement] {
+        guard Self.isSupported, days > 0 else { return [] }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        guard let start = calendar.date(byAdding: .day, value: -(days - 1), to: today) else { return [] }
+        let steps = await dailySums(HKQuantityType(.stepCount), unit: .count(), from: start, to: now)
+        let distance = await dailySums(HKQuantityType(.distanceWalkingRunning), unit: .meter(), from: start, to: now)
+        return DailyMovement.days(days, endingOn: now, calendar: calendar, steps: steps, distance: distance)
+    }
+
     // MARK: Query plumbing
+
+    private func dailySums(_ type: HKQuantityType, unit: HKUnit, from start: Date, to end: Date) async -> [Date: Double] {
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(quantityType: type,
+                                                    quantitySamplePredicate: predicate,
+                                                    options: .cumulativeSum,
+                                                    anchorDate: start,
+                                                    intervalComponents: DateComponents(day: 1))
+            query.initialResultsHandler = { _, collection, _ in
+                var sums: [Date: Double] = [:]
+                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    if let value = statistics.sumQuantity()?.doubleValue(for: unit) {
+                        sums[Calendar.current.startOfDay(for: statistics.startDate)] = value
+                    }
+                }
+                continuation.resume(returning: sums)
+            }
+            store.execute(query)
+        }
+    }
 
     private func statistic(_ type: HKQuantityType,
                            _ predicate: NSPredicate,
