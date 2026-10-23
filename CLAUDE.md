@@ -23,6 +23,8 @@ Same per-change loop as the other iOS apps (Pothole Radar is the template):
 4. OWASP LLM note in the commit: always N/A, there is no LLM surface.
 5. Commit with an explanatory body + `Co-Authored-By`, then push.
 6. `./scripts/ship.sh` for app-code changes once the ASC app record exists.
+   **TestFlight only** (owner, 2026-10-23): do NOT submit to App Review until
+   the owner has tried the build on his phone and says to submit.
 
 Apple quality gates (2026-10-07, owner rule for every iOS app; `ship.sh`
 runs them before every TestFlight upload and refuses to continue on a fail):
