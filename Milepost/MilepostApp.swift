@@ -45,6 +45,9 @@ struct MilepostApp: App {
         if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-daily-demo") {
             UserDefaults.standard.set(true, forKey: HealthSettings.dailyKey)
         }
+        if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-health-routes") {
+            UserDefaults.standard.set(true, forKey: HealthSettings.mapKey)
+        }
         let location = LocationService()
         let recorder = RunRecorder()
         let announcer = VoiceAnnouncer(isMuted: isUITest)

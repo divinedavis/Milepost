@@ -86,6 +86,9 @@ final class HealthKitService {
     private let store = HKHealthStore()
 
     private(set) var lastError: String?
+    /// Other apps' workout routes for "Your map" (`HealthSettings.mapKey`).
+    private(set) var mapRoutes: [HealthRoute] = []
+    private var mapRoutesLoadedAt: Date?
 
     // MARK: Types
 
@@ -171,6 +174,25 @@ final class HealthKitService {
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    /// Workouts and their routes, read only, for "Show Apple Health
+    /// workouts on my map". Asked on their own, on that switch's tap.
+    static var mapReadTypes: Set<HKObjectType> {
+        [HKObjectType.workoutType(), HKSeriesType.workoutRoute()]
+    }
+
+    func requestMapAccess() async {
+        guard Self.isSupported else {
+            lastError = HealthError.unavailable.errorDescription
+            return
+        }
+        do {
+            try await store.requestAuthorization(toShare: [], read: Self.mapReadTypes)
+        } catch {
+            lastError = error.localizedDescription
+        }
+        await refreshMapRoutes(force: true)
     }
 
     // MARK: Writing
@@ -408,6 +430,77 @@ final class HealthKitService {
         return DailyMovement.days(days, endingOn: now, calendar: calendar, steps: steps, distance: distance)
     }
 
+    /// Loads other apps' walks, runs and rides with a route from the last
+    /// year into `mapRoutes`, at most every `refreshSeconds`. Off, it empties.
+    func refreshMapRoutes(force: Bool = false, now: Date = .now) async {
+        guard UserDefaults.standard.bool(forKey: HealthSettings.mapKey) else {
+            mapRoutes = []
+            mapRoutesLoadedAt = nil
+            return
+        }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-uitest-health-routes") {
+            mapRoutes = HealthRouteRules.demo(now: now)
+            return
+        }
+        #endif
+        if !force, let loaded = mapRoutesLoadedAt,
+           now.timeIntervalSince(loaded) < HealthRouteRules.refreshSeconds { return }
+        guard Self.isSupported else { return }
+        mapRoutesLoadedAt = now
+        mapRoutes = await workoutRoutes(since: now.addingTimeInterval(-Double(HealthRouteRules.windowDays) * 86_400))
+    }
+
+    private func workoutRoutes(since start: Date) async -> [HealthRoute] {
+        let kinds = NSCompoundPredicate(orPredicateWithSubpredicates:
+            HealthRouteRules.workoutTypes.map { HKQuery.predicateForWorkouts(with: $0) })
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates:
+            [kinds, HKQuery.predicateForSamples(withStart: start, end: nil)])
+        let sort = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        let workouts: [HKWorkout] = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate,
+                                      limit: HealthRouteRules.maxWorkouts, sortDescriptors: sort) { _, samples, _ in
+                continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
+            }
+            store.execute(query)
+        }
+        var routes: [HealthRoute] = []
+        for workout in workouts {
+            // Milepost's own (phone and watch) are activities already.
+            if workout.sourceRevision.source.bundleIdentifier.hasPrefix("com.divinedavis.milepost") { continue }
+            guard let sport = HealthRouteRules.sport(for: workout.workoutActivityType) else { continue }
+            let coordinates = await routeCoordinates(of: workout)
+            guard coordinates.count > 1 else { continue }
+            routes.append(HealthRoute(id: workout.uuid, sport: sport, start: workout.startDate,
+                                      externalID: workout.metadata?[HKMetadataKeyExternalUUID] as? String,
+                                      brand: workout.metadata?[HKMetadataKeyWorkoutBrandName] as? String,
+                                      coordinates: RouteLine.thin(coordinates, to: RouteLine.maxPoints)))
+        }
+        return routes
+    }
+
+    /// Every location of every route on the workout (a paused workout can
+    /// carry more than one), in order. Empty when there is none or reading
+    /// routes was refused.
+    private func routeCoordinates(of workout: HKWorkout) async -> [CLLocationCoordinate2D] {
+        let routes = (try? await samples(of: HKSeriesType.workoutRoute(),
+                                         predicate: HKQuery.predicateForObjects(from: workout),
+                                         limit: HKObjectQueryNoLimit))?
+            .compactMap { $0 as? HKWorkoutRoute } ?? []
+        var coordinates: [CLLocationCoordinate2D] = []
+        for route in routes {
+            coordinates += await withCheckedContinuation { continuation in
+                let collected = LocationBatch()
+                let query = HKWorkoutRouteQuery(route: route) { _, locations, done, error in
+                    collected.coordinates += (locations ?? []).map(\.coordinate)
+                    if done || error != nil { continuation.resume(returning: collected.coordinates) }
+                }
+                store.execute(query)
+            }
+        }
+        return coordinates
+    }
+
     // MARK: Query plumbing
 
     private func dailySums(_ type: HKQuantityType, unit: HKUnit, from start: Date, to end: Date) async -> [Date: Double] {
@@ -469,4 +562,9 @@ final class HealthKitService {
             store.execute(query)
         }
     }
+}
+
+/// Collects a route query's batches; the handler is called once per batch.
+private final class LocationBatch: @unchecked Sendable {
+    var coordinates: [CLLocationCoordinate2D] = []
 }

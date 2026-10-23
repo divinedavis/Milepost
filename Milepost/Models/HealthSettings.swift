@@ -15,9 +15,13 @@ enum HealthSettings {
     /// on the You tab. Off until the user asks: it is a read permission of
     /// its own and the sheet only appears on that tap.
     static let dailyKey = "health.dailySteps"
+    /// Other apps' walks, runs and rides (with routes) on "Your map". A read
+    /// permission of its own, asked on that switch's tap.
+    static let mapKey = "health.mapWorkouts"
 
     static let enabledDefault = false
     static let routeDefault = false
     static let metricsDefault = true
     static let dailyDefault = false
+    static let mapDefault = false
 }

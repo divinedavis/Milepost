@@ -13,6 +13,7 @@ struct HealthSection: View {
     @AppStorage(HealthSettings.routeKey) private var includeRoute = HealthSettings.routeDefault
     @AppStorage(HealthSettings.metricsKey) private var readMetrics = HealthSettings.metricsDefault
     @AppStorage(HealthSettings.dailyKey) private var dailySteps = HealthSettings.dailyDefault
+    @AppStorage(HealthSettings.mapKey) private var mapWorkouts = HealthSettings.mapDefault
 
     @State private var isAsking = false
 
@@ -50,6 +51,18 @@ struct HealthSection: View {
                 .onChange(of: dailySteps) { _, on in
                     guard on else { return }
                     Task { await health.requestDailyMovementAccess() }
+                }
+
+                // Read only, like daily steps. The routes stay on this phone.
+                Toggle(isOn: $mapWorkouts) {
+                    Text("Show Apple Health workouts on my map")
+                    Text("Walks, runs and rides other apps saved with a route, like Apple's Workout app or Strava. They stay on this phone.")
+                }
+                .accessibilityIdentifier("you.healthMap")
+                .onChange(of: mapWorkouts) { _, on in
+                    Task {
+                        if on { await health.requestMapAccess() } else { await health.refreshMapRoutes() }
+                    }
                 }
 
                 NavigationLink {

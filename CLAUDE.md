@@ -423,6 +423,23 @@ an Airbnb Profile recording):
   (polylines are not in the accessibility tree). Routes are thinned to 250
   points (`RouteLine.thin`). Local only; nothing new leaves the phone.
 
+Apple Health workouts on the map (`HealthRoutes.swift`, `HealthKitService.refreshMapRoutes`,
+added 2026-10-23, owner request):
+- Profile > Apple Health > "Show Apple Health workouts on my map"
+  (`you.healthMap`, `HealthSettings.mapKey`), **OFF by default**. Its tap asks
+  READ only for workouts + workout routes (`mapReadTypes`).
+- Reads running / walking / hiking (as a walk) / cycling workouts from the last
+  365 days, newest 300, and each one's `HKWorkoutRouteQuery` locations, thinned
+  to 250 points. Cached on the service for 10 min; refreshed when a map opens.
+  In memory only: never stored, never in `SharedActivityPayload`.
+- Never a second line for an outing Milepost has: skipped if the source bundle
+  is Milepost's (phone or watch), brand "Milepost", the activity's
+  `healthWorkoutID`/external UUID matches, or a Milepost activity started
+  within 2 min (a Watch Workout app run alongside) — `HealthRouteRules`.
+- Same sport colours; `routes.count` adds "· N from Apple Health".
+  `-uitest-health-routes` (DEBUG) turns it on with a demo run + ride.
+- Steps cannot be lines: Health has no location for them.
+
 Friend request notification (in-app only, added 2026-10-22, owner request):
 - Milepost has no push. While the app is in the foreground and signed in,
   `RootView` calls `SocialStore.checkForRequests()` now and every 60 s

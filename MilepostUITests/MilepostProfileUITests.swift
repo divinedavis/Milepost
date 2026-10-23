@@ -45,6 +45,45 @@ final class MilepostProfileUITests: XCTestCase {
         XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 6))
     }
 
+    /// Other apps' Apple Health workouts join the map when the switch is on
+    /// (`-uitest-health-routes` stands in for Health: a run and a ride).
+    func testAppleHealthWorkoutsJoinTheMap() {
+        launch(["-uitest-seed-heatmap", "-uitest-health-routes"])
+        app.buttons["tab.you"].tap()
+        XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 8))
+        app.buttons["you.map"].tap()
+        let count = app.staticTexts["routes.count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 8))
+        XCTAssertEqual(count.label, "5 activities · 2 from Apple Health")
+        app.buttons["routes.filter.bike"].tap()
+        XCTAssertEqual(count.label, "1 activity · 1 from Apple Health")
+        app.buttons["routes.filter.walk"].tap()
+        XCTAssertEqual(count.label, "3 activities", "the seeded walks are Milepost's own")
+        app.buttons["routes.close"].tap()
+
+        // The switch that turned it on, under Apple Health.
+        let row = app.buttons["you.rowHealth"]
+        for _ in 0..<8 where !(row.exists && row.isHittable) { app.swipeUp(velocity: .slow) }
+        row.tap()
+        let toggle = app.switches["you.healthMap"]
+        for _ in 0..<4 where !toggle.exists { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(toggle.waitForExistence(timeout: 6))
+        XCTAssertEqual(toggle.value as? String, "1")
+    }
+
+    func testAppleHealthWorkoutsAreOffByDefault() {
+        launch(["-uitest-seed-heatmap"])
+        app.buttons["tab.you"].tap()
+        let row = app.buttons["you.rowHealth"]
+        XCTAssertTrue(app.buttons["you.map"].waitForExistence(timeout: 8))
+        for _ in 0..<8 where !(row.exists && row.isHittable) { app.swipeUp(velocity: .slow) }
+        row.tap()
+        let toggle = app.switches["you.healthMap"]
+        for _ in 0..<4 where !toggle.exists { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(toggle.waitForExistence(timeout: 6))
+        XCTAssertEqual(toggle.value as? String, "0")
+    }
+
     func testAnEmptyMapSaysWhatWillAppear() {
         launch([])
         app.buttons["tab.you"].tap()

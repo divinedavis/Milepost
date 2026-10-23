@@ -328,6 +328,7 @@ struct ProfileAvatar: View {
 
 /// The small map on the card: the newest routes, framed to fit.
 private struct ProfileMapPreview: View {
+    @Environment(HealthKitService.self) private var health
     let activities: [Activity]
     @State private var lines: [RouteLine] = []
     @State private var position: MapCameraPosition = .automatic
@@ -357,9 +358,17 @@ private struct ProfileMapPreview: View {
         }
         // Keyed on the ids so a new activity redraws, but not every render.
         .task(id: activities.map(\.id)) {
-            lines = activities.compactMap(RouteLine.init)
-            // .automatic frames the content present when it is set.
-            position = .automatic
+            await health.refreshMapRoutes()
+            drawLines()
         }
+        // The switch in Apple Health settings turned on or off.
+        .onChange(of: health.mapRoutes.map(\.id)) { _, _ in drawLines() }
+    }
+
+    /// The newest of each, like the activities this card is given.
+    private func drawLines() {
+        lines = RouteLine.all(activities: activities, health: Array(health.mapRoutes.prefix(40)))
+        // .automatic frames the content present when it is set.
+        position = .automatic
     }
 }

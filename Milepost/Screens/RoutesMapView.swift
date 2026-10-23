@@ -3,9 +3,11 @@ import SwiftUI
 
 /// Every saved activity's route as a line on one map, opened from the "Your
 /// map" card on Profile (added 2026-10-22, user request, after Airbnb's
-/// travel map). Lines are coloured by sport; the chips filter them.
+/// travel map). Lines are coloured by sport; the chips filter them. With
+/// "Show Apple Health workouts on my map" on, other apps' routes join them.
 struct RoutesMapView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(HealthKitService.self) private var health
     let activities: [Activity]
 
     @State private var filter: Sport? = nil
@@ -75,7 +77,8 @@ struct RoutesMapView: View {
         .task {
             // Decoded once, on the main actor (SwiftData), and thinned: a
             // map of a few hundred hour-long runs is millions of points.
-            lines = activities.compactMap(RouteLine.init)
+            await health.refreshMapRoutes()
+            lines = RouteLine.all(activities: activities, health: health.mapRoutes)
         }
         .onChange(of: filter) { _, _ in
             withAnimation { position = .automatic }
@@ -87,7 +90,9 @@ struct RoutesMapView: View {
     private var caption: String {
         if lines.isEmpty { return "Your lines show up here after your first activity" }
         let n = shown.count
-        return n == 1 ? "1 activity" : "\(n) activities"
+        let text = n == 1 ? "1 activity" : "\(n) activities"
+        let fromHealth = shown.filter(\.fromHealth).count
+        return fromHealth == 0 ? text : "\(text) · \(fromHealth) from Apple Health"
     }
 
     private func chip(_ sport: Sport?, title: String) -> some View {
@@ -119,6 +124,8 @@ struct RouteLine: Identifiable {
     let id: UUID
     let sport: Sport
     let coordinates: [CLLocationCoordinate2D]
+    /// Another app's workout, read from Apple Health.
+    var fromHealth = false
 
     init?(_ activity: Activity) {
         let all = activity.coordinates
@@ -126,6 +133,19 @@ struct RouteLine: Identifiable {
         id = activity.id
         sport = activity.sport
         coordinates = Self.thin(all, to: Self.maxPoints)
+    }
+
+    init(_ route: HealthRoute) {
+        id = route.id
+        sport = route.sport
+        coordinates = route.coordinates
+        fromHealth = true
+    }
+
+    /// Milepost's activities, then Health's workouts that are not one of them.
+    static func all(activities: [Activity], health: [HealthRoute]) -> [RouteLine] {
+        activities.compactMap(RouteLine.init)
+            + HealthRouteRules.newRoutes(health, activities: activities).map(RouteLine.init)
     }
 
     /// Every k-th point, always keeping the last so the line ends where the
