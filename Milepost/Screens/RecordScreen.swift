@@ -51,7 +51,9 @@ struct RecordScreen: View {
                 }
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
-            .ignoresSafeArea(edges: .top)
+            // Edge to edge: under the status bar and under the floating
+            // dark glass controls and tab bar.
+            .ignoresSafeArea()
             .overlay(alignment: .topTrailing) {
                 MapUserLocationButton(scope: mapScope)
                     .buttonBorderShape(.circle)
@@ -64,7 +66,7 @@ struct RecordScreen: View {
                         .accessibilityLabel("Milepost")
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)
-                        .background(Theme.card.opacity(0.9), in: Capsule())
+                        .darkGlass(in: Capsule(), shadow: false)
                     heatWindowMenu
                 }
                 .padding(.top, 8)
@@ -180,7 +182,7 @@ struct RecordScreen: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(Theme.card.opacity(0.9), in: Capsule())
+            .darkGlass(in: Capsule(), shadow: false)
         }
         .accessibilityLabel("Past activities, \(heatWindow.title)")
         .accessibilityValue(heatWindow == .off
@@ -227,7 +229,7 @@ struct RecordScreen: View {
             }
         }
         .padding(16)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 18))
+        .darkGlass(in: RoundedRectangle(cornerRadius: 22))
     }
 
     private func stat(_ value: String, _ label: String, id: String) -> some View {
@@ -250,11 +252,6 @@ struct RecordScreen: View {
 
     private var bottomBar: some View {
         VStack(spacing: 12) {
-            Capsule()
-                .fill(Color(white: 0.3))
-                .frame(width: 56, height: 5)
-                .padding(.top, 8)
-
             if recorder.isActive {
                 RecorderControls(layout: .map)
                     .padding(.horizontal, 20)
@@ -264,7 +261,7 @@ struct RecordScreen: View {
                 // label wider than both the circle above it and "History" —
                 // grew the left column and shoved Start off centre. Thirds
                 // put Start on the screen's centre line whatever is chosen.
-                HStack(alignment: .top, spacing: 0) {
+                HStack(alignment: .center, spacing: 0) {
                     sportChip
                     startButton
                     historyChip
@@ -272,9 +269,13 @@ struct RecordScreen: View {
                 .padding(.horizontal, 24)
             }
         }
-        .padding(.bottom, 12)
+        .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
-        .background(Theme.card)
+        // A floating dark glass panel (2026-10-22) instead of an opaque
+        // sheet, so the map and its past routes fill the screen.
+        .darkGlass(in: RoundedRectangle(cornerRadius: 30))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 
     private var sportChip: some View {
@@ -282,7 +283,7 @@ struct RecordScreen: View {
             Button { showSportPicker = true } label: {
                 ZStack(alignment: .topTrailing) {
                     Circle()
-                        .fill(Color(white: 0.2))
+                        .fill(Color.white.opacity(0.12))
                         .frame(width: 72, height: 72)
                         .overlay(SportIcon(sport: sport, size: 28).foregroundStyle(Theme.accent))
                     Circle()
@@ -295,7 +296,6 @@ struct RecordScreen: View {
             .accessibilityLabel("Sport, \(sport.title)")
             .accessibilityHint("Choose run, stroller run, walk or ride")
             .accessibilityIdentifier("record.sport")
-            Text(sport.title).font(.subheadline).foregroundStyle(.white)
         }
         .modifier(ControlColumn())
     }
@@ -311,7 +311,6 @@ struct RecordScreen: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Start")
             .accessibilityIdentifier("record.start")
-            Text("Start").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accentText)
         }
         .modifier(ControlColumn())
     }
@@ -320,14 +319,13 @@ struct RecordScreen: View {
         VStack(spacing: 8) {
             Button { tab = .block } label: {
                 Circle()
-                    .fill(Color(white: 0.2))
+                    .fill(Color.white.opacity(0.12))
                     .frame(width: 72, height: 72)
                     .overlay(Image(systemName: "clock.arrow.circlepath").font(.system(size: 26)).foregroundStyle(.white))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("History")
             .accessibilityIdentifier("record.history")
-            Text("History").font(.subheadline).foregroundStyle(.white)
         }
         .modifier(ControlColumn())
     }
@@ -368,8 +366,9 @@ struct GPSStatusPill: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        // Opaque: over a light map a see-through card fails the contrast audit.
-        .background(Theme.card, in: Capsule())
+        // Dark glass is 85% tint over a blur, dark enough for the contrast
+        // audit over a light map (a plain see-through card failed it).
+        .darkGlass(in: Capsule(), shadow: false)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("gps.status")
     }
@@ -417,7 +416,7 @@ struct RecoveredRunBanner: View {
             .accessibilityIdentifier("record.recoveredDismiss")
         }
         .padding(14)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+        .darkGlass(in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

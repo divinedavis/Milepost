@@ -71,7 +71,6 @@ final class MilepostSportUITests: XCTestCase {
         tap("sport.walk")
         XCTAssertTrue(app.buttons["record.sport"].waitForExistence(timeout: 6))
         XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Walk")
-        XCTAssertTrue(app.staticTexts["Walk"].exists, "the chip caption still says Run")
 
         choose("bike")
         XCTAssertEqual(app.buttons["record.sport"].label, "Sport, Ride")

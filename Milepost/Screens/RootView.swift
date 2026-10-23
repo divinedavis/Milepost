@@ -32,6 +32,7 @@ struct RootView: View {
         return !args.contains("-uitest") || args.contains("-uitest-request-banner")
     }()
     // `-open-tab block` lets scripts land on a tab for screenshots.
+    @Namespace private var pill
     @State private var tab: Tab = {
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "-open-tab"), i + 1 < args.count, let t = Tab(rawValue: args[i + 1]) { return t }
@@ -39,17 +40,21 @@ struct RootView: View {
     }()
 
     var body: some View {
-        VStack(spacing: 0) {
-            Group {
-                switch tab {
-                case .record: RecordScreen(tab: $tab)
-                case .block: BlockScreen()
-                case .you: YouScreen(tab: $tab)
-                }
+        Group {
+            switch tab {
+            case .record: RecordScreen(tab: $tab)
+            case .block: BlockScreen()
+            case .you: YouScreen(tab: $tab)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The bar floats: screens draw under it (the map runs to the bottom
+        // edge, lists scroll beneath it) and the inset keeps their last row
+        // and controls clear of it.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             tabBar
+                .padding(.horizontal, 20)
+                .padding(.bottom, 4)
         }
         .background(Theme.background)
         .overlay(alignment: .top) {
@@ -97,35 +102,54 @@ struct RootView: View {
         }
     }
 
+    static let barHeight: CGFloat = 62
+
     /// Hand-rolled: iOS 26's floating TabView bar reports a successful tap in
     /// XCUITest without switching, and this one is three buttons anyway.
+    /// A floating dark glass capsule (2026-10-22), 62pt tall and 20pt in from
+    /// the edges like Marracat's, with a lighter pill that slides behind the
+    /// selected tab.
     private var tabBar: some View {
-        HStack {
+        HStack(spacing: 0) {
             ForEach(Tab.allCases, id: \.self) { item in
+                let selected = tab == item
                 Button {
                     tab = item
                 } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: item.symbol).font(.system(size: 20))
-                            .overlay(alignment: .topTrailing) {
-                                if item == .you, !social.incoming.isEmpty {
-                                    Circle().fill(Color.red).frame(width: 8, height: 8).offset(x: 4, y: -2)
-                                }
+                    // Icons only (owner, 2026-10-22), like Instagram's bar;
+                    // VoiceOver still reads the tab's name.
+                    Image(systemName: item.symbol).font(.system(size: 22, weight: .medium))
+                        .overlay(alignment: .topTrailing) {
+                            if item == .you, !social.incoming.isEmpty {
+                                Circle().fill(Color.red).frame(width: 8, height: 8).offset(x: 4, y: -2)
                             }
-                        Text(item.title).font(.caption2)
-                    }
+                        }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .foregroundStyle(tab == item ? Theme.accentText : Theme.secondaryText)
+                    .frame(height: Self.barHeight - 10)
+                    .foregroundStyle(selected ? Theme.accentText : Color.white.opacity(0.92))
+                    .background {
+                        if selected {
+                            Capsule()
+                                .fill(DarkGlass.pill)
+                                .overlay(Capsule().strokeBorder(DarkGlass.rim, lineWidth: 1))
+                                .matchedGeometryEffect(id: "pill", in: pill)
+                        }
+                    }
+                    .contentShape(Capsule())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(item.title)
                 .accessibilityIdentifier("tab.\(item.rawValue)")
                 .accessibilityValue(item == .you && !social.incoming.isEmpty ? social.incomingSummary : "")
-                .accessibilityAddTraits(tab == item ? .isSelected : [])
+                .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 8)
-        .background(Theme.card)
-        .overlay(alignment: .top) { Divider() }
+        .padding(5)
+        .frame(height: Self.barHeight)
+        .frame(maxWidth: 480)
+        .darkGlass(in: Capsule())
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: tab)
+        .sensoryFeedback(.selection, trigger: tab)
     }
 }
 
