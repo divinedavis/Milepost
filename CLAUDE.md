@@ -408,6 +408,12 @@ user report: a walker's app died halfway and the walk was gone — a run lived o
   `-uitest-keep-autosave` (many tests start a run and terminate, which must
   not seed the next test). `-uitest-seed-checkpoint`
   (DEBUG) plants `HeatmapPreviewData.interruptedWalk()`.
+- `testAWalkCutOffByTheAppDyingIsSavedOnNextLaunch` presses Home before
+  `terminate()` since 2026-10-23: killed straight from the foreground it
+  failed the full ship run twice (builds 36, 38; the screen recording showed
+  34 s recorded and no checkpoint found on relaunch) while passing alone.
+  OPEN: why a foreground kill after 3 timer ticks sometimes leaves nothing —
+  not yet reproduced outside the full run.
 - Not resumable: a recovered run is saved, not continued. Phone only — the
   watch has no checkpoint yet (its HKWorkoutSession could be recovered with
   `recoverActiveWorkoutSession`).

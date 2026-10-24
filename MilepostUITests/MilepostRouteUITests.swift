@@ -46,11 +46,15 @@ final class MilepostRouteUITests: XCTestCase {
         XCTAssertTrue(app.buttons["live.pause"].waitForExistence(timeout: 8))
         let distance = app.staticTexts["live.distance"]
         wait(for: [expectation(for: NSPredicate(format: "label != '0.00'"), evaluatedWith: distance)], timeout: 45)
-        // Two autosave intervals with ground covered, so a tick has surely
-        // written it. One (sleep 12) passed alone and failed once in the full
-        // ship run, where the simulator is slower (2026-10-22).
+        // Two autosave intervals with ground covered, so the timer has had
+        // its chances to write.
         sleep(22)
-
+        // Then the way a walk usually dies: the screen locks (the app leaves
+        // the foreground, which writes a checkpoint at once) and the app is
+        // killed. Killing it straight from the foreground failed the ship
+        // run twice (2026-10-23, builds 36 and 38) while passing alone.
+        XCUIDevice.shared.press(.home)
+        sleep(2)
         app.terminate()
         app.launchArguments = ["-uitest", "-uitest-keep-autosave"]
         app.launch()
