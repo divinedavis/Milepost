@@ -14,6 +14,10 @@ Baseline (build 38, 2026-10-23): ship ~51 min; 20 min of it running tests,
 the rest builds (~15 separate `xcodebuild test` runs), archive, upload.
 Per-step timings now go to `~/Library/Logs/milepost-ship-timings.csv`.
 
+After phase 1 (build 39, 2026-10-23): **ship 20 min** (from 51). Tests 17 min,
+performance 73 s, smoke 11 s + watch 23 s, archive 30 s, export 14 s,
+upload 54 s. Every test passed, no flaky retries.
+
 ## Claude's 50
 
 | # | Idea | Status |
