@@ -3,6 +3,8 @@
 # starts, which a green `xcodebuild build` does not.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/build_lock.sh
+build_lock_take "Milepost smoke test"
 
 DEVICE="$(./scripts/sim_udid.sh)"
 if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then

@@ -6,6 +6,8 @@
 # CoreLocation setup, and its own ways to die on launch.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/build_lock.sh
+build_lock_take "Milepost watch smoke test"
 
 DEVICE="${MILEPOST_WATCH_SIM:-Apple Watch Series 11 (46mm)}"
 BUNDLE_ID="com.divinedavis.milepost.watchkitapp"

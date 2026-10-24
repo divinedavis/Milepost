@@ -8,6 +8,10 @@
 #   ./scripts/run_tests.sh ui MilepostUITests/testEveryTabOpens
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# The Mac-wide build lock (one build at a time, every app). Re-entrant: under
+# ship.sh it is already ours.
+source scripts/build_lock.sh
+build_lock_take "Milepost tests"
 
 WHAT="${1:-all}"
 FILTER="${2:-}"

@@ -29,9 +29,15 @@ trap cleanup EXIT INT TERM
 
 cd "$(dirname "$0")/.."
 
-# Never two builds on this Mac at once (owner rule, 2026-10-23): wait until no
-# other app's ship, test run or xcodebuild is going, for up to three hours.
-./scripts/wait_for_quiet_mac.sh
+# Never two builds on this Mac at once (owner rule, 2026-10-23): the Mac-wide
+# lock every app's ship, nightly and test scripts take (Find A Crib's
+# build_lock.sh). Held until this script exits; run_tests.sh and the smoke
+# tests below see BUILD_LOCK_HELD and do not wait on it again.
+source scripts/build_lock.sh
+build_lock_take "Milepost ship"
+# build_lock_try set its own EXIT trap; keep the altool clean-up as well.
+trap 'cleanup; build_lock_release' EXIT
+trap 'cleanup; build_lock_release; exit 130' INT TERM
 
 # Every step is timed into a CSV, so slow steps show up over many ships.
 TIMINGS="$HOME/Library/Logs/milepost-ship-timings.csv"

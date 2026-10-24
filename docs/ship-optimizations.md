@@ -39,7 +39,7 @@ upload 54 s. Every test passed, no flaky retries.
 | C15 | Deep-link launch flags instead of tapping | HAD (-open-tab, seed flags) |
 | C16 | Condition waits instead of fixed sleeps | DONE (recovery 22 s → 5 s; moving run waits for a pace, not 20 s; clock check by predicate; map-tile waits only when capturing screenshots) |
 | C17 | Shorter waitForExistence timeouts | N/A — a wait returns as soon as the element appears; the timeout only costs time on a failure |
-| C18 | Injected clock for the route tests | NEXT (phase 3, larger) |
+| C18 | Injected clock for the route tests | N/A — would save ~1 min and replace the real simulated-GPS path that caught the recovery bug |
 | C19 | Autosave interval as a launch flag | DONE (`-uitest-autosave-interval`) |
 | C20 | Audit only changed screens | NO — same: the full audit runs every ship |
 | C21 | Parallel simulator clones | NO for now — conflicts with the one-simulator rule (16 GB Mac); owner to decide |
@@ -58,9 +58,9 @@ upload 54 s. Every test passed, no flaky retries.
 | C34 | Background upload | N/A — upload is ~1 s for 9 MB |
 | C35 | Background attach after processing | DONE (testflight_notes.py polls; attach only on submit) |
 | C36 | Skip watch smoke when no watch change | DONE (diff since the last build-N tag over the watch target's sources) |
-| C37 | Machine-wide build lock | DONE (wait_for_quiet_mac.sh at ship start) |
-| C38 | Queue runner across apps | NEXT (needs Marracat/FAC scripts; their sessions own them) |
-| C39 | Fixed nightly slots per app | NEXT (same) |
+| C37 | Machine-wide build lock | DONE (2026-10-24: Find A Crib's shared lock, ~/Library/Caches/build-lock; replaced Milepost's process-name check) |
+| C38 | Queue runner across apps | DONE (the shared lock queues Marracat, Find A Crib and Milepost) |
+| C39 | Fixed nightly slots per app | DUP C38 (the lock serialises the 03:00/03:05 nightlies) |
 | C40 | Refuse to start on low memory/disk | DONE (disk ≥ 10 GB; memory covered by the quiet-Mac wait) |
 | C41 | Pre-commit compile check | N/A — commits are made mid-work (WIP pushes are a standing rule); a compile per commit would slow those and the ship already gates |
 | C42 | Fastest gates first | DONE (coverage + ui_all checks before tests) |
@@ -79,7 +79,7 @@ upload 54 s. Every test passed, no flaky retries.
 |---|---|
 | Single-file compilation in Debug | HAD (incremental is Xcode's Debug default) |
 | No dSYM in Debug | HAD |
-| Shared files as a local Swift package | NEXT (phase 5) |
+| Shared files as a local Swift package | N/A — clean build is 23 s; a three-target refactor for seconds |
 | Conditional XcodeGen | DONE (C4) |
 | ONLY_ACTIVE_ARCH Debug | HAD |
 | EAGER_LINKING = YES | DONE (project.yml) |
