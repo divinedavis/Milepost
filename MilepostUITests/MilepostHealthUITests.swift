@@ -31,13 +31,6 @@ final class MilepostHealthUITests: XCTestCase {
         el.tap()
     }
 
-    private func allowLocation() {
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        for label in ["Allow While Using App", "Allow Once", "Allow"] {
-            let b = springboard.buttons[label]
-            if b.waitForExistence(timeout: 3) { b.tap(); return }
-        }
-    }
 
     /// Profile > Apple Health (its own screen since 2026-10-22).
     private func openHealthSettings() {

@@ -15,12 +15,6 @@ final class MilepostLiveActivityUITests: XCTestCase {
         app.launch()
     }
 
-    private func allowLocation() {
-        for label in ["Allow While Using App", "Allow Once", "Allow"] {
-            let b = springboard.buttons[label]
-            if b.waitForExistence(timeout: 3) { b.tap(); return }
-        }
-    }
 
     private func snap(_ name: String) {
         guard let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty else { return }

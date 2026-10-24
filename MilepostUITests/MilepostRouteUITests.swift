@@ -14,13 +14,6 @@ final class MilepostRouteUITests: XCTestCase {
         app.launch()
     }
 
-    private func allowLocation() {
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        for label in ["Allow While Using App", "Allow Once", "Allow"] {
-            let b = springboard.buttons[label]
-            if b.waitForExistence(timeout: 3) { b.tap(); return }
-        }
-    }
 
     private func snap(_ name: String) {
         guard let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty else { return }
@@ -38,6 +31,10 @@ final class MilepostRouteUITests: XCTestCase {
     /// The York, PA report (2026-10-22): the app dies mid-walk. The run must
     /// come back saved on the next launch, from the real timer's autosave.
     func testAWalkCutOffByTheAppDyingIsSavedOnNextLaunch() {
+        // Autosave every 2 s instead of 10, so waiting out two ticks is quick.
+        app.terminate()
+        app.launchArguments = ["-uitest", "-uitest-autosave-interval", "2"]
+        app.launch()
         tap("record.start")
         allowLocation()
         if !app.buttons["live.pause"].waitForExistence(timeout: 4), app.buttons["record.start"].exists {
@@ -48,7 +45,7 @@ final class MilepostRouteUITests: XCTestCase {
         wait(for: [expectation(for: NSPredicate(format: "label != '0.00'"), evaluatedWith: distance)], timeout: 45)
         // Two autosave intervals with ground covered, so the timer has had
         // its chances to write.
-        sleep(22)
+        sleep(5)
         // Then the way a walk usually dies: the screen locks (the app leaves
         // the foreground, which writes a checkpoint at once) and the app is
         // killed. Killing it straight from the foreground failed the ship

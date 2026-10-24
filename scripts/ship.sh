@@ -29,6 +29,23 @@ trap cleanup EXIT INT TERM
 
 cd "$(dirname "$0")/.."
 
+# Never two builds on this Mac at once (owner rule, 2026-10-23): wait until no
+# other app's ship, test run or xcodebuild is going, for up to three hours.
+./scripts/wait_for_quiet_mac.sh
+
+# Every step is timed into a CSV, so slow steps show up over many ships.
+TIMINGS="$HOME/Library/Logs/milepost-ship-timings.csv"
+SHIP_ID="$(date '+%F %T')"
+STEP=""; STEP_START=$(date +%s)
+step() {
+    local now; now=$(date +%s)
+    if [[ -n "$STEP" ]]; then
+        echo "$SHIP_ID,$STEP,$((now - STEP_START))" >> "$TIMINGS"
+    fi
+    STEP="$1"; STEP_START=$now
+    echo "==> $1  ($(date '+%H:%M:%S'))"
+}
+
 if [[ ! -f scripts/asc-config.env ]]; then
     echo "error: scripts/asc-config.env missing. Copy from .example and fill in." >&2
     exit 1
@@ -57,16 +74,32 @@ if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then DEST="platform=iOS Simulator,id=$DEV
 
 # Regenerate BEFORE testing: a Swift file added since the last generate is in
 # no target, and its tests silently never run (Marracat, 2026-10-03).
-echo "==> regenerating xcodeproj"
+step "regenerating xcodeproj"
 ./scripts/generate.sh >/dev/null
 
-echo "==> MetricKit still wired (metrics + diagnostics)"
+step "MetricKit still wired (metrics + diagnostics)"
 grep -q "MXMetricManager.shared.add" Milepost/Services/MetricsReporter.swift \
   && grep -q "\[MXDiagnosticPayload\]" Milepost/Services/MetricsReporter.swift \
   && grep -q "MetricsReporter.shared.start()" Milepost/MilepostApp.swift \
   || { echo "error: MetricsReporter (MetricKit) is no longer subscribed at launch" >&2; exit 1; }
 
-echo "==> running tests"
+# A commit that already passed every test and gate (a ship that then failed at
+# archive or upload) is not tested again. Only a clean tree counts.
+HEAD_SHA=$(git rev-parse HEAD)
+TESTED_STAMP="$HOME/Library/Caches/milepost-tested/$HEAD_SHA-ui${SHIP_RUN_UI:-0}"
+# perf_gate.py records into perf_baseline.json, so that file does not count.
+tree_clean() { [[ -z "$(git status --porcelain -- . ':!scripts/perf_baseline.json')" ]]; }
+if tree_clean && [[ -f "$TESTED_STAMP" ]]; then
+    echo "==> $HEAD_SHA already passed the tests and gates; skipping to the archive"
+    SKIP_TESTS=1
+else
+    SKIP_TESTS=0
+fi
+
+if [[ "$SKIP_TESTS" == "0" ]]; then
+step "running tests"
+export MILEPOST_RESULTS="$GATES/results"
+rm -rf "$MILEPOST_RESULTS"
 if [[ "${SHIP_RUN_UI:-0}" == "1" ]]; then
     ./scripts/run_tests.sh all
 else
@@ -74,13 +107,10 @@ else
 fi
 
 # xcodebuild passes with zero tests run, so each gate proves it ran. Swift
-# Testing cases are the ones not named test…() (XCTest's convention).
-echo "==> Swift Testing"
-rm -rf "$GATES/Unit.xcresult"
-xcodebuild test -project Milepost.xcodeproj -scheme Milepost -destination "$DEST" CODE_SIGNING_ALLOWED=NO \
-    -only-testing:MilepostTests -resultBundlePath "$GATES/Unit.xcresult" >/dev/null 2>&1 \
-    || { echo "error: unit tests failed (see $GATES/Unit.xcresult)" >&2; exit 1; }
-xcrun xcresulttool get test-results tests --path "$GATES/Unit.xcresult" | python3 -c '
+# Testing cases are the ones not named test…() (XCTest's convention). Read
+# from the unit run above instead of running the unit tests a second time.
+step "Swift Testing"
+xcrun xcresulttool get test-results tests --path "$MILEPOST_RESULTS/MilepostTests.xcresult" | python3 -c '
 import json, sys
 n = 0
 def walk(node):
@@ -94,21 +124,26 @@ for t in json.load(sys.stdin)["testNodes"]:
 print(f"==> Swift Testing: {n} test(s) passed")
 sys.exit(0 if n else 1)' || { echo "error: no Swift Testing tests ran" >&2; exit 1; }
 
-echo "==> accessibility audit"
-./scripts/run_tests.sh ui MilepostUITests/AccessibilityAuditTests
+# The full UI suite already ran the audit; only a unit-only ship runs it here.
+if [[ "${SHIP_RUN_UI:-0}" != "1" ]]; then
+    step "accessibility audit"
+    ./scripts/run_tests.sh ui MilepostUITests/AccessibilityAuditTests
+fi
 
-echo "==> every screen is reached by a UI test"
+step "every screen is reached by a UI test"
 python3 scripts/check_test_coverage.py
 
-echo "==> performance"
+step "performance"
 rm -rf "$GATES/Perf.xcresult"
 xcrun simctl location "$DEVICE" set 40.6835,-73.9680 >/dev/null 2>&1 || true
-xcodebuild test -project Milepost.xcodeproj -scheme Milepost -destination "$DEST" CODE_SIGNING_ALLOWED=NO \
+TEST_DERIVED="${MILEPOST_TEST_DERIVED:-$HOME/Library/Developer/Xcode/DerivedData/Milepost-tests}"
+xcodebuild test-without-building -project Milepost.xcodeproj -scheme Milepost -destination "$DEST" \
+    -derivedDataPath "$TEST_DERIVED" -enableCodeCoverage NO CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ENABLE_DEBUG_DYLIB=NO \
     -only-testing:MilepostUITests/PerformanceTests -resultBundlePath "$GATES/Perf.xcresult" >/dev/null 2>&1 \
     || { echo "error: PerformanceTests failed (see $GATES/Perf.xcresult)" >&2; exit 1; }
 python3 scripts/perf_gate.py "$GATES/Perf.xcresult" --record
 
-echo "==> Xcode Organizer: what real phones reported for recent builds"
+step "Xcode Organizer: what real phones reported for recent builds"
 "$PY" scripts/organizer_report.py || echo "warning: Organizer report unavailable"
 
 # A green suite does not prove the app starts — XCUITest launches through its
@@ -116,8 +151,9 @@ echo "==> Xcode Organizer: what real phones reported for recent builds"
 if [[ "${SHIP_SKIP_SMOKE:-0}" == "1" ]]; then
     echo "==> skipping smoke test (SHIP_SKIP_SMOKE=1)"
 else
-    echo "==> smoke-testing a simulator launch"
-    ./scripts/smoke_test.sh
+    step "smoke-testing a simulator launch"
+    # The app the tests just built, not a third build of it.
+    MILEPOST_SMOKE_APP="$TEST_DERIVED/Build/Products/Debug-iphonesimulator/Milepost.app" ./scripts/smoke_test.sh
     # The iPhone smoke test says nothing about the watch app riding inside the
     # bundle: its own @main, its own HealthKit and CoreLocation setup, its own
     # ways to die on launch. watchOS has no XCUITest, so a cold launch is the
@@ -126,16 +162,20 @@ else
     # 2026-10-21: a Find A Crib ship was killed for low memory on this 16 GB Mac).
     # Only by UDID: a bare name ("iPhone 17 Pro") can match another session's device.
     [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]] && xcrun simctl shutdown "$DEVICE" 2>/dev/null || true
-    echo "==> smoke-testing a watch simulator launch"
+    step "smoke-testing a watch simulator launch"
     ./scripts/smoke_test_watch.sh
 fi
+
+mkdir -p "$(dirname "$TESTED_STAMP")"
+tree_clean && touch "$TESTED_STAMP"
+fi  # SKIP_TESTS
 
 current=$(grep -m1 'CURRENT_PROJECT_VERSION:' "$PROJECT_YML" | sed -E 's/.*"([0-9]+)".*/\1/')
 next=$((current + 1))
 echo "==> bumping build $current -> $next"
 sed -i '' "s/CURRENT_PROJECT_VERSION: \"$current\"/CURRENT_PROJECT_VERSION: \"$next\"/" "$PROJECT_YML"
 
-echo "==> regenerating xcodeproj"
+step "regenerating xcodeproj"
 ./scripts/generate.sh >/dev/null
 
 ASC_AUTH_FLAGS=(
@@ -144,7 +184,7 @@ ASC_AUTH_FLAGS=(
     -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 )
 
-echo "==> archiving"
+step "archiving"
 rm -rf build.nosync
 mkdir -p build.nosync
 xcodebuild \
@@ -157,7 +197,7 @@ xcodebuild \
     "${ASC_AUTH_FLAGS[@]}" \
     archive
 
-echo "==> exporting IPA"
+step "exporting IPA"
 # Apple's tools first (2026-10-12): Xcode's IPA step runs /usr/bin/rsync, which
 # starts the rsync on PATH as its receiving side. A Homebrew rsync 3.x there
 # rejects --extended-attributes and the export dies with just "Copy failed".
@@ -169,7 +209,7 @@ PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH" xcodebuild \
     -allowProvisioningUpdates \
     "${ASC_AUTH_FLAGS[@]}"
 
-echo "==> uploading to TestFlight"
+step "uploading to TestFlight"
 xcrun altool \
     --upload-app \
     -f "$IPA" \
@@ -177,5 +217,10 @@ xcrun altool \
     --apiKey "$ASC_KEY_ID" \
     --apiIssuer "$ASC_ISSUER_ID"
 
+step "done"
+git tag -f "build-$next" >/dev/null
 echo "==> shipped build $next"
+# TestFlight's "What to Test" from the commits since the last ship, once Apple
+# has processed the build (a few minutes). In the background: the ship is done.
+nohup "$PY" scripts/testflight_notes.py --build "$next" >> "$HOME/Library/Logs/milepost-testflight-notes.log" 2>&1 &
 echo "    Processing takes a few minutes before it appears in TestFlight."

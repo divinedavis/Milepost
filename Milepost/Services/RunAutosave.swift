@@ -18,6 +18,7 @@ final class RunAutosave {
     static let interval: TimeInterval = 10
 
     let fileURL: URL
+    private let tickInterval: TimeInterval
     private weak var recorder: RunRecorder?
     private var timer: Timer?
     /// Set once this process has written a checkpoint. Only then may an idle
@@ -28,9 +29,10 @@ final class RunAutosave {
     /// never land after the delete that followed it and bring a run back.
     private let queue = DispatchQueue(label: "com.divinedavis.milepost.autosave")
 
-    init(recorder: RunRecorder, fileURL: URL = RunAutosave.defaultURL) {
+    init(recorder: RunRecorder, fileURL: URL = RunAutosave.defaultURL, interval: TimeInterval = RunAutosave.interval) {
         self.recorder = recorder
         self.fileURL = fileURL
+        self.tickInterval = interval
     }
 
     nonisolated static var defaultURL: URL {
@@ -42,7 +44,7 @@ final class RunAutosave {
 
     func start() {
         guard timer == nil else { return }
-        let timer = Timer(timeInterval: Self.interval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: tickInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)

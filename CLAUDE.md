@@ -23,6 +23,18 @@ Same per-change loop as the other iOS apps (Pothole Radar is the template):
 4. OWASP LLM note in the commit: always N/A, there is no LLM surface.
 5. Commit with an explanatory body + `Co-Authored-By`, then push.
 6. `./scripts/ship.sh` for app-code changes once the ASC app record exists.
+   Since 2026-10-23 (`docs/ship-optimizations.md` tracks all 150 ideas):
+   run_tests.sh builds ONCE (`build-for-testing` into DerivedData
+   `Milepost-tests`) and every pass is `test-without-building`, coverage and
+   index store off, failures retried once (passes on retry go to
+   `~/Library/Logs/milepost-flaky-tests.log`), location pre-granted with
+   `simctl privacy`. ship.sh waits for a quiet Mac (`wait_for_quiet_mac.sh`),
+   times each step into `~/Library/Logs/milepost-ship-timings.csv`, reads
+   Swift Testing from the unit run, runs the audit once, smoke-launches the
+   tests' app, skips tests for a commit that already passed them, tags
+   `build-N`, and fills TestFlight "What to Test" in the background
+   (`testflight_notes.py`). UI tests run with UIKit animations off
+   (`-uitest-animations` turns them back on). Full suite: ~17 min.
    **TestFlight only** (owner, 2026-10-23): do NOT submit to App Review until
    the owner has tried the build on his phone and says to submit.
 

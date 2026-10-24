@@ -37,6 +37,12 @@ struct MilepostApp: App {
             // test once left voice cues on and broke the following run).
             UserDefaults.standard.removePersistentDomain(forName: bundle)
         }
+        // UI tests do not wait on UIKit transitions (pushes, sheets, alerts).
+        // The splash test keeps them: it is the animation under test.
+        let args = ProcessInfo.processInfo.arguments
+        if isUITest, !args.contains("-uitest-splash"), !args.contains("-uitest-animations") {
+            UIView.setAnimationsEnabled(false)
+        }
         // Lets the Health section be driven without tapping the toggle that
         // raises Apple's permission sheet, which the runner cannot dismiss.
         if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-health-on") {
@@ -92,7 +98,14 @@ struct MilepostApp: App {
         if isUITest, !ProcessInfo.processInfo.arguments.contains("-uitest-keep-autosave") {
             try? FileManager.default.removeItem(at: autosaveURL)
         }
-        let autosave = RunAutosave(recorder: recorder, fileURL: autosaveURL)
+        // `-uitest-autosave-interval 2` lets the kill-and-relaunch test wait
+        // seconds instead of two 10 s ticks.
+        var autosaveInterval = RunAutosave.interval
+        if isUITest, let i = args.firstIndex(of: "-uitest-autosave-interval"), i + 1 < args.count,
+           let seconds = TimeInterval(args[i + 1]) {
+            autosaveInterval = seconds
+        }
+        let autosave = RunAutosave(recorder: recorder, fileURL: autosaveURL, interval: autosaveInterval)
         #if DEBUG
         if isUITest, ProcessInfo.processInfo.arguments.contains("-uitest-seed-checkpoint") {
             autosave.write(HeatmapPreviewData.interruptedWalk())

@@ -13,15 +13,20 @@ fi
 BUNDLE_ID="com.divinedavis.milepost"
 DERIVED="build/smoke"
 
-echo "== build =="
-xcodebuild -project Milepost.xcodeproj -scheme Milepost \
-  -destination "$DEST" \
-  -derivedDataPath "$DERIVED" \
-  -configuration Debug CODE_SIGNING_ALLOWED=NO \
-  ENABLE_DEBUG_DYLIB=NO \
-  build > /dev/null
-
-APP="$DERIVED/Build/Products/Debug-iphonesimulator/Milepost.app"
+# ship.sh passes the app its tests just built (MILEPOST_SMOKE_APP) instead of
+# building a third copy; on its own this script still builds.
+if [[ -n "${MILEPOST_SMOKE_APP:-}" && -d "${MILEPOST_SMOKE_APP}" ]]; then
+  APP="$MILEPOST_SMOKE_APP"
+else
+  echo "== build =="
+  xcodebuild -project Milepost.xcodeproj -scheme Milepost \
+    -destination "$DEST" \
+    -derivedDataPath "$DERIVED" \
+    -configuration Debug CODE_SIGNING_ALLOWED=NO \
+    ENABLE_DEBUG_DYLIB=NO \
+    build > /dev/null
+  APP="$DERIVED/Build/Products/Debug-iphonesimulator/Milepost.app"
+fi
 [ -d "$APP" ] || { echo "no app at $APP"; exit 1; }
 
 # XcodeGen quietly drops resources that are declared in the wrong place.

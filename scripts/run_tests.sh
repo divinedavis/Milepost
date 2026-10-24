@@ -21,9 +21,37 @@ else
   DEST="platform=iOS Simulator,name=$DEVICE"
 fi
 
+# One build for every pass (2026-10-23): build-for-testing once into a fixed
+# DerivedData, then each class runs test-without-building against it. Before,
+# every pass was its own `xcodebuild test`, re-checking and re-linking
+# everything ~15 times a ship. Coverage is off (nothing reads it) and so is
+# the index store (only Xcode's editor uses it).
+DERIVED="${MILEPOST_TEST_DERIVED:-$HOME/Library/Developer/Xcode/DerivedData/Milepost-tests}"
+RESULTS="${MILEPOST_RESULTS:-build.nosync/test-results}"
+FLAKY_LOG="$HOME/Library/Logs/milepost-flaky-tests.log"
+BUILD_FLAGS=(CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ENABLE_DEBUG_DYLIB=NO)
+BUILT=0
+
+build_once() {
+  [ "$BUILT" = 1 ] && return 0
+  echo "== build for testing =="
+  local log
+  log=$(mktemp)
+  if ! xcodebuild build-for-testing -project Milepost.xcodeproj -scheme Milepost -destination "$DEST" \
+      -derivedDataPath "$DERIVED" -enableCodeCoverage NO "${BUILD_FLAGS[@]}" > "$log" 2>&1; then
+    grep -E "error:" "$log" | head -20
+    rm -f "$log"
+    return 1
+  fi
+  rm -f "$log"
+  BUILT=1
+}
+
 boot() {
   xcrun simctl boot "$DEVICE" 2>/dev/null || true
   xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || true
+  # Location granted up front: no prompt to tap through, no 9 s wait for one.
+  xcrun simctl privacy "$DEVICE" grant location-always com.divinedavis.milepost >/dev/null 2>&1 || true
 }
 
 # A fixed fix in Brooklyn: the static suite expects "No Movement Detected".
@@ -48,19 +76,27 @@ riding() {
 
 run() {
   local target="$1"
-  local args=(-project Milepost.xcodeproj -scheme Milepost -destination "$DEST" CODE_SIGNING_ALLOWED=NO)
-  if [ -n "$FILTER" ]; then
-    args+=(-only-testing:"$FILTER")
-  else
-    args+=(-only-testing:"$target")
-  fi
+  build_once
+  local only="${FILTER:-$target}"
+  local bundle="$RESULTS/$(echo "$only" | tr '/' '_').xcresult"
+  mkdir -p "$RESULTS"
+  rm -rf "$bundle"
+  # A failing test is run once more on its own; a pass on the retry is a
+  # flake, logged, not a ship failure. A real regression fails both times.
+  local args=(-project Milepost.xcodeproj -scheme Milepost -destination "$DEST" -derivedDataPath "$DERIVED"
+              -enableCodeCoverage NO -only-testing:"$only" -resultBundlePath "$bundle"
+              -retry-tests-on-failure -test-iterations 2 "${BUILD_FLAGS[@]}")
   local log
   log=$(mktemp)
   set +e
-  xcodebuild test "${args[@]}" > "$log" 2>&1
+  xcodebuild test-without-building "${args[@]}" > "$log" 2>&1
   local status=$?
   set -e
   grep -E "Test Case|error:|failed|\*\* TEST" "$log" | tail -80
+  if [ "$status" = 0 ] && grep -qE "Test Case .* failed" "$log"; then
+    grep -E "Test Case .* failed" "$log" | sed "s/^/$(date '+%F %T') FLAKY (passed on retry): /" >> "$FLAKY_LOG"
+    echo "flaky: a test failed once and passed on retry (logged to $FLAKY_LOG)"
+  fi
   # A filter that matches nothing — or a stale xcodeproj whose test bundle
   # was built without the new file — runs zero tests and still prints
   # "** TEST SUCCEEDED **". That is a broken gate, not a pass.
@@ -83,7 +119,7 @@ watch_tests() {
   set +e
   xcodebuild test -project Milepost.xcodeproj -scheme MilepostWatch \
     -destination "platform=watchOS Simulator,name=$WATCH_DEVICE" \
-    CODE_SIGNING_ALLOWED=NO > "$log" 2>&1
+    -enableCodeCoverage NO CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$log" 2>&1
   local status=$?
   set -e
   grep -E "Test Case|error:|\*\* TEST" "$log" | grep -v "healthkit Code=4" | tail -40

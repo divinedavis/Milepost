@@ -15,13 +15,6 @@ final class MilepostUITests: XCTestCase {
     }
 
     /// The location prompt is a SpringBoard alert outside the app.
-    private func allowLocation() {
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        for label in ["Allow While Using App", "Allow Once", "Allow"] {
-            let b = springboard.buttons[label]
-            if b.waitForExistence(timeout: 3) { b.tap(); return }
-        }
-    }
 
     /// Writes a PNG when TEST_RUNNER_MILEPOST_SHOTS points at a directory;
     /// otherwise a no-op. The simulator shares the host filesystem.
