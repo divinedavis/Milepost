@@ -67,6 +67,10 @@ Gotchas:
 - Two simulators can share the name "iPhone 17 Pro" (26.4 and 26.5 runtimes);
   `simctl io "iPhone 17 Pro" screenshot` may hit the one the tests are not on.
 - The tab bar is hand-rolled (iOS 26 TabView taps lie to XCUITest).
+- `darkGlass(in:)` (`Design/DarkGlass.swift`) is Apple's Liquid Glass on
+  iOS 26+ (`glassEffect(.regular.tint(ink @ liquidTint 0.55))`, dark scheme;
+  owner 2026-10-23) and the frosted material + 85% ink + rim recipe below 26.
+  Raise `liquidTint` if the accessibility audit flags contrast over the map.
 - The floating bar's `safeAreaInset` does NOT reach a List/ScrollView inside
   a NavigationStack (1.6 build 34: the bar covered Profile's Privacy row and a
   run's splits). Both tab stacks carry `.clearsTabBar()` (bottom
