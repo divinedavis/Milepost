@@ -67,7 +67,7 @@ final class MilepostUITests: XCTestCase {
 
     func testEveryTabOpens() {
         XCTAssertTrue(app.buttons["record.start"].waitForExistence(timeout: 8))
-        sleep(3)   // let the map tiles land before the marketing capture
+        settleForCapture(3)   // map tiles, for the marketing capture
         snap("record-idle")
 
         tap("tab.block")
@@ -116,8 +116,8 @@ final class MilepostUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["splits.bar.1"].exists || app.staticTexts["Splits (mi)"].exists)
 
         // The clock runs.
-        sleep(2)
-        XCTAssertNotEqual(app.staticTexts["live.time"].label, "00:00:00")
+        let ticking = NSPredicate(format: "label != '00:00:00'")
+        wait(for: [expectation(for: ticking, evaluatedWith: app.staticTexts["live.time"])], timeout: 4)
         snap("live-recording")
 
         tap("live.pause")
@@ -184,18 +184,8 @@ final class MilepostUITests: XCTestCase {
         startRun()
         XCTAssertTrue(app.staticTexts["Distance (km)"].waitForExistence(timeout: 6))
         discardRun()
-
-        // Put it back for the other tests (AppStorage persists across launches).
-        openProfileRow("you.rowSettings")
-        XCTAssertTrue(picker.waitForExistence(timeout: 6))
-        picker.tap()
-        let mi = app.buttons["Miles"]
-        XCTAssertTrue(mi.waitForExistence(timeout: 4))
-        mi.tap()
-        tap("tab.record")
-        startRun()
-        XCTAssertTrue(app.staticTexts["Distance (mi)"].waitForExistence(timeout: 6))
-        discardRun()
+        // No need to switch back to miles: every -uitest launch wipes the
+        // settings (MilepostApp.init), so the next test starts on miles.
     }
 
     /// Pause, Finish, Discard: the pinned simulator never moves.

@@ -134,7 +134,11 @@ final class MilepostRouteUITests: XCTestCase {
         let moved = NSPredicate(format: "label != '0.00'")
         let e = expectation(for: moved, evaluatedWith: distance)
         wait(for: [e], timeout: 45)
-        sleep(20)   // let a few hundred metres and a split pace accrue
+        // A split pace on screen is all the checks below need (it was a fixed
+        // 20 s). Screenshots still get a few hundred metres for the capture.
+        let paced = NSPredicate(format: "label != '-:--'")
+        wait(for: [expectation(for: paced, evaluatedWith: app.staticTexts["live.pace"])], timeout: 30)
+        settleForCapture(20)
         XCTAssertTrue(app.staticTexts["live.elevation"].exists, "no elevation on the live recorder")
         XCTAssertTrue(app.staticTexts["live.fastestSplit"].exists, "no fastest split on the live recorder")
 

@@ -13,4 +13,11 @@ extension XCTestCase {
             if b.exists { b.tap(); return }
         }
     }
+
+    /// Gives map tiles time to land, but only when screenshots are being
+    /// captured (MILEPOST_SHOTS); a normal run checks nothing that needs it.
+    func settleForCapture(_ seconds: UInt32 = 2) {
+        guard let dir = ProcessInfo.processInfo.environment["MILEPOST_SHOTS"], !dir.isEmpty else { return }
+        sleep(seconds)
+    }
 }

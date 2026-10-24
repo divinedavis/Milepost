@@ -29,7 +29,7 @@ final class MilepostHeatmapUITests: XCTestCase {
         XCTAssertTrue(control.label.contains("30 days"), "default window is \(control.label)")
         // Two seeded walks are this month, one is 60 days old.
         XCTAssertEqual(value(control), "2 activities, 0 from friends")
-        sleep(2) // let the tiles and the polylines draw
+        settleForCapture() // tiles and polylines, for the capture
         snap("heatmap-30-days")
 
         control.tap()
@@ -59,7 +59,7 @@ final class MilepostHeatmapUITests: XCTestCase {
         let expected = NSPredicate(format: "value == %@", "2 activities, 1 from friends")
         expectation(for: expected, evaluatedWith: control)
         waitForExpectations(timeout: 10)
-        sleep(2)
+        settleForCapture()
         snap("heatmap-friends")
 
         control.tap()

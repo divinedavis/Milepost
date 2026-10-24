@@ -35,10 +35,10 @@ upload 54 s. Every test passed, no flaky retries.
 | C11 | Tests picked by changed files | NEXT (phase 3) |
 | C12 | Full suite before review, affected tests otherwise | NO — owner keeps the full suite every ship |
 | C13 | Logic tests as unit tests | HAD (RunRecorder, RouteHeatmap, SplitTimeline are unit-tested) |
-| C14 | Merge single-check UI tests | NEXT (phase 3) |
+| C14 | Merge single-check UI tests | DONE in part (units test no longer switches back: -uitest wipes settings; 51 s → 26 s) |
 | C15 | Deep-link launch flags instead of tapping | HAD (-open-tab, seed flags) |
-| C16 | Condition waits instead of fixed sleeps | NEXT (phase 3; recovery test 22 s → 5 s DONE) |
-| C17 | Shorter waitForExistence timeouts | NEXT (phase 3) |
+| C16 | Condition waits instead of fixed sleeps | DONE (recovery 22 s → 5 s; moving run waits for a pace, not 20 s; clock check by predicate; map-tile waits only when capturing screenshots) |
+| C17 | Shorter waitForExistence timeouts | N/A — a wait returns as soon as the element appears; the timeout only costs time on a failure |
 | C18 | Injected clock for the route tests | NEXT (phase 3, larger) |
 | C19 | Autosave interval as a launch flag | DONE (`-uitest-autosave-interval`) |
 | C20 | Audit only changed screens | NEXT (phase 3) |
@@ -122,8 +122,8 @@ upload 54 s. Every test passed, no flaky retries.
 | No animations in tests | DONE (UIView.setAnimationsEnabled(false) under -uitest) |
 | Predicates instead of sleeps | DUP C16 |
 | Pre-grant permissions | DONE (simctl privacy grant location-always; Health cannot be granted) |
-| Typed queries, not descendants(.any) | NEXT (phase 3 sweep) |
-| Scope queries to containers | NEXT (phase 3) |
+| Typed queries, not descendants(.any) | N/A — XCUITest snapshots the whole tree either way; no measurable gain |
+| Scope queries to containers | N/A — same reason |
 | Seed data by flags | HAD |
 | Parallel workers | DUP C21 |
 | In-memory SwiftData | HAD |
