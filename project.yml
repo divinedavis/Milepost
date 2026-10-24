@@ -16,6 +16,12 @@ settings:
     # Link a target as soon as what it depends on has emitted its module,
     # instead of waiting for the whole dependency to finish (2026-10-23).
     EAGER_LINKING: YES
+  configs:
+    # Debug builds warn when one view or function takes over 300 ms to
+    # type-check, so the next 2.9 s FriendsScreen body shows up in Xcode the
+    # day it is written (2026-10-24).
+    Debug:
+      OTHER_SWIFT_FLAGS: "$(inherited) -Xfrontend -warn-long-function-bodies=300 -Xfrontend -warn-long-expression-type-checking=300"
 
 configs:
   Debug: debug

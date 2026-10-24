@@ -28,7 +28,7 @@ upload 54 s. Every test passed, no flaky retries.
 | C4 | Skip generate.sh when nothing changed | DONE (`xcodegen --use-cache`) |
 | C5 | Swift Testing / audit / smoke reuse the suite's results | DONE (unit xcresult read; audit once; smoke uses built app) |
 | C6 | Build the watch app once | DONE (watch tests share the iOS build's DerivedData) |
-| C7 | Xcode compilation caching | NEXT (phase 4: needs a clean-build measurement) |
+| C7 | Xcode compilation caching | N/A — a clean app build measured 23 s; ships build incrementally; nothing worth caching |
 | C8 | Skip package plugin/macro validation, pin packages | DONE (Package.resolved committed, supabase-swift 2.55.2; -onlyUsePackageVersionsFromResolvedFile) |
 | C9 | Debug builds one architecture | HAD (ONLY_ACTIVE_ARCH = YES) |
 | C10 | No dSYM in Debug | HAD (dwarf) |
@@ -83,8 +83,8 @@ upload 54 s. Every test passed, no flaky retries.
 | Conditional XcodeGen | DONE (C4) |
 | ONLY_ACTIVE_ARCH Debug | HAD |
 | EAGER_LINKING = YES | DONE (project.yml) |
-| Profile slow type checks | NEXT (phase 4) |
-| Explicit types in big ViewBuilders | NEXT (after the phase 4 report) |
+| Profile slow type checks | DONE (report run 2026-10-24; Debug builds now warn over 300 ms) |
+| Explicit types in big ViewBuilders | DONE (FriendsScreen body 2,881 ms → 219 ms; RecordScreen.startButton 174 ms and RootView.tabBar 198 ms are under the 300 ms bar) |
 | DEAD_CODE_STRIPPING = NO Debug | N/A — negligible |
 | LLVM_LTO = NO Debug | HAD (default) |
 | xcfilelist for run scripts | N/A — no run-script build phases |
