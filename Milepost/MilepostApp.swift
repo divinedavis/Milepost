@@ -120,7 +120,8 @@ struct MilepostApp: App {
 
         // MetricKit: launch/hang/memory summaries and crash diagnostics, logged
         // on device only. ship.sh fails if this line goes.
-        MetricsReporter.shared.start()
+        // Not in UI tests: their launches are not field data.
+        if !isUITest { MetricsReporter.shared.start() }
 
         #if DEBUG
         // Past activities for the Record map's heatmap, so it can be driven

@@ -8,4 +8,8 @@ find . -maxdepth 1 -name "Milepost [0-9]*.xcodeproj" -exec rm -rf {} + 2>/dev/nu
 # since the last generate (the cache lives in ~/.xcodegen). A missing
 # xcodeproj always regenerates.
 if [[ -d Milepost.xcodeproj ]]; then xcodegen generate --use-cache; else xcodegen generate; fi
+# Package versions are pinned by the committed Package.resolved (2026-10-24);
+# the generated project is gitignored, so it gets a copy every time.
+mkdir -p Milepost.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+cp Package.resolved Milepost.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 echo "regenerated Milepost.xcodeproj"

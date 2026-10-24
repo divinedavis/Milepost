@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DEVICE="${MILEPOST_SIM:-iPhone 17 Pro}"
+DEVICE="$(./scripts/sim_udid.sh)"
 if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then
   DEST="platform=iOS Simulator,id=$DEVICE"
 else

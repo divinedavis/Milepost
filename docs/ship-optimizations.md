@@ -27,9 +27,9 @@ upload 54 s. Every test passed, no flaky retries.
 | C3 | One shared DerivedData across runs | DONE (`Milepost-tests` DerivedData) |
 | C4 | Skip generate.sh when nothing changed | DONE (`xcodegen --use-cache`) |
 | C5 | Swift Testing / audit / smoke reuse the suite's results | DONE (unit xcresult read; audit once; smoke uses built app) |
-| C6 | Build the watch app once | NEXT (phase 2: watch tests still build their scheme) |
-| C7 | Xcode compilation caching | NEXT (phase 2, measure) |
-| C8 | Skip package plugin/macro validation, pin packages | NEXT (phase 2) |
+| C6 | Build the watch app once | DONE (watch tests share the iOS build's DerivedData) |
+| C7 | Xcode compilation caching | NEXT (phase 4: needs a clean-build measurement) |
+| C8 | Skip package plugin/macro validation, pin packages | DONE (Package.resolved committed, supabase-swift 2.55.2; -onlyUsePackageVersionsFromResolvedFile) |
 | C9 | Debug builds one architecture | HAD (ONLY_ACTIVE_ARCH = YES) |
 | C10 | No dSYM in Debug | HAD (dwarf) |
 | C11 | Tests picked by changed files | NEXT (phase 3) |
@@ -43,10 +43,10 @@ upload 54 s. Every test passed, no flaky retries.
 | C19 | Autosave interval as a launch flag | DONE (`-uitest-autosave-interval`) |
 | C20 | Audit only changed screens | NEXT (phase 3) |
 | C21 | Parallel simulator clones | NO for now — conflicts with the one-simulator rule (16 GB Mac); owner to decide |
-| C22 | One booted simulator for the whole ship | NEXT (phase 2: smoke still shuts it down) |
-| C23 | Pre-warmed simulator snapshot | NEXT (phase 2) |
-| C24 | Pin the simulator by UDID by default | NEXT (phase 1b) |
-| C25 | Disable Siri/Spotlight in the test sim | NEXT (phase 2) |
+| C22 | One booted simulator for the whole ship | N/A — the iPhone sim is shut before the watch sim boots on purpose (one-simulator rule) |
+| C23 | Pre-warmed simulator snapshot | HAD — the same simulator is reused, never erased |
+| C24 | Pin the simulator by UDID by default | DONE (scripts/sim_udid.sh: newest-runtime iPhone 17 Pro) |
+| C25 | Disable Siri/Spotlight in the test sim | N/A — no measured cost; the reused sim is quiet |
 | C26 | Relaunch instead of reinstall | HAD (XCUIApplication relaunches) |
 | C27 | Location once per pass | HAD (still/moving/riding per pass) |
 | C28 | Retry a failed test once, log flakes | DONE (`-retry-tests-on-failure`, ~/Library/Logs/milepost-flaky-tests.log) |
@@ -57,20 +57,20 @@ upload 54 s. Every test passed, no flaky retries.
 | C33 | Upload with an API key | HAD (altool --apiKey) |
 | C34 | Background upload | N/A — upload is ~1 s for 9 MB |
 | C35 | Background attach after processing | DONE (testflight_notes.py polls; attach only on submit) |
-| C36 | Skip watch smoke when no watch change | NEXT (phase 2) |
+| C36 | Skip watch smoke when no watch change | DONE (diff since the last build-N tag over the watch target's sources) |
 | C37 | Machine-wide build lock | DONE (wait_for_quiet_mac.sh at ship start) |
 | C38 | Queue runner across apps | NEXT (needs Marracat/FAC scripts; their sessions own them) |
 | C39 | Fixed nightly slots per app | NEXT (same) |
-| C40 | Refuse to start on low memory/disk | NEXT (phase 1b) |
+| C40 | Refuse to start on low memory/disk | DONE (disk ≥ 10 GB; memory covered by the quiet-Mac wait) |
 | C41 | Pre-commit compile check | NEXT (phase 4) |
-| C42 | Fastest gates first | NEXT (phase 1b) |
+| C42 | Fastest gates first | DONE (coverage + ui_all checks before tests) |
 | C43 | Stop on first failure | HAD (set -e) |
 | C44 | Strict concurrency only in CI | N/A — no CI |
-| C45 | Static checks: duplicate sims, ui_all entries, stale project | NEXT (phase 1b) |
+| C45 | Static checks: duplicate sims, ui_all entries, stale project | DONE (ui_all check in ship; UDID resolver; generate runs every ship) |
 | C46 | Per-step timing history | DONE (ship-timings.csv) |
-| C47 | Slowest tests report | NEXT (phase 1b) |
+| C47 | Slowest tests report | DONE (milepost-test-durations.csv; top 10 printed after each ship) |
 | C48 | Flaky test list | DONE (flaky log) |
-| C49 | One-line ship summary | NEXT (phase 1b) |
+| C49 | One-line ship summary | DONE (~/Library/Logs/milepost-ships.log) |
 | C50 | Weekly cache cleanup incl. archives | NEXT (check the existing job) |
 
 ## Owner's list — Xcode build & Swift compilation
@@ -96,7 +96,7 @@ upload 54 s. Every test passed, no flaky retries.
 | Cache SwiftPM checkouts | HAD (local Mac keeps them) |
 | Non-Debug scripts only at archive | HAD (MetricKit check is a grep in ship.sh) |
 | No signing until packaging | HAD (CODE_SIGNING_ALLOWED=NO) |
-| Asset catalog optimisation = time | NEXT (phase 2, measure) |
+| Asset catalog optimisation = time | DONE (test builds) |
 | Vector assets | N/A — icons are generated once; little to gain |
 | Remove unused imports | NEXT (phase 4) |
 | No @_exported import | HAD (none) |
@@ -137,7 +137,7 @@ upload 54 s. Every test passed, no flaky retries.
 | Separate building from testing | DUP C1 |
 | Shard across machines | N/A — one Mac |
 | Pre-boot simulator | HAD (boot()) |
-| Hardware keyboard off | NEXT (phase 2) |
+| Hardware keyboard off | DONE (boot()) |
 | Health via demo flags | HAD |
 | Audit static screens only | DUP C20 |
 | In-memory network mocks | HAD (DemoSocialBackend) |
@@ -147,7 +147,7 @@ upload 54 s. Every test passed, no flaky retries.
 | Unique identifiers | HAD (check_test_coverage.py enforces) |
 | Don't test Apple's UI | N/A — the Live Activity card is ours; the test is deliberate |
 | Minimal unit test target | HAD |
-| MetricKit off in tests | NEXT (phase 1b) |
+| MetricKit off in tests | DONE (not started under -uitest) |
 | No device UI tests in CI | N/A — no CI |
 | Moving-route tests nightly only | NO — owner, 2026-10-23: every ship |
 | Autosave file by flag | HAD |
@@ -177,7 +177,7 @@ upload 54 s. Every test passed, no flaky retries.
 | Reuse the archive | HAD |
 | Clean DerivedData selectively | HAD (cleanup job) |
 | Lint changed files only | N/A — no SwiftLint |
-| Fail fast on signing | NEXT (phase 1b) |
+| Fail fast on signing | DONE (ASC key + ExportOptions + disk checked first) |
 | Watch embedded once | HAD |
 | What to Test from commits | DONE (testflight_notes.py, build-N tags) |
 | Parallel CI stages | N/A — no CI |
@@ -185,6 +185,6 @@ upload 54 s. Every test passed, no flaky retries.
 | Screenshots on one device | HAD |
 | ITSAppUsesNonExemptEncryption = NO | HAD |
 | Exclude docs from bundles | HAD (resources are listed explicitly) |
-| Organizer report async | NEXT (phase 1b: run in background) |
+| Organizer report async | DONE (runs alongside the tests) |
 | Headless CI | N/A — no CI |
 | Code coverage off when unused (found while doing this) | DONE (-enableCodeCoverage NO) |

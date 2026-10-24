@@ -14,7 +14,7 @@ FILTER="${2:-}"
 WATCH_DEVICE="${MILEPOST_WATCH_SIM:-Apple Watch Series 11 (46mm)}"
 # MILEPOST_SIM may be a name or a UDID. Three runtimes share the name
 # "iPhone 17 Pro", so a UDID is the only way to pin one for screenshots.
-DEVICE="${MILEPOST_SIM:-iPhone 17 Pro}"
+DEVICE="$(./scripts/sim_udid.sh)"
 if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then
   DEST="platform=iOS Simulator,id=$DEVICE"
 else
@@ -29,7 +29,12 @@ fi
 DERIVED="${MILEPOST_TEST_DERIVED:-$HOME/Library/Developer/Xcode/DerivedData/Milepost-tests}"
 RESULTS="${MILEPOST_RESULTS:-build.nosync/test-results}"
 FLAKY_LOG="$HOME/Library/Logs/milepost-flaky-tests.log"
-BUILD_FLAGS=(CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ENABLE_DEBUG_DYLIB=NO)
+# Package versions come only from the committed Package.resolved; asset
+# catalogs compile for speed, not size, in these Debug builds.
+BUILD_FLAGS=(CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ENABLE_DEBUG_DYLIB=NO
+             ASSETCATALOG_COMPILER_OPTIMIZATION=time)
+PKG_FLAGS=(-onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation -skipMacroValidation)
+DURATIONS="$HOME/Library/Logs/milepost-test-durations.csv"
 BUILT=0
 
 build_once() {
@@ -38,7 +43,7 @@ build_once() {
   local log
   log=$(mktemp)
   if ! xcodebuild build-for-testing -project Milepost.xcodeproj -scheme Milepost -destination "$DEST" \
-      -derivedDataPath "$DERIVED" -enableCodeCoverage NO "${BUILD_FLAGS[@]}" > "$log" 2>&1; then
+      -derivedDataPath "$DERIVED" -enableCodeCoverage NO "${PKG_FLAGS[@]}" "${BUILD_FLAGS[@]}" > "$log" 2>&1; then
     grep -E "error:" "$log" | head -20
     rm -f "$log"
     return 1
@@ -48,6 +53,9 @@ build_once() {
 }
 
 boot() {
+  # No Mac keyboard attached to the simulator: typed text goes through the
+  # on-screen keyboard the tests expect.
+  defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false 2>/dev/null || true
   xcrun simctl boot "$DEVICE" 2>/dev/null || true
   xcrun simctl bootstatus "$DEVICE" -b >/dev/null 2>&1 || true
   # Location granted up front: no prompt to tap through, no 9 s wait for one.
@@ -93,6 +101,8 @@ run() {
   local status=$?
   set -e
   grep -E "Test Case|error:|failed|\*\* TEST" "$log" | tail -80
+  # Every test's time, for the slowest-tests report.
+  sed -nE "s/.*Test Case '-\[([A-Za-z]+)\.([A-Za-z]+) ([A-Za-z0-9_]+)\]' passed \(([0-9.]+) seconds\).*/$(date +%F),\2,\3,\4/p" "$log" >> "$DURATIONS"
   if [ "$status" = 0 ] && grep -qE "Test Case .* failed" "$log"; then
     grep -E "Test Case .* failed" "$log" | sed "s/^/$(date '+%F %T') FLAKY (passed on retry): /" >> "$FLAKY_LOG"
     echo "flaky: a test failed once and passed on retry (logged to $FLAKY_LOG)"
@@ -117,8 +127,10 @@ watch_tests() {
   local log
   log=$(mktemp)
   set +e
+  # Same DerivedData as the iOS build, which already compiled the watch app.
   xcodebuild test -project Milepost.xcodeproj -scheme MilepostWatch \
     -destination "platform=watchOS Simulator,name=$WATCH_DEVICE" \
+    -derivedDataPath "$DERIVED" "${PKG_FLAGS[@]}" \
     -enableCodeCoverage NO CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$log" 2>&1
   local status=$?
   set -e

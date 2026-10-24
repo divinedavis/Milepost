@@ -59,6 +59,14 @@ if [[ -z "${ASC_APP_ID:-}" ]]; then
     exit 1
 fi
 
+# Fail in seconds, not after 20 minutes of tests: what the archive and the
+# upload need, and room on the disk.
+[[ -f "$ASC_KEY_PATH" ]] || { echo "error: App Store Connect key not found at $ASC_KEY_PATH" >&2; exit 1; }
+[[ -f ExportOptions.plist ]] || { echo "error: ExportOptions.plist missing" >&2; exit 1; }
+free_gb=$(df -g "$HOME" | awk 'NR==2 {print $4}')
+(( free_gb >= 10 )) || { echo "error: only ${free_gb} GB free; a ship needs 10 (archives + DerivedData)" >&2; exit 1; }
+SHIP_STARTED=$(date +%s)
+
 PROJECT="Milepost.xcodeproj"
 SCHEME="Milepost"
 PROJECT_YML="project.yml"
@@ -69,7 +77,8 @@ IPA="$EXPORT_DIR/Milepost.ipa"
 GATES="build.nosync/gates"
 mkdir -p "$GATES"
 PY="${PY:-$HOME/.venvs/spendcap/bin/python}"
-DEVICE="${MILEPOST_SIM:-iPhone 17 Pro}"
+DEVICE="$(./scripts/sim_udid.sh)"
+export MILEPOST_SIM="$DEVICE"   # smoke_test.sh and run_tests.sh use the same one
 if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then DEST="platform=iOS Simulator,id=$DEVICE"; else DEST="platform=iOS Simulator,name=$DEVICE"; fi
 
 # Regenerate BEFORE testing: a Swift file added since the last generate is in
@@ -97,6 +106,20 @@ else
 fi
 
 if [[ "$SKIP_TESTS" == "0" ]]; then
+# The seconds-long static checks first, so a mistake there costs no test run.
+step "every screen is reached by a UI test"
+python3 scripts/check_test_coverage.py
+# Every UI test class must be in run_tests.sh's ui_all, or ships never run it.
+for f in MilepostUITests/*UITests.swift MilepostUITests/AccessibilityAuditTests.swift; do
+    cls=$(basename "$f" .swift)
+    grep -q "run MilepostUITests/$cls\b" scripts/run_tests.sh \
+        || { echo "error: $cls is not in ui_all in scripts/run_tests.sh" >&2; exit 1; }
+done
+
+# The Organizer report is a network read and only informs; it runs alongside.
+ORGANIZER_OUT="$GATES/organizer.txt"
+( "$PY" scripts/organizer_report.py > "$ORGANIZER_OUT" 2>&1 || echo "warning: Organizer report unavailable" >> "$ORGANIZER_OUT" ) &
+
 step "running tests"
 export MILEPOST_RESULTS="$GATES/results"
 rm -rf "$MILEPOST_RESULTS"
@@ -130,9 +153,6 @@ if [[ "${SHIP_RUN_UI:-0}" != "1" ]]; then
     ./scripts/run_tests.sh ui MilepostUITests/AccessibilityAuditTests
 fi
 
-step "every screen is reached by a UI test"
-python3 scripts/check_test_coverage.py
-
 step "performance"
 rm -rf "$GATES/Perf.xcresult"
 xcrun simctl location "$DEVICE" set 40.6835,-73.9680 >/dev/null 2>&1 || true
@@ -144,7 +164,8 @@ xcodebuild test-without-building -project Milepost.xcodeproj -scheme Milepost -d
 python3 scripts/perf_gate.py "$GATES/Perf.xcresult" --record
 
 step "Xcode Organizer: what real phones reported for recent builds"
-"$PY" scripts/organizer_report.py || echo "warning: Organizer report unavailable"
+wait
+cat "$ORGANIZER_OUT"
 
 # A green suite does not prove the app starts — XCUITest launches through its
 # own harness. Prove a cold launch works before shipping.
@@ -162,8 +183,17 @@ else
     # 2026-10-21: a Find A Crib ship was killed for low memory on this 16 GB Mac).
     # Only by UDID: a bare name ("iPhone 17 Pro") can match another session's device.
     [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]] && xcrun simctl shutdown "$DEVICE" 2>/dev/null || true
-    step "smoke-testing a watch simulator launch"
-    ./scripts/smoke_test_watch.sh
+    # The watch smoke test only when something the watch app is built from
+    # changed since the last ship: MilepostWatch/, the files project.yml lists
+    # under the watch target, or project.yml itself.
+    last_tag=$(git tag --list 'build-*' | sort -t- -k2 -n | tail -1)
+    watch_paths=$(awk '/^  MilepostWatch:/{w=1;next} w&&/^  [A-Za-z]/{w=0} w&&/- path:/{print $3}' project.yml)
+    if [[ -n "$last_tag" ]] && ! git diff --name-only "$last_tag" HEAD -- $watch_paths project.yml | grep -q .; then
+        echo "==> watch smoke test skipped: nothing the watch app is built from changed since $last_tag"
+    else
+        step "smoke-testing a watch simulator launch"
+        ./scripts/smoke_test_watch.sh
+    fi
 fi
 
 mkdir -p "$(dirname "$TESTED_STAMP")"
@@ -194,6 +224,7 @@ xcodebuild \
     -destination "generic/platform=iOS" \
     -archivePath "$ARCHIVE" \
     -allowProvisioningUpdates \
+    -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation -skipMacroValidation \
     "${ASC_AUTH_FLAGS[@]}" \
     archive
 
@@ -220,6 +251,12 @@ xcrun altool \
 step "done"
 git tag -f "build-$next" >/dev/null
 echo "==> shipped build $next"
+minutes=$(( ($(date +%s) - SHIP_STARTED) / 60 ))
+echo "$(date '+%F %T') build $next shipped in ${minutes} min (UI suite: ${SHIP_RUN_UI:-0}, tests skipped: $SKIP_TESTS)" \
+    | tee -a "$HOME/Library/Logs/milepost-ships.log"
+echo "==> slowest tests this month:"
+sort -t, -k4 -rn "$HOME/Library/Logs/milepost-test-durations.csv" 2>/dev/null \
+    | awk -F, -v m="$(date +%Y-%m)" 'index($1, m) == 1 && !seen[$2 $3]++ {printf "    %6.1fs  %s/%s\n", $4, $2, $3}' | head -10
 # TestFlight's "What to Test" from the commits since the last ship, once Apple
 # has processed the build (a few minutes). In the background: the ship is done.
 nohup "$PY" scripts/testflight_notes.py --build "$next" >> "$HOME/Library/Logs/milepost-testflight-notes.log" 2>&1 &
