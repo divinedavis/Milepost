@@ -57,11 +57,32 @@ echo "== install =="
 xcrun simctl install "$DEVICE" "$APP"
 
 echo "== launch =="
-PID=$(xcrun simctl launch "$DEVICE" "$BUNDLE_ID" | awk '{print $2}')
-sleep 5
+# Straight after the performance tests the simulator can still be tearing the
+# test app down, and a single check 5 s after launch failed the ship twice
+# (2026-10-22, 2026-10-23) for an app that started fine. So: stop any running
+# copy, retry the launch, and pass once the app has stayed up for three checks
+# in a row (6 s alive — a crash on launch still fails).
+xcrun simctl terminate "$DEVICE" "$BUNDLE_ID" >/dev/null 2>&1 || true
+PID=""
+for attempt in 1 2 3; do
+  PID=$(xcrun simctl launch "$DEVICE" "$BUNDLE_ID" 2>/dev/null | awk '{print $2}') || true
+  [ -n "$PID" ] && break
+  sleep 3
+done
 
-RUNNING=$(xcrun simctl spawn "$DEVICE" launchctl list 2>/dev/null || true)
-if printf '%s' "$RUNNING" | grep -q "$BUNDLE_ID"; then
+alive=0
+for i in $(seq 1 10); do
+  sleep 2
+  # Captured first: grep -q under pipefail reports launchctl's SIGPIPE as a miss.
+  RUNNING=$(xcrun simctl spawn "$DEVICE" launchctl list 2>/dev/null || true)
+  if printf '%s' "$RUNNING" | grep -q "$BUNDLE_ID"; then
+    alive=$((alive + 1)); [ "$alive" -ge 3 ] && break
+  else
+    alive=0
+  fi
+done
+
+if [ "$alive" -ge 3 ]; then
   echo "SMOKE OK — $BUNDLE_ID running (pid $PID)"
 else
   echo "SMOKE FAILED — $BUNDLE_ID is not running after launch"
