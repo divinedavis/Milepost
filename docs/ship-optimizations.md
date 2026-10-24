@@ -32,7 +32,7 @@ upload 54 s. Every test passed, no flaky retries.
 | C8 | Skip package plugin/macro validation, pin packages | DONE (Package.resolved committed, supabase-swift 2.55.2; -onlyUsePackageVersionsFromResolvedFile) |
 | C9 | Debug builds one architecture | HAD (ONLY_ACTIVE_ARCH = YES) |
 | C10 | No dSYM in Debug | HAD (dwarf) |
-| C11 | Tests picked by changed files | NEXT (phase 3) |
+| C11 | Tests picked by changed files | NO — owner keeps the full suite every ship (2026-10-23) |
 | C12 | Full suite before review, affected tests otherwise | NO — owner keeps the full suite every ship |
 | C13 | Logic tests as unit tests | HAD (RunRecorder, RouteHeatmap, SplitTimeline are unit-tested) |
 | C14 | Merge single-check UI tests | DONE in part (units test no longer switches back: -uitest wipes settings; 51 s → 26 s) |
@@ -41,7 +41,7 @@ upload 54 s. Every test passed, no flaky retries.
 | C17 | Shorter waitForExistence timeouts | N/A — a wait returns as soon as the element appears; the timeout only costs time on a failure |
 | C18 | Injected clock for the route tests | NEXT (phase 3, larger) |
 | C19 | Autosave interval as a launch flag | DONE (`-uitest-autosave-interval`) |
-| C20 | Audit only changed screens | NEXT (phase 3) |
+| C20 | Audit only changed screens | NO — same: the full audit runs every ship |
 | C21 | Parallel simulator clones | NO for now — conflicts with the one-simulator rule (16 GB Mac); owner to decide |
 | C22 | One booted simulator for the whole ship | N/A — the iPhone sim is shut before the watch sim boots on purpose (one-simulator rule) |
 | C23 | Pre-warmed simulator snapshot | HAD — the same simulator is reused, never erased |
@@ -62,7 +62,7 @@ upload 54 s. Every test passed, no flaky retries.
 | C38 | Queue runner across apps | NEXT (needs Marracat/FAC scripts; their sessions own them) |
 | C39 | Fixed nightly slots per app | NEXT (same) |
 | C40 | Refuse to start on low memory/disk | DONE (disk ≥ 10 GB; memory covered by the quiet-Mac wait) |
-| C41 | Pre-commit compile check | NEXT (phase 4) |
+| C41 | Pre-commit compile check | N/A — commits are made mid-work (WIP pushes are a standing rule); a compile per commit would slow those and the ship already gates |
 | C42 | Fastest gates first | DONE (coverage + ui_all checks before tests) |
 | C43 | Stop on first failure | HAD (set -e) |
 | C44 | Strict concurrency only in CI | N/A — no CI |
@@ -71,7 +71,7 @@ upload 54 s. Every test passed, no flaky retries.
 | C47 | Slowest tests report | DONE (milepost-test-durations.csv; top 10 printed after each ship) |
 | C48 | Flaky test list | DONE (flaky log) |
 | C49 | One-line ship summary | DONE (~/Library/Logs/milepost-ships.log) |
-| C50 | Weekly cache cleanup incl. archives | NEXT (check the existing job) |
+| C50 | Weekly cache cleanup incl. archives | HAD (dev-cleanup.sh every 6 h removes DerivedData idle 3 days; archives total 127 MB) |
 
 ## Owner's list — Xcode build & Swift compilation
 
@@ -98,7 +98,7 @@ upload 54 s. Every test passed, no flaky retries.
 | No signing until packaging | HAD (CODE_SIGNING_ALLOWED=NO) |
 | Asset catalog optimisation = time | DONE (test builds) |
 | Vector assets | N/A — icons are generated once; little to gain |
-| Remove unused imports | NEXT (phase 4) |
+| Remove unused imports | N/A — no measurable compile cost at this size (clean build 23 s) |
 | No @_exported import | HAD (none) |
 | Batch mode in Release | HAD (default) |
 | DerivedData on a RAM disk | N/A — 16 GB Mac, memory is the scarce resource |
@@ -158,7 +158,7 @@ upload 54 s. Every test passed, no flaky retries.
 | Idea | Status |
 |---|---|
 | API-key auth | HAD |
-| Reuse the JWT | NEXT (phase 4) |
+| Reuse the JWT | N/A — signing a token takes milliseconds; a few calls per ship |
 | Async dSYM upload | N/A — no crash service |
 | ARCHS arm64 archives | HAD (archives are device-only) |
 | Skip Bitcode | N/A — Bitcode is gone |
@@ -171,7 +171,7 @@ upload 54 s. Every test passed, no flaky retries.
 | Skip metadata on binary-only builds | HAD (metadata is a separate script) |
 | Batch ASC requests | N/A — a few calls a day |
 | Profiles via API | HAD (-allowProvisioningUpdates + API key) |
-| Prune profiles | NEXT (phase 4 check) |
+| Prune profiles | DONE (2 expired 2020 ShypQuick profiles moved to ~/Documents/Archived/expired-provisioning-profiles) |
 | Export straight to output | HAD |
 | Holiday events by cron | HAD (launchd 06:20) |
 | Reuse the archive | HAD |
