@@ -243,6 +243,16 @@ def swap_header(today, version, have, apply):
     if want not in have:
         log(f"header   {want} isn't in the library; left as is")
         return
+    # Apple refuses to delete a placement while a product page A/B test runs
+    # (409 STATE_ERROR.EXPERIMENT_IN_PROGRESS, daily since 2026-10-25), so
+    # wait it out, as mc_holidays_auto.py does.
+    now = datetime.now(timezone.utc)
+    for x in call("GET", f"/v1/apps/{APP}/appStoreVersionExperimentsV2?limit=50")["data"]:
+        a = x["attributes"]
+        if a.get("startDate") and a.get("endDate") and \
+                datetime.fromisoformat(a["startDate"]) <= now < datetime.fromisoformat(a["endDate"]):
+            log(f"header   kept: A/B test '{a.get('name')}' runs until {a['endDate'][:10]} (wanted {want})")
+            return
     by_id = {v[0]: r for r, v in have.items()}
     for loc in call("GET", f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations")["data"]:
         for p in call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/placements?limit=200&include=image,video")["data"]:
