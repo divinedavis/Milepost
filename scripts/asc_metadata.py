@@ -132,6 +132,17 @@ AGE_RATING = {
 }
 
 
+def as_paragraphs(text):
+    """Release notes as short paragraphs with a blank line between them, never
+    bullets (owner, 2026-10-31: "line breaks with a space in between the
+    sentences instead of bullets ... do this for all our apps")."""
+    import re
+    if not text:
+        return text
+    lines = (line.strip() for line in str(text).replace("\r\n", "\n").split("\n"))
+    return "\n\n".join(re.sub(r"^[•●▪◦·\-\*–]\s+", "", line) for line in lines if line)
+
+
 def resolve(asc: ASC, app_id: str) -> dict:
     # Once a version is live there are two appInfos; the live one refuses
     # edits (409 INVALID_STATE), so take the one still being prepared.
@@ -229,7 +240,7 @@ def apply(asc: ASC, cfg: dict) -> None:
     if ids["version_string"] != "1.0":
         asc.patch(f"/appStoreVersionLocalizations/{ids['version_loc']}", {"data": {
             "type": "appStoreVersionLocalizations", "id": ids["version_loc"],
-            "attributes": {"whatsNew": WHATS_NEW}}})
+            "attributes": {"whatsNew": as_paragraphs(WHATS_NEW)}}})
         print("    what's new")
 
     asc.patch(f"/appStoreVersions/{ids['version']}", {"data": {
