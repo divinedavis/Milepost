@@ -338,6 +338,42 @@ Friends (`Milepost/Social/`, `supabase/migrations/`, added 2026-09-10):
   account, 200 reports per reporter per day, 100 pending outgoing requests.
   Nothing else bounds what a valid session can insert.
 
+Age gate (`Social/AgeGate.swift`, `AgeGateViews.swift`, added 2026-11-07, COPPA; same pattern as
+Barrel Baseball b3bdafe and Hidden Gems 1ad5b39):
+- The only account is the friends one, made by Sign in with Apple, so the gate
+  sits in `SocialStore.completeSignIn`. An existing account goes straight in.
+  A NEW one (auth server's `last_sign_in_at` within 2 min of `created_at`, and
+  no `age_confirmed_13_plus` in user_metadata) is HELD: session kept, phase
+  `.signedOut`, `RootView` covers the app with `AgeGateCover` (birth month +
+  year wheels, nothing pre-selected, copy names no age). 13+ = `confirmAge()`
+  writes ONLY `age_confirmed_13_plus = true` to auth user_metadata (no DB
+  column, so no migration), then the account is admitted. Under 13 or Cancel
+  = `delete_account` RPC (the same 5.1.1(v) delete) and signed out; under 13
+  also blocks the phone and shows `AgeBlockedView`.
+- The block and the held account id live in UserDefaults AND the Keychain
+  (`AgeGateStore`, service `com.divinedavis.milepost.agegate`), so a reinstall
+  keeps them. A held id is asked again at the next launch (or its delete
+  retried if blocked), and asked again if that Apple ID signs in later however
+  old the account is. A blocked phone can still sign in to an EXISTING account
+  (a parent's); `AgeBlockedNote` under the Apple button says so.
+- The session stream must not admit a session the rule has not seen:
+  `apply()` ignores events while `completingSignIn`, for the held id, and for
+  an id that is no longer the backend's session (a late event after a delete).
+- Recording never needs an account and is never gated. Existing accounts are
+  never asked. The watch has no accounts.
+- Tests: `AgeGateSwiftTests` (Swift Testing: age math incl. the birth-month
+  boundary, neutral years, new-account rule, reinstall, every sign-in path on
+  the demo backend) and `MilepostAgeGateUITests` + the audit's
+  `testAgeGateScreens`. UI hooks (DEBUG): `-uitest-age-new-account` (demo
+  backend holding a brand-new account, the state a first Apple sign-in
+  leaves), `-uitest-signed-out`, `-uitest-keep-agegate` (UI tests cannot write
+  the Keychain, so `FileAgeGateStore` stands in and is wiped per launch
+  unless this is passed).
+- App Store age rating: `socialMedia` is unanswered on the live record
+  (2026-11-07). Friends = profiles, username search, requests, a feed of
+  friends' activities, so the honest answer is Yes, which per Apple's table
+  moves the rating from 4+ to 13+. Owner decision before the next submission.
+
 Live Activity (`MilepostWidget/`, `RunActivityController`):
 - The SwiftData model is called `Activity`, so inside the app target it
   shadows ActivityKit's. Write `ActivityKit.Activity<RunActivityAttributes>`

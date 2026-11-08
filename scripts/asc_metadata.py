@@ -69,7 +69,7 @@ REVIEW_NOTES = """WHAT THE APP DOES
 Milepost records a run, walk or bike ride with GPS: elapsed time, distance, split pace, mile/km splits, and the route drawn on an Apple map. Runs are saved to a local database on the device. Recording needs no account and there is no in-app purchase.
 
 FRIENDS (OPTIONAL, SIGN IN WITH APPLE)
-Profile tab > Friends & account > Continue with Apple (or Block tab > Friends), then pick any username. Tap the person-plus button, search "milepost_demo" and tap Add: that demo account accepts requests automatically and has sample activities, so its runs appear in Block > Friends right away. Friends see only an activity's sport, title, distance, pace and time - never the route. Swipe a friend's activity (or long-press) to Report or Block. Profile tab > Friends & account: sharing toggle, Sign out, and Delete account (deletes the account and everything shared, immediately). A new incoming request shows an in-app banner and a dot on the Profile tab (no push notifications).
+Profile tab > Friends & account > Continue with Apple (or Block tab > Friends). A brand-new account is first asked for a birth month and year (a neutral age screen, nothing pre-selected; enter any adult date, e.g. January 1990); then pick any username. An Apple ID that already has a Milepost account is not asked. Tap the person-plus button, search "milepost_demo" and tap Add: that demo account accepts requests automatically and has sample activities, so its runs appear in Block > Friends right away. Friends see only an activity's sport, title, distance, pace and time - never the route. Swipe a friend's activity (or long-press) to Report or Block. Profile tab > Friends & account: sharing toggle, Sign out, and Delete account (deletes the account and everything shared, immediately). A new incoming request shows an in-app banner and a dot on the Profile tab (no push notifications).
 
 HOW TO TEST
 1. Record tab: press Start. iOS asks for location access ("While Using the App"). The full-screen recorder opens with a running clock.
@@ -92,13 +92,13 @@ CONTACT
 Any question at all: the email and phone number above.
 """
 
-# "What's New" for the version being prepared (1.6, 2026-10-22).
-WHATS_NEW = """- A walk or run is saved even if your phone dies or the app closes halfway.
-- New Profile: your stats, a map of every street you've walked, run and ridden, and your friends in one place.
-- Daily steps and walking distance from your iPhone and Apple Watch (turn on in Apple Health).
-- Friend requests now show up as a banner in the app.
-- A cleaner Record screen: dark glass controls, the map edge to edge, and quick options when you pull up the panel.
-- Holiday themes and holiday app icons, plus Global Running Day and NYC Marathon Sunday."""
+# "What's New" for the version being prepared (1.6.1, 2026-11-07). Plain
+# paragraphs with a blank line between them, never bullets (owner, 10/31).
+WHATS_NEW = """Your map can now show the walks, runs and rides other apps saved to Apple Health, next to the ones you recorded in Milepost. Turn it on in Profile > Apple Health.
+
+The Record panel now follows your thumb: pull it up for quick options and push it down to close. On iOS 26 the controls use Apple's Liquid Glass.
+
+Creating a new friends account now starts by asking for your birth month and year. Your answer stays on your phone, and recording never needs an account."""
 
 # A run tracker. "Health or wellness topics" in Apple's questionnaire means
 # self-care/lifestyle recommendations (calorie tracking, dieting advice,

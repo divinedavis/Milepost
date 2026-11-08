@@ -19,6 +19,9 @@ struct AccountSection: View {
                 if social.isAvailable {
                     AppleSignInButton()
                         .frame(maxWidth: .infinity)
+                    if social.ageGate.isBlocked {
+                        AgeBlockedNote().frame(maxWidth: .infinity)
+                    }
                     if let error = social.lastError {
                         Text(error).font(.footnote).foregroundStyle(.red)
                     }

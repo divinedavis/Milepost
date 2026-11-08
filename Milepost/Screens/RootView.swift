@@ -113,6 +113,14 @@ struct RootView: View {
                 .zIndex(1)
             }
         }
+        // A brand-new friends account answers the age question before it is
+        // used, wherever Sign in with Apple was pressed (COPPA, AgeGate.swift).
+        .fullScreenCover(isPresented: ageGateShown) { AgeGateCover() }
+    }
+
+    private var ageGateShown: Binding<Bool> {
+        Binding(get: { social.ageCheckPending || social.showAgeBlocked },
+                set: { if !$0 { social.showAgeBlocked = false } })
     }
 
     static let barHeight: CGFloat = 62

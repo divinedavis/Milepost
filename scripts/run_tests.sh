@@ -163,6 +163,7 @@ ui_all() {
   run MilepostUITests/MilepostHeatmapUITests
   echo "== ui (friends) =="
   run MilepostUITests/MilepostFriendsUITests
+  run MilepostUITests/MilepostAgeGateUITests
   echo "== ui (accessibility audit) =="
   run MilepostUITests/AccessibilityAuditTests
   echo "== ui (profile, recovery, holidays, record options, tab bar) =="

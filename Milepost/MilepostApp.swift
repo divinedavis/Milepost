@@ -131,7 +131,8 @@ struct MilepostApp: App {
         }
         #endif
 
-        let social = SocialStore(backend: Self.socialBackend(isUITest: isUITest))
+        let social = SocialStore(backend: Self.socialBackend(isUITest: isUITest),
+                                 ageGate: Self.ageGateStore(isUITest: isUITest))
         let context = container.mainContext
         social.localActivities = { (try? context.fetch(FetchDescriptor<Activity>())) ?? [] }
         _social = State(initialValue: social)
@@ -151,11 +152,35 @@ struct MilepostApp: App {
     /// screens can be driven at all.
     private static func socialBackend(isUITest: Bool) -> SocialBackend {
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-uitest-social-demo") {
-            return DemoSocialBackend()
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-uitest-social-demo") {
+            let demo = DemoSocialBackend()
+            // `-uitest-age-new-account`: the state a first Sign in with Apple
+            // leaves (XCUITest cannot drive Apple's sheet): a brand-new
+            // account held for the age question.
+            if args.contains("-uitest-age-new-account") { demo.startWithNewAccount() }
+            // `-uitest-signed-out`: the demo backend with no session yet.
+            if args.contains("-uitest-signed-out") { demo.startSignedOut() }
+            return demo
         }
         #endif
         return SupabaseSocialBackend(inMemorySession: isUITest)
+    }
+
+    /// The Keychain in a real build. UI-test builds cannot write the Keychain,
+    /// so a file stands in for it (kept across a relaunch only with
+    /// `-uitest-keep-agegate`, the way the Keychain outlives a reinstall).
+    private static func ageGateStore(isUITest: Bool) -> AgeGateStore {
+        #if DEBUG
+        if isUITest {
+            let args = ProcessInfo.processInfo.arguments
+            if !args.contains("-uitest-keep-agegate") { FileAgeGateStore.wipe() }
+            let store = AgeGateStore(persistent: FileAgeGateStore())
+            if args.contains("-uitest-age-new-account") { store.setPendingUser(DemoSocialBackend.me) }
+            return store
+        }
+        #endif
+        return AgeGateStore()
     }
 
     var body: some Scene {

@@ -14,8 +14,15 @@ protocol SocialBackend: AnyObject {
     var sessionUserID: UUID? { get }
     /// The signed-in user id after every auth change; nil when signed out.
     func sessionChanges() -> AsyncStream<UUID?>
+    /// The signed-in account as the auth server described it (creation and
+    /// last sign-in time, whether it passed the age question), for deciding
+    /// whether a Sign in with Apple just created it.
+    var sessionAccount: SessionAccount? { get }
 
     func signInWithApple(idToken: String, nonce: String?) async throws
+    /// Marks the signed-in account `age_confirmed_13_plus = true` in its auth
+    /// user_metadata. The birth date itself is never sent.
+    func confirmAge() async throws
     func signOut() async
     func deleteAccount() async throws
 
@@ -129,9 +136,20 @@ final class SupabaseSocialBackend: SocialBackend {
         }
     }
 
+    var sessionAccount: SessionAccount? {
+        guard isConfigured, let user = client.auth.currentSession?.user else { return nil }
+        return SessionAccount(id: user.id, createdAt: user.createdAt, lastSignInAt: user.lastSignInAt,
+                              ageConfirmed: user.userMetadata[AgeGate.metadataKey]?.boolValue == true)
+    }
+
     func signInWithApple(idToken: String, nonce: String?) async throws {
         guard isConfigured else { throw SocialError.notConfigured }
         try await client.auth.signInWithIdToken(credentials: .init(provider: .apple, idToken: idToken, nonce: nonce))
+    }
+
+    func confirmAge() async throws {
+        guard isConfigured else { throw SocialError.notConfigured }
+        _ = try await client.auth.update(user: UserAttributes(data: [AgeGate.metadataKey: .bool(true)]))
     }
 
     func signOut() async {
@@ -266,6 +284,19 @@ final class DemoSocialBackend: SocialBackend {
 
     let isConfigured = true
     private(set) var sessionUserID: UUID? = DemoSocialBackend.me
+    /// The demo account: an old, existing one unless a test makes it new.
+    var sessionAccount: SessionAccount? {
+        guard let id = sessionUserID else { return nil }
+        return SessionAccount(id: id, createdAt: accountCreated, lastSignInAt: lastSignIn, ageConfirmed: ageConfirmed)
+    }
+    private var accountCreated = Date(timeIntervalSince1970: 1_757_000_000)
+    private var lastSignIn: Date? = .now
+    private(set) var ageConfirmed = false
+    /// Accounts deleted (by the user, or discarded by the age gate).
+    private(set) var deletedAccounts = 0
+    /// The next `signInWithApple` creates a brand-new account (Apple's sheet
+    /// cannot be driven by tests, so the outcome is chosen here).
+    var nextSignInCreatesAccount = false
     private var continuation: AsyncStream<UUID?>.Continuation?
     private var people: [FriendProfile] = [
         FriendProfile(id: jamie, username: "jamie_runs", displayName: "Jamie", status: .friend),
@@ -298,9 +329,31 @@ final class DemoSocialBackend: SocialBackend {
         }
     }
 
+    /// Starts with no session (a phone that has never signed in).
+    func startSignedOut() { sessionUserID = nil }
+
+    /// Starts signed in to an account created moments ago that has not
+    /// answered the age question: the state a first Sign in with Apple leaves.
+    func startWithNewAccount() {
+        sessionUserID = Self.me
+        accountCreated = .now
+        lastSignIn = .now
+        ageConfirmed = false
+    }
+
     func signInWithApple(idToken: String, nonce: String?) async throws {
+        if nextSignInCreatesAccount {
+            startWithNewAccount()
+        } else {
+            lastSignIn = .now
+        }
         sessionUserID = Self.me
         continuation?.yield(Self.me)
+    }
+
+    func confirmAge() async throws {
+        guard sessionUserID != nil else { throw SocialError.notConfigured }
+        ageConfirmed = true
     }
 
     func signOut() async {
@@ -308,7 +361,11 @@ final class DemoSocialBackend: SocialBackend {
         continuation?.yield(nil)
     }
 
-    func deleteAccount() async throws { await signOut() }
+    func deleteAccount() async throws {
+        deletedAccounts += 1
+        ageConfirmed = false
+        await signOut()
+    }
 
     func profile(id: UUID) async throws -> FriendProfile? {
         id == Self.me ? FriendProfile(id: Self.me, username: "you_demo", displayName: "You") : nil

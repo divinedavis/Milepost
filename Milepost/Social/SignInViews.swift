@@ -35,6 +35,7 @@ struct SignInCard: View {
                 .foregroundStyle(.secondary)
             if social.isAvailable {
                 AppleSignInButton()
+                if social.ageGate.isBlocked { AgeBlockedNote() }
             } else {
                 Text(SocialError.notConfigured.localizedDescription)
                     .font(.footnote)

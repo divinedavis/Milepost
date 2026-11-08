@@ -62,6 +62,25 @@ final class SocialStore {
     /// Apple sends the name exactly once; kept for the username sheet.
     var suggestedDisplayName = ""
 
+    // MARK: Age gate state (COPPA, 2026-11-07; see AgeGate.swift)
+
+    /// A Sign in with Apple just created an account that must answer the age
+    /// question before it is used. RootView covers the app with the question
+    /// while this is true; the account is held as signed out meanwhile.
+    private(set) var ageCheckPending = false
+    /// The age answer was under 13: RootView shows the friendly block until
+    /// it is dismissed. The device-level block lives in `ageGate`.
+    var showAgeBlocked = false
+    /// Set while the age answer is being sent, so Continue cannot fire twice.
+    private(set) var ageAnswerInFlight = false
+    let ageGate: AgeGateStore
+    /// The new account the age question is about. Its session exists on the
+    /// phone but nothing uses it until the answer is 13+.
+    private var heldAccountID: UUID?
+    /// True while a Sign in with Apple is completing: the session stream's
+    /// "signed in" must not admit an account the age rule has not looked at.
+    private var completingSignIn = false
+
     /// The phone's saved activities, supplied by the app (the store has no
     /// model context of its own).
     var localActivities: () -> [Activity] = { [] }
@@ -83,13 +102,29 @@ final class SocialStore {
         incoming.count == 1 ? "1 friend request" : "\(incoming.count) friend requests"
     }
 
-    init(backend: SocialBackend, defaults: UserDefaults = .standard) {
+    init(backend: SocialBackend, defaults: UserDefaults = .standard, ageGate: AgeGateStore) {
         self.backend = backend
         self.defaults = defaults
+        self.ageGate = ageGate
         isAvailable = backend.isConfigured
         if let id = backend.sessionUserID {
-            apply(id)
+            if ageGate.pendingUserID == id {
+                // The app was closed before the age question was answered (or
+                // before an under-13 account could be deleted): ask again, or
+                // finish deleting it. The account is never let in meanwhile.
+                heldAccountID = id
+                phase = .signedOut
+                if ageGate.isBlocked {
+                    Task { await discardHeldAccount() }
+                } else {
+                    ageCheckPending = true
+                }
+            } else {
+                apply(id)
+            }
         } else {
+            // A held id with no session is kept: if that account (its delete
+            // never reached the server) signs in again, it is asked again.
             phase = .signedOut
         }
         let stream = backend.sessionChanges()
@@ -100,7 +135,19 @@ final class SocialStore {
         }
     }
 
+    /// From the session stream. A session the age rule has not cleared (a
+    /// sign-in still completing, or a held new account) is ignored here;
+    /// `completeSignIn` and `answerAge` admit it themselves.
     private func apply(_ id: UUID?) {
+        if let id, completingSignIn || id == heldAccountID { return }
+        if id == nil, completingSignIn { return }
+        // A late event for a session that is already gone (a held account
+        // deleted since) must not let it in.
+        if let id, id != backend.sessionUserID { return }
+        admit(id)
+    }
+
+    private func admit(_ id: UUID?) {
         guard let id else {
             reset()
             return
@@ -199,13 +246,92 @@ final class SocialStore {
             // Apple does not always include the nonce claim, and GoTrue
             // rejects a nonce the token does not carry.
             let claim = IDToken.stringClaim("nonce", from: credential.idToken)
-            try await backend.signInWithApple(idToken: credential.idToken, nonce: claim == nil ? nil : credential.rawNonce)
             if let name = credential.fullName {
                 suggestedDisplayName = PersonNameComponentsFormatter().string(from: name)
             }
-            apply(backend.sessionUserID)
+            await completeSignIn(idToken: credential.idToken, nonce: claim == nil ? nil : credential.rawNonce)
         } catch {
             lastError = error.localizedDescription
+        }
+    }
+
+    /// Signs in with Apple's token, then applies the age rule before the
+    /// account is used: an existing account goes straight in; a brand-new one
+    /// is held until the age question is answered, or deleted at once on a
+    /// phone that already answered under 13.
+    func completeSignIn(idToken: String, nonce: String?) async {
+        completingSignIn = true
+        defer { completingSignIn = false }
+        do {
+            try await backend.signInWithApple(idToken: idToken, nonce: nonce)
+        } catch {
+            lastError = error.localizedDescription
+            return
+        }
+        guard let id = backend.sessionUserID else { return }
+        // An account this phone is already holding for the question (one whose
+        // deletion has not reached the server yet) is asked again however old
+        // it has become; otherwise the server's timestamps decide.
+        let held = ageGate.pendingUserID == id
+        guard held || backend.sessionAccount.map(AgeGate.needsAgeCheck) == true else {
+            admit(id)
+            return
+        }
+        heldAccountID = id
+        ageGate.setPendingUser(id)
+        if ageGate.isBlocked {
+            await discardHeldAccount()
+            showAgeBlocked = true
+        } else {
+            ageCheckPending = true
+        }
+    }
+
+    /// The age question's answer for the held new account.
+    func answerAge(oldEnough: Bool) async {
+        guard let id = heldAccountID, !ageAnswerInFlight else { return }
+        ageAnswerInFlight = true
+        defer { ageAnswerInFlight = false }
+        lastError = nil
+        guard oldEnough else {
+            ageGate.recordBlocked()
+            ageCheckPending = false
+            showAgeBlocked = true
+            await discardHeldAccount()
+            return
+        }
+        do {
+            try await backend.confirmAge()
+        } catch {
+            // Stay on the question: the account is not let in unrecorded.
+            lastError = "Couldn't finish setting up your account. Check your connection and try again."
+            return
+        }
+        ageGate.setPendingUser(nil)
+        heldAccountID = nil
+        ageCheckPending = false
+        admit(id)
+    }
+
+    /// Cancel on the age question: the new account is deleted again, the
+    /// phone is not blocked, and the person can start over.
+    func cancelAgeCheck() async {
+        guard heldAccountID != nil, !ageAnswerInFlight else { return }
+        ageCheckPending = false
+        await discardHeldAccount()
+    }
+
+    /// Deletes the held new account (and its session). If the server cannot
+    /// be reached the pending id stays, so the next launch tries again; the
+    /// account is never admitted in between.
+    private func discardHeldAccount() async {
+        do {
+            try await backend.deleteAccount()
+            ageGate.setPendingUser(nil)
+            heldAccountID = nil
+            reset()
+        } catch {
+            phase = .signedOut
         }
     }
 

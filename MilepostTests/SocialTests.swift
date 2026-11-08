@@ -132,7 +132,8 @@ final class SocialTests: XCTestCase {
         let suite = "SocialTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         let backend = DemoSocialBackend()
-        return (SocialStore(backend: backend, defaults: defaults), backend, defaults)
+        return (SocialStore(backend: backend, defaults: defaults,
+                            ageGate: AgeGateStore(defaults: defaults, persistent: MemoryAgeGateStore())), backend, defaults)
     }
 
     func testStartsSignedInFromTheStoredSessionWithoutWaiting() {

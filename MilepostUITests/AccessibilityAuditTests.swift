@@ -129,6 +129,21 @@ final class AccessibilityAuditTests: XCTestCase {
         audit("You (signed in)")
     }
 
+    /// The age question a new friends account answers, and the under-13
+    /// screen (COPPA, 2026-11-07). The cover hides Record, so no launch wait.
+    func testAgeGateScreens() {
+        app = XCUIApplication()
+        app.launchArguments = ["-uitest", "-uitest-social-demo", "-uitest-age-new-account"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["ageGate.title"].waitForExistence(timeout: 15), "age question never appeared")
+        audit("Age question")
+        app.pickerWheels.element(boundBy: 0).adjust(toPickerWheelValue: "January")
+        app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: String(Calendar.current.component(.year, from: .now)))
+        app.buttons["ageGate.continue"].tap()
+        XCTAssertTrue(app.staticTexts["ageBlocked.title"].waitForExistence(timeout: 6), "under-13 screen never appeared")
+        audit("Under 13")
+    }
+
     /// The real Dynamic Type check: at the largest accessibility size every
     /// tab still opens and Start is still there to press.
     func testTheLargestTextSizeStillWorks() {
