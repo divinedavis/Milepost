@@ -176,8 +176,8 @@ def open_submission():
     return None, None
 
 
-def submit(apply):
-    """Draft events and unreviewed holiday headers, in one submission."""
+def pending_items():
+    """Draft events and unreviewed holiday headers: what the next submission carries."""
     items = [("appEvent", "appEvents", e["id"], e["attributes"]["referenceName"])
              for e in call("GET", f"/v1/apps/{APP}/appEvents?limit=200")["data"]
              if e["attributes"].get("eventState") == "DRAFT"]
@@ -186,10 +186,78 @@ def submit(apply):
               if i["attributes"].get("state") == "PREPARE_FOR_SUBMISSION"
               and i["attributes"].get("referenceName", "").startswith("milepost-holidays/")
               and "/header-" in i["attributes"]["referenceName"]]
+    return items
+
+
+def submission_items(sid):
+    """{(relationship, id)} already in a submission, e.g. ("appEvent", "6827505916")."""
+    d = call("GET", f"/v1/reviewSubmissions/{sid}/items?limit=50"
+                    "&include=appEvent,appAssetLibraryImage,appStoreVersion")["data"]
+    return {(rel, v["data"]["id"]) for it in d for rel, v in it.get("relationships", {}).items() if v.get("data")}
+
+
+def freshen(eid):
+    """An event whose publishStart (or eventStart) has passed can't be submitted
+    (409 TERRITORY_SCHEDULES_DATES_IN_PAST): move it to an hour from now. Returns
+    False for an event that has already ended, which is left out."""
+    a = call("GET", f"/v1/appEvents/{eid}")["data"]["attributes"]
+    now = datetime.now(timezone.utc)
+    soon = iso(now + timedelta(hours=1))
+    when = lambda s: datetime.fromisoformat(s.replace("Z", "+00:00"))
+    sched, changed = a.get("territorySchedules") or [], False
+    for s in sched:
+        if when(s["eventEnd"]) <= now + timedelta(hours=2):
+            return False
+        for k in ("publishStart", "eventStart"):
+            if when(s[k]) < now + timedelta(minutes=30):
+                s[k], changed = soon, True
+    if changed:
+        call("PATCH", f"/v1/appEvents/{eid}", {"data": {"type": "appEvents", "id": eid,
+             "attributes": {"territorySchedules": sched}}})
+        log(f"moved    {a['referenceName']} publish start to {soon} (the planned one had passed)")
+    return True
+
+
+def complete(sid, items):
+    """Add what's missing to an unsent submission, freshen its events, and send it."""
+    have = submission_items(sid)
+    for rel, typ, iid, _ in items:
+        if (rel, iid) not in have:
+            call("POST", "/v1/reviewSubmissionItems", {"data": {"type": "reviewSubmissionItems", "relationships": {
+                "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": sid}},
+                rel: {"data": {"type": typ, "id": iid}}}}})
+    for rel, iid in submission_items(sid):
+        if rel == "appEvent":
+            freshen(iid)
+    return call("PATCH", f"/v1/reviewSubmissions/{sid}", {"data": {"type": "reviewSubmissions", "id": sid,
+                "attributes": {"submitted": True}}})["data"]
+
+
+def submit(apply):
+    """Draft events and unreviewed holiday headers, in one submission.
+
+    A submission left READY_FOR_REVIEW was created but never sent: on 2026-10-27
+    the final PATCH timed out after the items were added, and the job then
+    waited on its own draft for 12 days while Black Friday's publish date went
+    by. If such a draft holds only holiday items, finish and send it. One that
+    holds an App Store version belongs to asc_submit_for_review.py, and a
+    version goes to review only when the owner says so, so it is left alone."""
+    items = pending_items()
+    sid, st = open_submission()
+    if sid and st == "READY_FOR_REVIEW":
+        if any(rel == "appStoreVersion" for rel, _ in submission_items(sid)):
+            log(f"wait     submission {sid[:8]} is an unsent version submission (owner sends it)")
+            return
+        names = ", ".join(x[3] for x in items) or "its items"
+        if not apply:
+            log(f"would finish unsent submission {sid[:8]} with {names}")
+            return
+        d = complete(sid, items)
+        log(f"submitted {names} in the unsent {sid[:8]} ({d['attributes'].get('state')})")
+        return
     if not items:
         return
     names = ", ".join(x[3] for x in items)
-    sid, st = open_submission()
     if sid:
         log(f"wait     {names}: submission {sid[:8]} is {st}")
         return
@@ -198,12 +266,7 @@ def submit(apply):
         return
     sub = call("POST", "/v1/reviewSubmissions", {"data": {"type": "reviewSubmissions", "attributes": {"platform": "IOS"},
                "relationships": {"app": {"data": {"type": "apps", "id": APP}}}}})["data"]
-    for rel, typ, iid, _ in items:
-        call("POST", "/v1/reviewSubmissionItems", {"data": {"type": "reviewSubmissionItems", "relationships": {
-            "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": sub["id"]}},
-            rel: {"data": {"type": typ, "id": iid}}}}})
-    d = call("PATCH", f"/v1/reviewSubmissions/{sub['id']}", {"data": {"type": "reviewSubmissions", "id": sub["id"],
-             "attributes": {"submitted": True}}})["data"]
+    d = complete(sub["id"], items)
     log(f"submitted {names} as {sub['id'][:8]} ({d['attributes'].get('state')})")
 
 

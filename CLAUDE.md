@@ -369,10 +369,11 @@ Barrel Baseball b3bdafe and Hidden Gems 1ad5b39):
   leaves), `-uitest-signed-out`, `-uitest-keep-agegate` (UI tests cannot write
   the Keychain, so `FileAgeGateStore` stands in and is wiped per launch
   unless this is passed).
-- App Store age rating: `socialMedia` is unanswered on the live record
-  (2026-11-07). Friends = profiles, username search, requests, a feed of
-  friends' activities, so the honest answer is Yes, which per Apple's table
-  moves the rating from 4+ to 13+. Owner decision before the next submission.
+- App Store age rating (owner, 2026-11-08, 1.6.1): `socialMedia` and
+  `userGeneratedContent` are Yes (friends = profiles, username search,
+  requests, a feed of friends' activity titles with Report/Block), so the
+  rating is 13+. `socialMediaAgeRestricted` is No: Yes needs Apple's Declared
+  Age Range API. All in `asc_metadata.py` AGE_RATING.
 
 Live Activity (`MilepostWidget/`, `RunActivityController`):
 - The SwiftData model is called `Activity`, so inside the app target it
@@ -545,7 +546,9 @@ Holiday themes (`Services/HolidayTheme.swift`, `Resources/holidays.json`, added 
   editing them or holidays.json; log ~/Library/Logs/milepost-holidays.log).
   Creates each event ~24 days ahead with art from `holiday_event_art.py`
   (card/details/header PNGs, cached in ~/Library/Caches/milepost-holidays),
-  submits drafts + headers when no submission is open, swaps the product page
+  submits drafts + headers when no submission is open (and finishes its own
+  unsent READY_FOR_REVIEW draft, moving a passed publish date forward; a
+  draft holding an App Store version is left for the owner), swaps the product page
   header during a theme and back to `milepost-2026-10/default/header-3840x1646.png`.
   Events link to `milepost://record` (CFBundleURLTypes, `RootView.onOpenURL`;
   also ://block, ://profile) and WAIT until 1.6 is live (`LINKS_FROM`).

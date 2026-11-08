@@ -103,7 +103,12 @@ Creating a new friends account now starts by asking for your birth month and yea
 # A run tracker. "Health or wellness topics" in Apple's questionnaire means
 # self-care/lifestyle recommendations (calorie tracking, dieting advice,
 # exercise recommendations); Milepost records what you did and recommends
-# nothing, so it stays 4+. The newer questionnaire fields are BOOLEANs, the
+# nothing. Friends is social media (profiles, username search, requests, a
+# friends feed of activity titles with Report/Block), so socialMedia and
+# userGeneratedContent are Yes and the rating is 13+ (owner, 2026-11-08,
+# submitting 1.6.1). socialMediaAgeRestricted stays No: Yes requires Apple's
+# Declared Age Range API, which the app does not use (its own neutral
+# birth month/year screen blocks under-13s). The newer questionnaire fields are BOOLEANs, the
 # older content fields three-value enums, and all of them must go in one PATCH.
 AGE_RATING = {
     "alcoholTobaccoOrDrugUseOrReferences": "NONE",
@@ -127,7 +132,9 @@ AGE_RATING = {
     "messagingAndChat": False,
     "parentalControls": False,
     "unrestrictedWebAccess": False,
-    "userGeneratedContent": False,
+    "userGeneratedContent": True,
+    "socialMedia": True,
+    "socialMediaAgeRestricted": False,
     "ageRatingOverride": "NONE",
 }
 
@@ -250,7 +257,7 @@ def apply(asc: ASC, cfg: dict) -> None:
 
     asc.patch(f"/ageRatingDeclarations/{ids['info']}", {"data": {
         "type": "ageRatingDeclarations", "id": ids["info"], "attributes": AGE_RATING}})
-    print("    age rating (4+)")
+    print("    age rating (13+: friends are social media)")
 
     missing = [k for k in ("ASC_CONTACT_FIRST_NAME", "ASC_CONTACT_LAST_NAME",
                            "ASC_CONTACT_PHONE", "ASC_CONTACT_EMAIL") if not cfg.get(k)]
