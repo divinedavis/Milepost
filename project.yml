@@ -11,7 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "1.6.1"
-    CURRENT_PROJECT_VERSION: "40"
+    CURRENT_PROJECT_VERSION: "41"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     # Link a target as soon as what it depends on has emitted its module,
     # instead of waiting for the whole dependency to finish (2026-10-23).
