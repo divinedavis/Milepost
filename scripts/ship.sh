@@ -28,6 +28,16 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 cd "$(dirname "$0")/.."
+# A ship started by hand had nothing keeping this Mac awake (it idle-sleeps on
+# battery after a minute); the nightly jobs already run under caffeinate.
+# Ends with this script; a closed lid still sleeps the Mac (2026-11-09).
+[[ -n "${DAILY_SHIP_AWAKE:-}" ]] || /usr/bin/caffeinate -i -w $$ &
+# Stage times, memory peaks and one SHIP SUMMARY line per run, pass or fail
+# (scripts/ship_log.sh, scripts/ship_summary.py; history in build/ship-history.jsonl).
+SHIP_LOG_DIR=build
+# shellcheck disable=SC1091
+source scripts/ship_log.sh
+ship_log_start
 
 # Never two builds on this Mac at once (owner rule, 2026-10-23): the Mac-wide
 # lock every app's ship, nightly and test scripts take (Find A Crib's
@@ -49,7 +59,7 @@ step() {
         echo "$SHIP_ID,$STEP,$((now - STEP_START))" >> "$TIMINGS"
     fi
     STEP="$1"; STEP_START=$now
-    echo "==> $1  ($(date '+%H:%M:%S'))"
+    stage "$1  ($(date '+%H:%M:%S'))"
 }
 
 if [[ ! -f scripts/asc-config.env ]]; then
@@ -105,7 +115,7 @@ TESTED_STAMP="$HOME/Library/Caches/milepost-tested/$HEAD_SHA-ui${SHIP_RUN_UI:-0}
 # perf_gate.py records into perf_baseline.json, so that file does not count.
 tree_clean() { [[ -z "$(git status --porcelain -- . ':!scripts/perf_baseline.json')" ]]; }
 if tree_clean && [[ -f "$TESTED_STAMP" ]]; then
-    echo "==> $HEAD_SHA already passed the tests and gates; skipping to the archive"
+    stage "$HEAD_SHA already passed the tests and gates; skipping to the archive"
     SKIP_TESTS=1
 else
     SKIP_TESTS=0
@@ -176,7 +186,7 @@ cat "$ORGANIZER_OUT"
 # A green suite does not prove the app starts — XCUITest launches through its
 # own harness. Prove a cold launch works before shipping.
 if [[ "${SHIP_SKIP_SMOKE:-0}" == "1" ]]; then
-    echo "==> skipping smoke test (SHIP_SKIP_SMOKE=1)"
+    stage "skipping smoke test (SHIP_SKIP_SMOKE=1)"
 else
     step "smoke-testing a simulator launch"
     # The app the tests just built, not a third build of it.
@@ -195,7 +205,7 @@ else
     last_tag=$(git tag --list 'build-*' | sort -t- -k2 -n | tail -1)
     watch_paths=$(awk '/^  MilepostWatch:/{w=1;next} w&&/^  [A-Za-z]/{w=0} w&&/- path:/{print $3}' project.yml)
     if [[ -n "$last_tag" ]] && ! git diff --name-only "$last_tag" HEAD -- $watch_paths project.yml | grep -q .; then
-        echo "==> watch smoke test skipped: nothing the watch app is built from changed since $last_tag"
+        stage "watch smoke test skipped: nothing the watch app is built from changed since $last_tag"
     else
         step "smoke-testing a watch simulator launch"
         ./scripts/smoke_test_watch.sh
@@ -208,7 +218,7 @@ fi  # SKIP_TESTS
 
 current=$(grep -m1 'CURRENT_PROJECT_VERSION:' "$PROJECT_YML" | sed -E 's/.*"([0-9]+)".*/\1/')
 next=$((current + 1))
-echo "==> bumping build $current -> $next"
+stage "bumping build $current -> $next"
 sed -i '' "s/CURRENT_PROJECT_VERSION: \"$current\"/CURRENT_PROJECT_VERSION: \"$next\"/" "$PROJECT_YML"
 
 step "regenerating xcodeproj"
@@ -256,14 +266,17 @@ xcrun altool \
 
 step "done"
 git tag -f "build-$next" >/dev/null
-echo "==> shipped build $next"
+stage "shipped build $next"
 minutes=$(( ($(date +%s) - SHIP_STARTED) / 60 ))
 echo "$(date '+%F %T') build $next shipped in ${minutes} min (UI suite: ${SHIP_RUN_UI:-0}, tests skipped: $SKIP_TESTS)" \
     | tee -a "$HOME/Library/Logs/milepost-ships.log"
-echo "==> slowest tests this month:"
+stage "slowest tests this month:"
 sort -t, -k4 -rn "$HOME/Library/Logs/milepost-test-durations.csv" 2>/dev/null \
     | awk -F, -v m="$(date +%Y-%m)" 'index($1, m) == 1 && !seen[$2 $3]++ {printf "    %6.1fs  %s/%s\n", $4, $2, $3}' | head -10
 # TestFlight's "What to Test" from the commits since the last ship, once Apple
 # has processed the build (a few minutes). In the background: the ship is done.
 nohup "$PY" scripts/testflight_notes.py --build "$next" >> "$HOME/Library/Logs/milepost-testflight-notes.log" 2>&1 &
 echo "    Processing takes a few minutes before it appears in TestFlight."
+
+# Reached the end: the summary line reports this ship as ok.
+ship_done
